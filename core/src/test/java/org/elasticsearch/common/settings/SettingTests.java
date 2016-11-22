@@ -425,6 +425,28 @@ public class SettingTests extends ESTestCase {
         assertTrue(listSetting.match("foo.bar." + randomIntBetween(0,10000)));
     }
 
+    public void testAffixListSettingAcceptsNumberSyntax() {
+        Setting<List<Long>> listSetting = Setting.affixKeyListSetting("something.", "value",
+            (s) -> Arrays.asList("7", "11"), Long::parseLong, Property.Dynamic, Property.NodeScope);
+        Settings.Builder builder = Settings.builder().putArray("something.foo.value",  "3", "9", "81");
+        for (String key : builder.internalMap().keySet()) {
+            assertTrue("key: " + key + " doesn't match", listSetting.match(key));
+            assertThat(listSetting.getConcreteSetting("something.foo.value").get(builder.build()), is(Arrays.asList(3L, 9L, 81L)));
+        }
+        builder = Settings.builder().put("something.bar.value", "16,8,4,2,1");
+        for (String key : builder.internalMap().keySet()) {
+            assertTrue("key: " + key + " doesn't match", listSetting.match(key));
+            assertThat(listSetting.getConcreteSetting("something.bar.value").get(builder.build()), is(Arrays.asList(16L, 8L, 4L, 2L, 1L)));
+        }
+        assertFalse(listSetting.match("something_baz_value"));
+        assertFalse(listSetting.match("something.val"));
+        assertFalse(listSetting.match("something.val.1"));
+        assertFalse(listSetting.match("something.baz.value.x"));
+        assertFalse(listSetting.match("something.baz.value.1x"));
+        assertTrue(listSetting.match("something.baz.value"));
+        assertTrue(listSetting.match("something.baz.value." + randomIntBetween(0,10000)));
+    }
+
     public void testDynamicKeySetting() {
         Setting<Boolean> setting = Setting.prefixKeySetting("foo.", "false", Boolean::parseBoolean, Property.NodeScope);
         assertTrue(setting.hasComplexMatcher());

@@ -649,11 +649,9 @@ public class Setting<T> extends ToXContentToBytes {
 
     public static <T> Setting<List<T>> listSetting(String key, Function<Settings, List<String>> defaultStringValue,
                                                    Function<String, T> singleValueParser, Property... properties) {
-        Function<String, List<T>> parser = (s) ->
-                parseableStringToList(s).stream().map(singleValueParser).collect(Collectors.toList());
 
         return new Setting<List<T>>(new ListKey(key),
-            (s) -> arrayToParsableString(defaultStringValue.apply(s).toArray(Strings.EMPTY_ARRAY)), parser, properties) {
+            arrayToStringDefault(defaultStringValue), listParser(singleValueParser), properties) {
             @Override
             public String getRaw(Settings settings) {
                 String[] array = settings.getAsArray(getKey(), null);
@@ -671,6 +669,10 @@ public class Setting<T> extends ToXContentToBytes {
                 return exists || settings.get(getKey() + ".0") != null;
             }
         };
+    }
+
+    private static <T> Function<String, List<T>> listParser(Function<String, T> singleValueParser) {
+        return (s) -> parseableStringToList(s).stream().map(singleValueParser).collect(Collectors.toList());
     }
 
     private static List<String> parseableStringToList(String parsableString) {
@@ -692,6 +694,9 @@ public class Setting<T> extends ToXContentToBytes {
         }
     }
 
+    private static Function<Settings, String> arrayToStringDefault(Function<Settings, List<String>> defaultStringValue) {
+        return (s) -> arrayToParsableString(defaultStringValue.apply(s).toArray(Strings.EMPTY_ARRAY));
+    }
 
     private static String arrayToParsableString(String[] array) {
         try {
@@ -866,9 +871,30 @@ public class Setting<T> extends ToXContentToBytes {
         return adfixKeySetting(prefix, suffix, (s) -> defaultValue, parser, properties);
     }
 
-    public static <T> Setting<T> affixKeySetting(AffixKey key, Function<Settings, String> defaultValue, Function<String, T> parser,
+    public static <T> Setting<T> affixKeySetting(String prefix, String suffix, Setting<T> fallback, Function<String, T> parser,
                                                  Property... properties) {
-        return new Setting<T>(key, defaultValue, parser, properties) {
+        return affixKeySetting(AffixKey.withAdfix(prefix, suffix),
+            fallback, fallback::getRaw, parser, (k) -> new Setting<T>(k, fallback, parser, properties),
+            properties);
+    }
+
+    public static <T> Setting<List<T>> affixKeyListSetting(String prefix, String suffix, Function<Settings, List<String>> defaultValue,
+                                                     Function<String, T> parser, Property... properties) {
+        Function<String, Setting<List<T>>> concrete = (k) -> listSetting(k, defaultValue, parser, properties);
+        return affixKeySetting(AffixKey.listKey(prefix, suffix), null, arrayToStringDefault(defaultValue),
+            listParser(parser), concrete, properties);
+    }
+
+    public static <T> Setting<T> affixKeySetting(AffixKey affixKey, Function<Settings, String> defaultValue, Function<String, T> parser,
+                                                 Property... properties) {
+        final Function<String, Setting<T>> concrete = (k) -> new Setting<T>(k, defaultValue, parser, properties);
+        return affixKeySetting(affixKey, null, defaultValue, parser, concrete, properties);
+    }
+
+    private static <T> Setting<T> affixKeySetting(AffixKey affixKey, @Nullable Setting<T> fallbackSetting,
+                                                  Function<Settings, String> defaultValue, Function<String, T> parser,
+                                                  Function<String, Setting<T>> concrete, Property... properties) {
+        return new Setting<T>(affixKey, fallbackSetting, defaultValue, parser, properties) {
 
             @Override
             boolean isGroupSetting() {
@@ -883,7 +909,7 @@ public class Setting<T> extends ToXContentToBytes {
             @Override
             public Setting<T> getConcreteSetting(String key) {
                 if (match(key)) {
-                    return new Setting<>(key, defaultValue, parser, properties);
+                    return concrete.apply(key);
                 } else {
                     throw new IllegalArgumentException("key [" + key + "] must match [" + getKey() + "] but didn't.");
                 }
@@ -942,11 +968,12 @@ public class Setting<T> extends ToXContentToBytes {
     }
 
     public static final class ListKey extends SimpleKey {
+        public static final String NUMERIC_SUFFIX_PATTERN = "(\\.\\d+)?";
         private final Pattern pattern;
 
         public ListKey(String key) {
             super(key);
-            this.pattern = Pattern.compile(Pattern.quote(key) + "(\\.\\d+)?");
+            this.pattern = Pattern.compile(Pattern.quote(key) + NUMERIC_SUFFIX_PATTERN);
         }
 
         @Override
@@ -957,20 +984,29 @@ public class Setting<T> extends ToXContentToBytes {
 
     public static final class AffixKey implements Key {
         public static AffixKey withPrefix(String prefix) {
-            return new AffixKey(prefix, null);
+            return new AffixKey(prefix, null, false);
         }
 
         public static AffixKey withAdfix(String prefix, String suffix) {
-            return new AffixKey(prefix, suffix);
+            return new AffixKey(prefix, suffix, false);
         }
+
+        public static AffixKey listKey(String prefix, String suffix) {return new AffixKey(prefix, suffix, true);}
 
         private final String prefix;
         private final String suffix;
+        private final Pattern suffixPattern;
 
-        public AffixKey(String prefix, String suffix) {
+        public AffixKey(String prefix, String suffix, boolean list) {
             assert prefix != null || suffix != null: "Either prefix or suffix must be non-null";
             this.prefix = prefix;
             this.suffix = suffix;
+            if (list) {
+                final String suffixLiteral = suffix == null ? "" : Pattern.quote(suffix);
+                this.suffixPattern = Pattern.compile(suffixLiteral + ListKey.NUMERIC_SUFFIX_PATTERN + "$");
+            } else {
+                suffixPattern = null;
+            }
         }
 
         @Override
@@ -979,7 +1015,9 @@ public class Setting<T> extends ToXContentToBytes {
             if (prefix != null) {
                 match = key.startsWith(prefix);
             }
-            if (suffix != null) {
+            if (suffixPattern != null) {
+                match = match && suffixPattern.matcher(key).find();
+            } else if(suffix != null) {
                 match = match && key.endsWith(suffix);
             }
             return match;
