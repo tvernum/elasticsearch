@@ -59,10 +59,7 @@ public class BootstrapCheckTests extends ESTestCase {
             transportAddresses.add(localTransportAddress);
         }
 
-        TransportAddress publishAddress = new TransportAddress(InetAddress.getLoopbackAddress(), 0);
-        BoundTransportAddress boundTransportAddress = mock(BoundTransportAddress.class);
-        when(boundTransportAddress.boundAddresses()).thenReturn(transportAddresses.toArray(new TransportAddress[0]));
-        when(boundTransportAddress.publishAddress()).thenReturn(publishAddress);
+        BoundTransportAddress boundTransportAddress = mockBoundTransportAddress(true);
         BootstrapChecks.check(Settings.EMPTY, boundTransportAddress, Collections.emptyList());
     }
 
@@ -80,40 +77,7 @@ public class BootstrapCheckTests extends ESTestCase {
     }
 
     public void testEnforceLimitsWhenBoundToNonLocalAddress() {
-        final List<TransportAddress> transportAddresses = new ArrayList<>();
-        final TransportAddress nonLocalTransportAddress = buildNewFakeTransportAddress();
-        transportAddresses.add(nonLocalTransportAddress);
-
-        for (int i = 0; i < randomIntBetween(0, 7); i++) {
-            final TransportAddress randomTransportAddress = randomBoolean() ? buildNewFakeTransportAddress() :
-                new TransportAddress(InetAddress.getLoopbackAddress(), i);
-            transportAddresses.add(randomTransportAddress);
-        }
-
-        final TransportAddress publishAddress = randomBoolean() ? buildNewFakeTransportAddress() :
-            new TransportAddress(InetAddress.getLoopbackAddress(), 0);
-
-        final BoundTransportAddress boundTransportAddress = mock(BoundTransportAddress.class);
-        Collections.shuffle(transportAddresses, random());
-        when(boundTransportAddress.boundAddresses()).thenReturn(transportAddresses.toArray(new TransportAddress[0]));
-        when(boundTransportAddress.publishAddress()).thenReturn(publishAddress);
-
-        assertTrue(BootstrapChecks.enforceLimits(boundTransportAddress));
-    }
-
-    public void testEnforceLimitsWhenPublishingToNonLocalAddress() {
-        final List<TransportAddress> transportAddresses = new ArrayList<>();
-
-        for (int i = 0; i < randomIntBetween(1, 8); i++) {
-            final TransportAddress randomTransportAddress = buildNewFakeTransportAddress();
-            transportAddresses.add(randomTransportAddress);
-        }
-
-        final TransportAddress publishAddress = new TransportAddress(InetAddress.getLoopbackAddress(), 0);
-        final BoundTransportAddress boundTransportAddress = mock(BoundTransportAddress.class);
-        when(boundTransportAddress.boundAddresses()).thenReturn(transportAddresses.toArray(new TransportAddress[0]));
-        when(boundTransportAddress.publishAddress()).thenReturn(publishAddress);
-
+        BoundTransportAddress boundTransportAddress = mockBoundTransportAddress(false);
         assertTrue(BootstrapChecks.enforceLimits(boundTransportAddress));
     }
 
@@ -656,4 +620,9 @@ public class BootstrapCheckTests extends ESTestCase {
         assertThat(alwaysEnforced, hasToString(containsString("error")));
     }
 
+    private BoundTransportAddress mockBoundTransportAddress(boolean loopbackAddress) {
+        BoundTransportAddress boundTransportAddress = mock(BoundTransportAddress.class);
+        when(boundTransportAddress.isLoopbackOrLinkLocalOnly()).thenReturn(loopbackAddress);
+        return boundTransportAddress;
+    }
 }

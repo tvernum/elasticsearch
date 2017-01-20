@@ -28,7 +28,6 @@ import org.elasticsearch.common.io.PathUtils;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.BoundTransportAddress;
-import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.monitor.jvm.JvmInfo;
 import org.elasticsearch.monitor.process.ProcessProbe;
 import org.elasticsearch.node.Node;
@@ -39,11 +38,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -141,10 +138,7 @@ final class BootstrapChecks {
      * @return {@code true} if the checks should be enforced
      */
     static boolean enforceLimits(BoundTransportAddress boundTransportAddress) {
-        Predicate<TransportAddress> isLoopbackOrLinkLocalAddress = t -> t.address().getAddress().isLinkLocalAddress()
-            || t.address().getAddress().isLoopbackAddress();
-        return !(Arrays.stream(boundTransportAddress.boundAddresses()).allMatch(isLoopbackOrLinkLocalAddress) &&
-                isLoopbackOrLinkLocalAddress.test(boundTransportAddress.publishAddress()));
+        return boundTransportAddress.isLoopbackOrLinkLocalOnly() == false;
     }
 
     // the list of checks to execute

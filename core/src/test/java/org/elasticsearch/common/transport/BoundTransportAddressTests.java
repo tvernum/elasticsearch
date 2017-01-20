@@ -24,12 +24,19 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.test.ESTestCase;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic tests for the {@link BoundTransportAddress} class. These tests should not bind to any addresses but should
@@ -79,5 +86,26 @@ public class BoundTransportAddressTests extends ESTestCase {
         } catch (IllegalArgumentException e) {
             //expected
         }
+    }
+
+    public void testIsLoopbackOrLinkLocal() throws UnknownHostException {
+        final TransportAddress loopback = new TransportAddress(InetAddress.getLoopbackAddress(), 0);
+        final TransportAddress[] loopbackArray = {loopback};
+
+        final TransportAddress[] nonLocal = new TransportAddress[randomIntBetween(1, 10)];
+        for (int i = 0; i < nonLocal.length; i++) {
+            nonLocal[i] = buildNewFakeTransportAddress();
+        }
+
+        final List<TransportAddress> mixed = new ArrayList<>();
+        mixed.addAll(randomSubsetOf(randomIntBetween(1, nonLocal.length), nonLocal));
+        mixed.add(loopback);
+        Collections.shuffle(mixed, random());
+        final TransportAddress[] mixedArray = mixed.toArray(new TransportAddress[mixed.size()]);
+
+        assertThat(new BoundTransportAddress(loopbackArray, loopback).isLoopbackOrLinkLocalOnly(), is(true));
+        assertThat(new BoundTransportAddress(nonLocal, loopback).isLoopbackOrLinkLocalOnly(), is(false));
+        assertThat(new BoundTransportAddress(loopbackArray, randomFrom(nonLocal)).isLoopbackOrLinkLocalOnly(), is(false));
+        assertThat(new BoundTransportAddress(mixedArray, loopback).isLoopbackOrLinkLocalOnly(), is(false));
     }
 }

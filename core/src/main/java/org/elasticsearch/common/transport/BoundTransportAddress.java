@@ -24,6 +24,8 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Streamable;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.function.Predicate;
 
 /**
  * A bounded transport address is a tuple of {@link TransportAddress}, one array that represents
@@ -55,6 +57,13 @@ public class BoundTransportAddress implements Streamable {
 
     public TransportAddress publishAddress() {
         return publishAddress;
+    }
+
+    public boolean isLoopbackOrLinkLocalOnly() {
+        Predicate<TransportAddress> isLoopbackOrLinkLocalAddress = t -> t.address().getAddress().isLinkLocalAddress()
+            || t.address().getAddress().isLoopbackAddress();
+        return Arrays.stream(boundAddresses).allMatch(isLoopbackOrLinkLocalAddress) &&
+            isLoopbackOrLinkLocalAddress.test(publishAddress);
     }
 
     public static BoundTransportAddress readBoundTransportAddress(StreamInput in) throws IOException {
