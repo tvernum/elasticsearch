@@ -15,11 +15,13 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.bulk.BulkAction;
 import org.elasticsearch.action.bulk.BulkItemRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkShardRequest;
 import org.elasticsearch.action.bulk.TransportShardBulkAction;
 import org.elasticsearch.action.delete.DeleteAction;
 import org.elasticsearch.action.get.MultiGetAction;
 import org.elasticsearch.action.index.IndexAction;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.ClearScrollAction;
 import org.elasticsearch.action.search.MultiSearchAction;
 import org.elasticsearch.action.search.SearchScrollAction;
@@ -29,7 +31,6 @@ import org.elasticsearch.action.termvectors.MultiTermVectorsAction;
 import org.elasticsearch.action.update.UpdateAction;
 import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
@@ -72,6 +73,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -80,13 +82,13 @@ import static org.elasticsearch.xpack.core.security.support.Exceptions.authoriza
 
 public class AuthorizationService extends AbstractComponent {
     public static final Setting<Boolean> ANONYMOUS_AUTHORIZATION_EXCEPTION_SETTING =
-            Setting.boolSetting(setting("authc.anonymous.authz_exception"), true, Property.NodeScope);
+        Setting.boolSetting(setting("authc.anonymous.authz_exception"), true, Property.NodeScope);
     public static final String ORIGINATING_ACTION_KEY = "_originating_action_name";
     public static final String ROLE_NAMES_KEY = "_effective_role_names";
 
     private static final Predicate<String> MONITOR_INDEX_PREDICATE = IndexPrivilege.MONITOR.predicate();
     private static final Predicate<String> SAME_USER_PRIVILEGE = Automatons.predicate(
-            ChangePasswordAction.NAME, AuthenticateAction.NAME, HasPrivilegesAction.NAME);
+        ChangePasswordAction.NAME, AuthenticateAction.NAME, HasPrivilegesAction.NAME);
 
     private static final String INDEX_SUB_REQUEST_PRIMARY = IndexAction.NAME + "[p]";
     private static final String INDEX_SUB_REQUEST_REPLICA = IndexAction.NAME + "[r]";
@@ -140,7 +142,7 @@ public class AuthorizationService extends AbstractComponent {
             request = TransportActionProxy.unwrapRequest(request);
             if (TransportActionProxy.isProxyRequest(originalRequest) && TransportActionProxy.isProxyAction(action) == false) {
                 throw new IllegalStateException("originalRequest is a proxy request for: [" + request + "] but action: ["
-                        + action + "] isn't");
+                    + action + "] isn't");
             }
         }
         // prior to doing any authorization lets set the originating action in the context only
@@ -150,11 +152,11 @@ public class AuthorizationService extends AbstractComponent {
         if (SystemUser.is(authentication.getUser())) {
             if (SystemUser.isAuthorized(action)) {
                 putTransientIfNonExisting(AuthorizationServiceField.INDICES_PERMISSIONS_KEY, IndicesAccessControl.ALLOW_ALL);
-                putTransientIfNonExisting(ROLE_NAMES_KEY, new String[] { SystemUser.ROLE_NAME });
-                auditTrail.accessGranted(authentication, action, request, new String[] { SystemUser.ROLE_NAME });
+                putTransientIfNonExisting(ROLE_NAMES_KEY, new String[]{SystemUser.ROLE_NAME});
+                auditTrail.accessGranted(authentication, action, request, new String[]{SystemUser.ROLE_NAME});
                 return;
             }
-            throw denial(authentication, action, request, new String[] { SystemUser.ROLE_NAME });
+            throw denial(authentication, action, request, new String[]{SystemUser.ROLE_NAME});
         }
 
         // get the roles of the authenticated user, which may be different than the effective
@@ -196,18 +198,24 @@ public class AuthorizationService extends AbstractComponent {
         if (isCompositeAction(action)) {
             if (request instanceof CompositeIndicesRequest == false) {
                 throw new IllegalStateException("Composite actions must implement " + CompositeIndicesRequest.class.getSimpleName()
-                        + ", " + request.getClass().getSimpleName() + " doesn't");
+                    + ", " + request.getClass().getSimpleName() + " doesn't");
             }
             // we check if the user can execute the action, without looking at indices, which will be authorized at the shard level
             if (permission.indices().check(action)) {
                 auditTrail.accessGranted(authentication, action, request, permission.names());
+                logger.info("[NO-COMMIT] Allow composite action: {} {} ", action, request);
+                if(request instanceof BulkRequest) {
+                    BulkRequest bulk = (BulkRequest) request;
+                    bulk.requests().forEach(r -> logger.info("[NO-COMMIT] Bulk item: {} [Pipeline={}]", r,
+                        r instanceof IndexRequest ? ((IndexRequest) r).getPipeline() : "#NA#"));
+                }
                 return;
             }
             throw denial(authentication, action, request, permission.names());
         } else if (isTranslatedToBulkAction(action)) {
             if (request instanceof CompositeIndicesRequest == false) {
                 throw new IllegalStateException("Bulk translated actions must implement " + CompositeIndicesRequest.class.getSimpleName()
-                        + ", " + request.getClass().getSimpleName() + " doesn't");
+                    + ", " + request.getClass().getSimpleName() + " doesn't");
             }
             // we check if the user can execute the action, without looking at indices, which will be authorized at the shard level
             if (permission.indices().check(action)) {
@@ -219,7 +227,7 @@ public class AuthorizationService extends AbstractComponent {
             // we authorize proxied actions once they are "unwrapped" on the next node
             if (TransportActionProxy.isProxyRequest(originalRequest) == false) {
                 throw new IllegalStateException("originalRequest is not a proxy request: [" + originalRequest + "] but action: ["
-                        + action + "] is a proxy action");
+                    + action + "] is a proxy action");
             }
             if (permission.indices().check(action)) {
                 auditTrail.accessGranted(authentication, action, request, permission.names());
@@ -256,13 +264,13 @@ public class AuthorizationService extends AbstractComponent {
                 }
             } else {
                 assert false :
-                        "only scroll related requests are known indices api that don't support retrieving the indices they relate to";
+                    "only scroll related requests are known indices api that don't support retrieving the indices they relate to";
                 throw denial(authentication, action, request, permission.names());
             }
         }
 
         final boolean allowsRemoteIndices = request instanceof IndicesRequest
-                && IndicesAndAliasesResolver.allowsRemoteIndices((IndicesRequest) request);
+            && IndicesAndAliasesResolver.allowsRemoteIndices((IndicesRequest) request);
 
         // If this request does not allow remote indices
         // then the user must have permission to perform this action on at least 1 local index
@@ -273,9 +281,9 @@ public class AuthorizationService extends AbstractComponent {
         final MetaData metaData = clusterService.state().metaData();
         final AuthorizedIndices authorizedIndices = new AuthorizedIndices(authentication.getUser(), permission, action, metaData);
         final ResolvedIndices resolvedIndices = resolveIndexNames(authentication, action, request,
-                metaData, authorizedIndices, permission);
+            metaData, authorizedIndices, permission);
         assert !resolvedIndices.isEmpty()
-                : "every indices request needs to have its indices set thus the resolved indices must not be empty";
+            : "every indices request needs to have its indices set thus the resolved indices must not be empty";
 
         // If this request does reference any remote indices
         // then the user must have permission to perform this action on at least 1 local index
@@ -292,16 +300,17 @@ public class AuthorizationService extends AbstractComponent {
         }
 
         final Set<String> localIndices = new HashSet<>(resolvedIndices.getLocal());
-        IndicesAccessControl indicesAccessControl = permission.authorize(action, localIndices, metaData, fieldPermissionsCache);
+        final String pipeline = request instanceof IndicesRequest ? getPipeline((IndicesRequest) request) : null;
+        IndicesAccessControl indicesAccessControl = permission.authorize(action, localIndices, pipeline, metaData, fieldPermissionsCache);
         if (!indicesAccessControl.isGranted()) {
             throw denial(authentication, action, request, permission.names());
         } else if (hasSecurityIndexAccess(indicesAccessControl)
-                && MONITOR_INDEX_PREDICATE.test(action) == false
-                && isSuperuser(authentication.getUser()) == false) {
+            && MONITOR_INDEX_PREDICATE.test(action) == false
+            && isSuperuser(authentication.getUser()) == false) {
             // only the XPackUser is allowed to work with this index, but we should allow indices monitoring actions through for debugging
             // purposes. These monitor requests also sometimes resolve indices concretely and then requests them
             logger.debug("user [{}] attempted to directly perform [{}] against the security index [{}]",
-                    authentication.getUser().principal(), action, SecurityLifecycleService.SECURITY_INDEX_NAME);
+                authentication.getUser().principal(), action, SecurityLifecycleService.SECURITY_INDEX_NAME);
             throw denial(authentication, action, request, permission.names());
         } else {
             putTransientIfNonExisting(AuthorizationServiceField.INDICES_PERMISSIONS_KEY, indicesAccessControl);
@@ -316,7 +325,7 @@ public class AuthorizationService extends AbstractComponent {
                 for (Alias alias : aliases) {
                     aliasesAndIndices.add(alias.name());
                 }
-                indicesAccessControl = permission.authorize("indices:admin/aliases", aliasesAndIndices, metaData, fieldPermissionsCache);
+                indicesAccessControl = permission.authorize("indices:admin/aliases", aliasesAndIndices, null, metaData, fieldPermissionsCache);
                 if (!indicesAccessControl.isGranted()) {
                     throw denial(authentication, "indices:admin/aliases", request, permission.names());
                 }
@@ -328,7 +337,7 @@ public class AuthorizationService extends AbstractComponent {
         if (action.equals(TransportShardBulkAction.ACTION_NAME)) {
             // is this is performing multiple actions on the index, then check each of those actions.
             assert request instanceof BulkShardRequest
-                    : "Action " + action + " requires " + BulkShardRequest.class + " but was " + request.getClass();
+                : "Action " + action + " requires " + BulkShardRequest.class + " but was " + request.getClass();
 
             authorizeBulkItems(authentication, (BulkShardRequest) request, permission, metaData, localIndices, authorizedIndices);
         }
@@ -364,19 +373,21 @@ public class AuthorizationService extends AbstractComponent {
                                     MetaData metaData, Set<String> indices, AuthorizedIndices authorizedIndices) {
         // Maps original-index -> expanded-index-name (expands date-math, but not aliases)
         final Map<String, String> resolvedIndexNames = new HashMap<>();
-        // Maps (resolved-index , action) -> is-granted
-        final Map<Tuple<String, String>, Boolean> indexActionAuthority = new HashMap<>();
+        // Maps (resolved-index , action, pipeline) -> is-granted
+        final Map<IndexAndAction, Boolean> indexActionAuthority = new HashMap<>();
         for (BulkItemRequest item : request.items()) {
+            logger.info("[NO-COMMIT] Bulk Item: {}  [Pipeline={}]", item.request(),
+                item.request() instanceof IndexRequest ? ((IndexRequest) item.request()).getPipeline() : "#NA#");
             String resolvedIndex = resolvedIndexNames.computeIfAbsent(item.index(), key -> {
                 final ResolvedIndices resolvedIndices = indicesAndAliasesResolver.resolveIndicesAndAliases(item.request(), metaData,
-                        authorizedIndices);
+                    authorizedIndices);
                 if (resolvedIndices.getRemote().size() != 0) {
                     throw illegalArgument("Bulk item should not write to remote indices, but request writes to "
-                            + String.join(",", resolvedIndices.getRemote()));
+                        + String.join(",", resolvedIndices.getRemote()));
                 }
                 if (resolvedIndices.getLocal().size() != 1) {
                     throw illegalArgument("Bulk item should write to exactly 1 index, but request writes to "
-                            + String.join(",", resolvedIndices.getLocal()));
+                        + String.join(",", resolvedIndices.getLocal()));
                 }
                 final String resolved = resolvedIndices.getLocal().get(0);
                 if (indices.contains(resolved) == false) {
@@ -385,10 +396,11 @@ public class AuthorizationService extends AbstractComponent {
                 return resolved;
             });
             final String itemAction = getAction(item);
-            final Tuple<String, String> indexAndAction = new Tuple<>(resolvedIndex, itemAction);
+            final String pipeline = getItemPipeline(item);
+            final IndexAndAction indexAndAction = new IndexAndAction(resolvedIndex, itemAction, pipeline);
             final boolean granted = indexActionAuthority.computeIfAbsent(indexAndAction, key -> {
                 final IndicesAccessControl itemAccessControl = permission.authorize(itemAction, Collections.singleton(resolvedIndex),
-                        metaData, fieldPermissionsCache);
+                    pipeline, metaData, fieldPermissionsCache);
                 return itemAccessControl.isGranted();
             });
             if (granted == false) {
@@ -416,6 +428,12 @@ public class AuthorizationService extends AbstractComponent {
         throw new IllegalArgumentException("No equivalent action for opType [" + docWriteRequest.opType() + "]");
     }
 
+    private String getItemPipeline(BulkItemRequest item) {
+        final String p = getPipeline(item.request());
+        logger.info("[NO-COMMIT] Pipline for item {} is {}", item, p);
+        return p;
+    }
+
     private ResolvedIndices resolveIndexNames(Authentication authentication, String action, TransportRequest request,
                                               MetaData metaData, AuthorizedIndices authorizedIndices, Role permission) {
         try {
@@ -423,6 +441,17 @@ public class AuthorizationService extends AbstractComponent {
         } catch (Exception e) {
             auditTrail.accessDenied(authentication, action, request, permission.names());
             throw e;
+        }
+    }
+
+    private String getPipeline(IndicesRequest request) {
+        if (request instanceof IndexRequest) {
+            final String p = ((IndexRequest) request).getPipeline();
+            logger.info("[NO-COMMIT] Pipeline for request {} is {}", request, p);
+            return p;
+        } else {
+            logger.info("[NO-COMMIT] Request {} has no pipeline", request.getClass());
+            return null;
         }
     }
 
@@ -440,7 +469,7 @@ public class AuthorizationService extends AbstractComponent {
         // passed into this method. The XPackUser has the Superuser role and we can simply return that
         if (SystemUser.is(user)) {
             throw new IllegalArgumentException("the user [" + user.principal() + "] is the system user and we should never try to get its" +
-                    " roles");
+                " roles");
         }
         if (XPackUser.is(user)) {
             assert XPackUser.INSTANCE.roles().length == 1;
@@ -472,35 +501,35 @@ public class AuthorizationService extends AbstractComponent {
 
     private static boolean isCompositeAction(String action) {
         return action.equals(BulkAction.NAME) ||
-                action.equals(MultiGetAction.NAME) ||
-                action.equals(MultiTermVectorsAction.NAME) ||
-                action.equals(MultiSearchAction.NAME) ||
-                action.equals("indices:data/read/mpercolate") ||
-                action.equals("indices:data/read/msearch/template") ||
-                action.equals("indices:data/read/search/template") ||
-                action.equals("indices:data/write/reindex") ||
-                action.equals("indices:data/read/sql") ||
-                action.equals("indices:data/read/sql/translate");
+            action.equals(MultiGetAction.NAME) ||
+            action.equals(MultiTermVectorsAction.NAME) ||
+            action.equals(MultiSearchAction.NAME) ||
+            action.equals("indices:data/read/mpercolate") ||
+            action.equals("indices:data/read/msearch/template") ||
+            action.equals("indices:data/read/search/template") ||
+            action.equals("indices:data/write/reindex") ||
+            action.equals("indices:data/read/sql") ||
+            action.equals("indices:data/read/sql/translate");
     }
 
     private static boolean isTranslatedToBulkAction(String action) {
         return action.equals(IndexAction.NAME) ||
-                action.equals(DeleteAction.NAME) ||
-                action.equals(INDEX_SUB_REQUEST_PRIMARY) ||
-                action.equals(INDEX_SUB_REQUEST_REPLICA) ||
-                action.equals(DELETE_SUB_REQUEST_PRIMARY) ||
-                action.equals(DELETE_SUB_REQUEST_REPLICA);
+            action.equals(DeleteAction.NAME) ||
+            action.equals(INDEX_SUB_REQUEST_PRIMARY) ||
+            action.equals(INDEX_SUB_REQUEST_REPLICA) ||
+            action.equals(DELETE_SUB_REQUEST_PRIMARY) ||
+            action.equals(DELETE_SUB_REQUEST_REPLICA);
     }
 
     private static boolean isScrollRelatedAction(String action) {
         return action.equals(SearchScrollAction.NAME) ||
-                action.equals(SearchTransportService.FETCH_ID_SCROLL_ACTION_NAME) ||
-                action.equals(SearchTransportService.QUERY_FETCH_SCROLL_ACTION_NAME) ||
-                action.equals(SearchTransportService.QUERY_SCROLL_ACTION_NAME) ||
-                action.equals(SearchTransportService.FREE_CONTEXT_SCROLL_ACTION_NAME) ||
-                action.equals(ClearScrollAction.NAME) ||
-                action.equals("indices:data/read/sql/close_cursor") ||
-                action.equals(SearchTransportService.CLEAR_SCROLL_CONTEXTS_ACTION_NAME);
+            action.equals(SearchTransportService.FETCH_ID_SCROLL_ACTION_NAME) ||
+            action.equals(SearchTransportService.QUERY_FETCH_SCROLL_ACTION_NAME) ||
+            action.equals(SearchTransportService.QUERY_SCROLL_ACTION_NAME) ||
+            action.equals(SearchTransportService.FREE_CONTEXT_SCROLL_ACTION_NAME) ||
+            action.equals(ClearScrollAction.NAME) ||
+            action.equals("indices:data/read/sql/close_cursor") ||
+            action.equals(SearchTransportService.CLEAR_SCROLL_CONTEXTS_ACTION_NAME);
     }
 
     static boolean checkSameUserPermissions(String action, TransportRequest request, Authentication authentication) {
@@ -523,7 +552,7 @@ public class AuthorizationService extends AbstractComponent {
             }
 
             assert AuthenticateAction.NAME.equals(action) || HasPrivilegesAction.NAME.equals(action) || sameUsername == false
-                    : "Action '" + action + "' should not be possible when sameUsername=" + sameUsername;
+                : "Action '" + action + "' should not be possible when sameUsername=" + sameUsername;
             return sameUsername;
         }
         return false;
@@ -569,17 +598,48 @@ public class AuthorizationService extends AbstractComponent {
         // check for run as
         if (authentication.getUser().isRunAs()) {
             return authorizationError("action [{}] is unauthorized for user [{}] run as [{}]", action, authUser.principal(),
-                    authentication.getUser().principal());
+                authentication.getUser().principal());
         }
         return authorizationError("action [{}] is unauthorized for user [{}]", action, authUser.principal());
     }
 
     static boolean isSuperuser(User user) {
         return Arrays.stream(user.roles())
-                .anyMatch(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName()::equals);
+            .anyMatch(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName()::equals);
     }
 
     public static void addSettings(List<Setting<?>> settings) {
         settings.add(ANONYMOUS_AUTHORIZATION_EXCEPTION_SETTING);
+    }
+
+    private static class IndexAndAction {
+        public final String index;
+        public final String action;
+        public final String pipeline;
+
+        private IndexAndAction(String index, String action, String pipeline) {
+            this.index = index;
+            this.action = action;
+            this.pipeline = pipeline;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (other == null || getClass() != other.getClass()) {
+                return false;
+            }
+            final IndexAndAction that = (IndexAndAction) other;
+            return Objects.equals(this.index, that.index) &&
+                Objects.equals(this.action, that.action) &&
+                Objects.equals(this.pipeline, that.pipeline);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(index, action, pipeline);
+        }
     }
 }

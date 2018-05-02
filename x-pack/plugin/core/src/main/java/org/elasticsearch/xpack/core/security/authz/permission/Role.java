@@ -71,10 +71,10 @@ public final class Role {
      * specified action with the requested indices/aliases. At the same time if field and/or document level security
      * is configured for any group also the allowed fields and role queries are resolved.
      */
-    public IndicesAccessControl authorize(String action, Set<String> requestedIndicesOrAliases, MetaData metaData,
-                                          FieldPermissionsCache fieldPermissionsCache) {
+    public IndicesAccessControl authorize(String action, Set<String> requestedIndicesOrAliases, @Nullable String ingestPipeline,
+                                          MetaData metaData, FieldPermissionsCache fieldPermissionsCache) {
         Map<String, IndicesAccessControl.IndexAccessControl> indexPermissions = indices.authorize(
-                action, requestedIndicesOrAliases, metaData, fieldPermissionsCache
+                action, requestedIndicesOrAliases, ingestPipeline == null ? "" : ingestPipeline, metaData, fieldPermissionsCache
         );
 
         // At least one role / indices permission set need to match with all the requested indices/aliases:
@@ -127,12 +127,18 @@ public final class Role {
         }
 
         public Builder add(IndexPrivilege privilege, String... indices) {
-            groups.add(new IndicesPermission.Group(privilege, FieldPermissions.DEFAULT, null, indices));
+            groups.add(new IndicesPermission.Group(privilege, FieldPermissions.DEFAULT, null, indices, null));
             return this;
         }
 
+        @Deprecated
         public Builder add(FieldPermissions fieldPermissions, Set<BytesReference> query, IndexPrivilege privilege, String... indices) {
-            groups.add(new IndicesPermission.Group(privilege, fieldPermissions, query, indices));
+            return add(fieldPermissions, query, privilege, indices, null);
+        }
+
+        public Builder add(FieldPermissions fieldPermissions, Set<BytesReference> query, IndexPrivilege privilege, String[] indices,
+                           String[] pipelines) {
+            groups.add(new IndicesPermission.Group(privilege, fieldPermissions, query, indices, pipelines));
             return this;
         }
 
@@ -151,13 +157,14 @@ public final class Role {
                     fieldPermissions = fieldPermissionsCache.getFieldPermissions(privilege.getGrantedFields(), privilege.getDeniedFields());
                 } else {
                     fieldPermissions = new FieldPermissions(
-                            new FieldPermissionsDefinition(privilege.getGrantedFields(), privilege.getDeniedFields()));
+                        new FieldPermissionsDefinition(privilege.getGrantedFields(), privilege.getDeniedFields()));
                 }
                 final Set<BytesReference> query = privilege.getQuery() == null ? null : Collections.singleton(privilege.getQuery());
                 list.add(new IndicesPermission.Group(IndexPrivilege.get(Sets.newHashSet(privilege.getPrivileges())),
-                        fieldPermissions,
-                        query,
-                        privilege.getIndices()));
+                    fieldPermissions,
+                    query,
+                    privilege.getIndices(),
+                    privilege.getPipelines()));
 
             }
             return list;

@@ -9,6 +9,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -42,6 +43,7 @@ public class TransportPutRoleAction extends HandledTransportAction<PutRoleReques
         rolesStore.putRole(request, request.roleDescriptor(), new ActionListener<Boolean>() {
             @Override
             public void onResponse(Boolean created) {
+                logger.info("[NO-COMMIT] {}", Strings.toString(request.roleDescriptor()));
                 if (created) {
                     logger.info("added role [{}]", request.name());
                 } else {

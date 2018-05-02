@@ -86,6 +86,9 @@
             "privileges" : {
               "type" : "keyword"
             },
+            "pipelines" : {
+              "type" : "keyword"
+            },
             "query" : {
               "type" : "keyword"
             }

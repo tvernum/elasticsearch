@@ -5,6 +5,7 @@
  */
 package org.elasticsearch.xpack.core.security.authz.permission;
 
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.automaton.Automaton;
 import org.apache.lucene.util.automaton.TooComplexToDeterminizeException;
 import org.elasticsearch.ElasticsearchSecurityException;
@@ -122,7 +123,8 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
      * Authorizes the provided action against the provided indices, given the current cluster metadata
      */
     public Map<String, IndicesAccessControl.IndexAccessControl> authorize(String action, Set<String> requestedIndicesOrAliases,
-                                                                          MetaData metaData, FieldPermissionsCache fieldPermissionsCache) {
+                                                                          String ingestPipeline, MetaData metaData,
+                                                                          FieldPermissionsCache fieldPermissionsCache) {
         // now... every index that is associated with the request, must be granted
         // by at least one indices permission group
 
@@ -142,14 +144,14 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
             }
 
             for (Group group : groups) {
-                if (group.check(action, indexOrAlias)) {
+                if (group.check(action, indexOrAlias, ingestPipeline)) {
                     granted = true;
                     for (String index : concreteIndices) {
                         Set<FieldPermissions> fieldPermissions = fieldPermissionsByIndex.computeIfAbsent(index, (k) -> new HashSet<>());
                         fieldPermissionsByIndex.put(indexOrAlias, fieldPermissions);
                         fieldPermissions.add(group.getFieldPermissions());
                         DocumentLevelPermissions permissions =
-                                roleQueriesByIndex.computeIfAbsent(index, (k) -> new DocumentLevelPermissions());
+                            roleQueriesByIndex.computeIfAbsent(index, (k) -> new DocumentLevelPermissions());
                         roleQueriesByIndex.putIfAbsent(indexOrAlias, permissions);
                         if (group.hasQuery()) {
                             permissions.addAll(group.getQuery());
@@ -188,7 +190,7 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
             final Set<FieldPermissions> indexFieldPermissions = fieldPermissionsByIndex.get(index);
             if (indexFieldPermissions != null && indexFieldPermissions.isEmpty() == false) {
                 fieldPermissions = indexFieldPermissions.size() == 1 ? indexFieldPermissions.iterator().next() :
-                        fieldPermissionsCache.getFieldPermissions(indexFieldPermissions);
+                    fieldPermissionsCache.getFieldPermissions(indexFieldPermissions);
             } else {
                 fieldPermissions = FieldPermissions.DEFAULT;
             }
@@ -202,6 +204,8 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
         private final Predicate<String> actionMatcher;
         private final String[] indices;
         private final Predicate<String> indexNameMatcher;
+        private final String[] pipelines;
+        private final Predicate<String> pipelineMatcher;
 
         public FieldPermissions getFieldPermissions() {
             return fieldPermissions;
@@ -210,12 +214,27 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
         private final FieldPermissions fieldPermissions;
         private final Set<BytesReference> query;
 
-        public Group(IndexPrivilege privilege, FieldPermissions fieldPermissions, @Nullable Set<BytesReference> query, String... indices) {
+        @Deprecated
+        public Group(IndexPrivilege privilege, FieldPermissions fieldPermissions, @Nullable Set<BytesReference> query,
+                     String... indices) {
+            this(privilege, fieldPermissions, query, indices, null);
+        }
+
+        public Group(IndexPrivilege privilege, FieldPermissions fieldPermissions, @Nullable Set<BytesReference> query,
+                     String[] indices, String[] pipelines) {
             assert indices.length != 0;
             this.privilege = privilege;
             this.actionMatcher = privilege.predicate();
             this.indices = indices;
             this.indexNameMatcher = indexMatcher(Arrays.asList(indices));
+            this.pipelines = pipelines;
+            if (pipelines == null) {
+                this.pipelineMatcher = s -> true;
+            } else if (pipelines.length == 0) {
+                this.pipelineMatcher = Strings::isNullOrEmpty;
+            } else {
+                this.pipelineMatcher = Automatons.predicate(pipelines);
+            }
             this.fieldPermissions = Objects.requireNonNull(fieldPermissions);
             this.query = query;
         }
@@ -237,9 +256,29 @@ public final class IndicesPermission implements Iterable<IndicesPermission.Group
             return actionMatcher.test(action);
         }
 
-        private boolean check(String action, String index) {
+        private boolean check(String action, String index, String pipeline) {
             assert index != null;
-            return check(action) && indexNameMatcher.test(index);
+            final Logger loggerNO_COMMIT = Loggers.getLogger(getClass());
+            if (check(action)) {
+                if (indexNameMatcher.test(index)) {
+                    if (pipelineMatcher.test(pipeline)) {
+                        loggerNO_COMMIT.info("[NO-COMMIT] Match {}:{} {}:{} {}:{}",
+                            this.privilege, action,
+                            Arrays.toString(indices), index,
+                            Arrays.toString(pipelines), pipeline);
+                        return true;
+                    } else {
+                        loggerNO_COMMIT.info("[NO-COMMIT] Pipeline matcher {} failed against {}",
+                            Arrays.toString(pipelines), pipeline);
+                    }
+                } else {
+                    loggerNO_COMMIT.info("[NO-COMMIT] Index matcher {} failed against {}",
+                        Arrays.toString(indices), index);
+                }
+            } else {
+                loggerNO_COMMIT.info("[NO-COMMIT] Action matcher {} failed against {}", this.privilege, action);
+            }
+            return false;
         }
 
         boolean hasQuery() {

@@ -437,17 +437,18 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
         Map<String, IndexAccessControl> authzMap =
-                superuserRole.indices().authorize(SearchAction.NAME, Sets.newHashSet("a1", "ba"), metaData, fieldPermissionsCache);
+                superuserRole.indices().authorize(SearchAction.NAME, Sets.newHashSet("a1", "ba"), null, metaData, fieldPermissionsCache);
         assertThat(authzMap.get("a1").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
-        authzMap = superuserRole.indices().authorize(DeleteIndexAction.NAME, Sets.newHashSet("a1", "ba"), metaData, fieldPermissionsCache);
+        authzMap =
+            superuserRole.indices().authorize(DeleteIndexAction.NAME, Sets.newHashSet("a1", "ba"), null, metaData, fieldPermissionsCache);
         assertThat(authzMap.get("a1").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
-        authzMap = superuserRole.indices().authorize(IndexAction.NAME, Sets.newHashSet("a2", "ba"), metaData, fieldPermissionsCache);
+        authzMap = superuserRole.indices().authorize(IndexAction.NAME, Sets.newHashSet("a2", "ba"), null, metaData, fieldPermissionsCache);
         assertThat(authzMap.get("a2").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
         authzMap = superuserRole.indices()
-                .authorize(UpdateSettingsAction.NAME, Sets.newHashSet("aaaaaa", "ba"), metaData, fieldPermissionsCache);
+                .authorize(UpdateSettingsAction.NAME, Sets.newHashSet("aaaaaa", "ba"), null, metaData, fieldPermissionsCache);
         assertThat(authzMap.get("aaaaaa").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
         assertTrue(superuserRole.indices().check(SearchAction.NAME));
