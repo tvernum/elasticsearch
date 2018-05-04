@@ -54,14 +54,21 @@ public class TransportClearRolesCacheAction extends TransportNodesAction<ClearRo
 
     @Override
     protected ClearRolesCacheResponse.Node nodeOperation(ClearRolesCacheRequest.Node request) {
-        if (request.getNames() == null || request.getNames().length == 0) {
+        if (isEmpty(request.getNames()) && isEmpty(request.getApplications())) {
             rolesStore.invalidateAll();
         } else {
             for (String role : request.getNames()) {
                 rolesStore.invalidate(role);
             }
+            for (String application : request.getApplications()) {
+                rolesStore.invalidateForApplication(application);
+            }
         }
         return new ClearRolesCacheResponse.Node(clusterService.localNode());
+    }
+
+    private boolean isEmpty(Object[] array) {
+        return array == null || array.length == 0;
     }
 
 }

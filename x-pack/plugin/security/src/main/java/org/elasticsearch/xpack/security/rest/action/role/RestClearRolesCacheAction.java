@@ -12,6 +12,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestActions.NodesResponseRestListener;
 import org.elasticsearch.xpack.core.security.action.role.ClearRolesCacheRequest;
+import org.elasticsearch.xpack.core.security.action.role.ClearRolesCacheRequestBuilder;
 import org.elasticsearch.xpack.core.security.client.SecurityClient;
 import org.elasticsearch.xpack.security.rest.action.SecurityBaseRestHandler;
 
@@ -35,7 +36,11 @@ public final class RestClearRolesCacheAction extends SecurityBaseRestHandler {
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         String[] roles = request.paramAsStringArrayOrEmptyIfAll("name");
 
-        ClearRolesCacheRequest req = new ClearRolesCacheRequest().names(roles);
+        final ClearRolesCacheRequestBuilder builder = new ClearRolesCacheRequestBuilder(client).names(roles);
+        if (request.hasContent()) {
+            builder.source(request.content(), request.getXContentType());
+        }
+        ClearRolesCacheRequest req = builder.request();
 
         return channel -> new SecurityClient(client).clearRolesCache(req, new NodesResponseRestListener<>(channel));
     }

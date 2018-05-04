@@ -74,6 +74,10 @@ public final class ApplicationPermission {
         return matched;
     }
 
+    public boolean matchesApplication(String application) {
+        return this.permissions.stream().anyMatch(e -> e.application.test(application));
+    }
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{privileges=" + permissions + "}";

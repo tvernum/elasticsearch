@@ -18,9 +18,11 @@ import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
 import org.elasticsearch.common.util.concurrent.ReleasableLock;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.util.iterable.Iterables;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.xpack.core.common.IteratingActionListener;
@@ -53,6 +55,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import static org.elasticsearch.common.Strings.collectionToCommaDelimitedString;
 import static org.elasticsearch.common.util.set.Sets.newHashSet;
 import static org.elasticsearch.xpack.core.security.SecurityField.setting;
 import static org.elasticsearch.xpack.security.SecurityLifecycleService.isIndexDeleted;
@@ -209,7 +212,7 @@ public class CompositeRolesStore extends AbstractComponent {
                 }).run();
             } else {
                 logger.debug(() ->
-                        new ParameterizedMessage("Requested roles [{}] do not exist", Strings.collectionToCommaDelimitedString(missing)));
+                        new ParameterizedMessage("Requested roles [{}] do not exist", collectionToCommaDelimitedString(missing)));
                 negativeLookupCache.addAll(missing);
                 roleDescriptorActionListener.onResponse(Collections.unmodifiableSet(builtInRoleDescriptors));
             }
@@ -333,6 +336,7 @@ public class CompositeRolesStore extends AbstractComponent {
         numInvalidation.incrementAndGet();
         negativeLookupCache.clear();
         try (ReleasableLock ignored = readLock.acquire()) {
+            logger.trace("Invalidate cache for all roles");
             roleCache.invalidateAll();
         }
     }
@@ -346,11 +350,28 @@ public class CompositeRolesStore extends AbstractComponent {
             while (keyIter.hasNext()) {
                 Set<String> key = keyIter.next();
                 if (key.contains(role)) {
+                    logger.trace(() -> new ParameterizedMessage("Invalidating cache for role: {}", collectionToCommaDelimitedString(key)));
                     keyIter.remove();
                 }
             }
         }
         negativeLookupCache.remove(role);
+    }
+
+    public void invalidateForApplication(String application) {
+        numInvalidation.incrementAndGet();
+
+        // the cache cannot be modified while doing this operation per the terms of the cache iterator
+        try (ReleasableLock ignored = writeLock.acquire()) {
+            Iterator<Role> valIter = roleCache.values().iterator();
+            while (valIter.hasNext()) {
+                Role role = valIter.next();
+                if (role.application().matchesApplication(application)) {
+                    logger.trace(() -> new ParameterizedMessage("Invalidating cache for role: {}", Arrays.toString(role.names())));
+                    valIter.remove();
+                }
+            }
+        }
     }
 
     public void usageStats(ActionListener<Map<String, Object>> listener) {
