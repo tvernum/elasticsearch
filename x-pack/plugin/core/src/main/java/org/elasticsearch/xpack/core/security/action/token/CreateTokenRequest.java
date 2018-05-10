@@ -9,12 +9,18 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.SecureString;
+import org.elasticsearch.common.xcontent.ConstructingObjectParser;
+import org.elasticsearch.common.xcontent.ObjectParser;
+import org.elasticsearch.common.xcontent.ToXContentObject;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.xpack.core.security.authc.support.CharArrays;
 
 import java.io.IOException;
@@ -27,7 +33,20 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  * fields for an OAuth 2.0 access token request that uses the <code>password</code> grant type or the
  * <code>refresh_token</code> grant type.
  */
-public final class CreateTokenRequest extends ActionRequest {
+public final class CreateTokenRequest extends ActionRequest implements ToXContentObject {
+
+    private static final ConstructingObjectParser<CreateTokenRequest, Void> PARSER = new ConstructingObjectParser<>("token_request",
+        a -> new CreateTokenRequest((String) a[0], (String) a[1], (SecureString) a[2], (String) a[3], (String) a[4]));
+
+    static {
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CreateTokenRequest.Fields.GRANT_TYPE);
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CreateTokenRequest.Fields.USERNAME);
+        PARSER.declareField(ConstructingObjectParser.optionalConstructorArg(), parser -> new SecureString(
+                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())),
+            CreateTokenRequest.Fields.PASSWORD, ObjectParser.ValueType.STRING);
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CreateTokenRequest.Fields.SCOPE);
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), CreateTokenRequest.Fields.REFRESH_TOKEN);
+    }
 
     private String grantType;
     private String username;
@@ -35,7 +54,8 @@ public final class CreateTokenRequest extends ActionRequest {
     private String scope;
     private String refreshToken;
 
-    public CreateTokenRequest() {}
+    public CreateTokenRequest() {
+    }
 
     public CreateTokenRequest(String grantType, @Nullable String username, @Nullable SecureString password, @Nullable String scope,
                               @Nullable String refreshToken) {
@@ -58,16 +78,16 @@ public final class CreateTokenRequest extends ActionRequest {
             }
             if (refreshToken != null) {
                 validationException =
-                        addValidationError("refresh_token is not supported with the password grant_type", validationException);
+                    addValidationError("refresh_token is not supported with the password grant_type", validationException);
             }
         } else if ("refresh_token".equals(grantType)) {
             if (username != null) {
                 validationException =
-                        addValidationError("username is not supported with the refresh_token grant_type", validationException);
+                    addValidationError("username is not supported with the refresh_token grant_type", validationException);
             }
             if (password != null) {
                 validationException =
-                        addValidationError("password is not supported with the refresh_token grant_type", validationException);
+                    addValidationError("password is not supported with the refresh_token grant_type", validationException);
             }
             if (refreshToken == null) {
                 validationException = addValidationError("refresh_token is missing", validationException);
@@ -184,5 +204,35 @@ public final class CreateTokenRequest extends ActionRequest {
             }
         }
         scope = in.readOptionalString();
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        builder.startObject().field(Fields.GRANT_TYPE.getPreferredName(), this.grantType);
+        if (username != null) {
+            builder.field(Fields.USERNAME.getPreferredName(), this.username);
+        }
+        if (password != null) {
+            builder.field(Fields.PASSWORD.getPreferredName(), this.password == null ? null : this.password.toString());
+        }
+        if (scope != null) {
+            builder.field(Fields.SCOPE.getPreferredName(), this.scope);
+        }
+        if (refreshToken != null) {
+            builder.field(Fields.REFRESH_TOKEN.getPreferredName(), this.refreshToken);
+        }
+        return builder.endObject();
+    }
+
+    public static CreateTokenRequest fromXContent(XContentParser parser) throws IOException {
+        return PARSER.parse(parser, null);
+    }
+
+    private static class Fields {
+        static final ParseField GRANT_TYPE = new ParseField("grant_type");
+        static final ParseField USERNAME = new ParseField("username");
+        static final ParseField PASSWORD = new ParseField("password");
+        static final ParseField SCOPE = new ParseField("scope");
+        static final ParseField REFRESH_TOKEN = new ParseField("refresh_token");
     }
 }

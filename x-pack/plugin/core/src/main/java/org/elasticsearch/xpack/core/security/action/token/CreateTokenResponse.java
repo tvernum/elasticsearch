@@ -7,11 +7,15 @@ package org.elasticsearch.xpack.core.security.action.token;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.ConstructingObjectParser;
+import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -23,12 +27,25 @@ import java.util.Objects;
  */
 public final class CreateTokenResponse extends ActionResponse implements ToXContentObject {
 
+    private static final ConstructingObjectParser<CreateTokenResponse, Void> PARSER = new ConstructingObjectParser<>("token_response",
+        a -> new CreateTokenResponse((String) a[0], (TimeValue) a[1], (String) a[2], (String) a[3]));
+
+    static {
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), Fields.ACCESS_TOKEN);
+        PARSER.declareField(ConstructingObjectParser.optionalConstructorArg(),
+            parser -> TimeValue.timeValueSeconds(parser.longValue()), Fields.EXPIRES_IN, ObjectParser.ValueType.LONG);
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), Fields.SCOPE);
+        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), Fields.REFRESH_TOKEN);
+        PARSER.declareString((r, s) -> { /* no-op */ }, Fields.TYPE);
+    }
+
     private String tokenString;
     private TimeValue expiresIn;
     private String scope;
     private String refreshToken;
 
-    CreateTokenResponse() {}
+    CreateTokenResponse() {
+    }
 
     public CreateTokenResponse(String tokenString, TimeValue expiresIn, String scope, String refreshToken) {
         this.tokenString = Objects.requireNonNull(tokenString);
@@ -78,16 +95,28 @@ public final class CreateTokenResponse extends ActionResponse implements ToXCont
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject()
-            .field("access_token", tokenString)
-            .field("type", "Bearer")
-            .field("expires_in", expiresIn.seconds());
+            .field(Fields.ACCESS_TOKEN.getPreferredName(), tokenString)
+            .field(Fields.TYPE.getPreferredName(), "Bearer")
+            .field(Fields.EXPIRES_IN.getPreferredName(), expiresIn.seconds());
         if (refreshToken != null) {
-            builder.field("refresh_token", refreshToken);
+            builder.field(Fields.REFRESH_TOKEN.getPreferredName(), refreshToken);
         }
         // only show the scope if it is not null
         if (scope != null) {
-            builder.field("scope", scope);
+            builder.field(Fields.SCOPE.getPreferredName(), scope);
         }
         return builder.endObject();
+    }
+
+    public static CreateTokenResponse fromXContent(XContentParser parser) throws IOException {
+        return PARSER.parse(parser, null);
+    }
+
+    private static final class Fields {
+        static final ParseField SCOPE = new ParseField("scope");
+        static final ParseField REFRESH_TOKEN = new ParseField("refresh_token");
+        static final ParseField EXPIRES_IN = new ParseField("expires_in");
+        static final ParseField TYPE = new ParseField("type");
+        static final ParseField ACCESS_TOKEN = new ParseField("access_token");
     }
 }

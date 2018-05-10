@@ -11,7 +11,6 @@ import org.elasticsearch.action.Action;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
@@ -46,18 +45,6 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
  */
 public final class RestGetTokenAction extends SecurityBaseRestHandler {
 
-    static final ConstructingObjectParser<CreateTokenRequest, Void> PARSER = new ConstructingObjectParser<>("token_request",
-            a -> new CreateTokenRequest((String) a[0], (String) a[1], (SecureString) a[2], (String) a[3], (String) a[4]));
-    static {
-        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("grant_type"));
-        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("username"));
-        PARSER.declareField(ConstructingObjectParser.optionalConstructorArg(), parser -> new SecureString(
-                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())),
-                new ParseField("password"), ValueType.STRING);
-        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("scope"));
-        PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("refresh_token"));
-    }
-
     public RestGetTokenAction(Settings settings, RestController controller, XPackLicenseState xPackLicenseState) {
         super(settings, xPackLicenseState);
         controller.registerHandler(POST, "/_xpack/security/oauth2/token", this);
@@ -71,7 +58,7 @@ public final class RestGetTokenAction extends SecurityBaseRestHandler {
     @Override
     protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client)throws IOException {
         try (XContentParser parser = request.contentParser()) {
-            final CreateTokenRequest tokenRequest = PARSER.parse(parser, null);
+            final CreateTokenRequest tokenRequest = CreateTokenRequest.fromXContent(parser);
             final Action<CreateTokenRequest, CreateTokenResponse, CreateTokenRequestBuilder> action =
                     "refresh_token".equals(tokenRequest.getGrantType()) ? RefreshTokenAction.INSTANCE : CreateTokenAction.INSTANCE;
             return channel -> client.execute(action, tokenRequest,

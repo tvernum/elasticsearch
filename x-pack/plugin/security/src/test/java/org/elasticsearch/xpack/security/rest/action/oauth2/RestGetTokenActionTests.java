@@ -82,39 +82,4 @@ public class RestGetTokenActionTests extends ESTestCase {
         assertThat(map, hasEntry("refresh_token", createTokenResponse.getRefreshToken()));
         assertEquals(4, map.size());
     }
-
-    public void testParser() throws Exception {
-        final String request = "{" +
-                "\"grant_type\": \"password\"," +
-                "\"username\": \"user1\"," +
-                "\"password\": \"" + SecuritySettingsSourceField.TEST_PASSWORD + "\"," +
-                "\"scope\": \"FULL\"" +
-                "}";
-        try (XContentParser parser = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)) {
-            CreateTokenRequest createTokenRequest = RestGetTokenAction.PARSER.parse(parser, null);
-            assertEquals("password", createTokenRequest.getGrantType());
-            assertEquals("user1", createTokenRequest.getUsername());
-            assertEquals("FULL", createTokenRequest.getScope());
-            assertTrue(SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING.equals(createTokenRequest.getPassword()));
-        }
-    }
-
-    public void testParserRefreshRequest() throws Exception {
-        final String token = randomAlphaOfLengthBetween(4, 32);
-        final String request = "{" +
-                "\"grant_type\": \"refresh_token\"," +
-                "\"refresh_token\": \"" + token + "\"," +
-                "\"scope\": \"FULL\"" +
-                "}";
-        try (XContentParser parser = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)) {
-            CreateTokenRequest createTokenRequest = RestGetTokenAction.PARSER.parse(parser, null);
-            assertEquals("refresh_token", createTokenRequest.getGrantType());
-            assertEquals(token, createTokenRequest.getRefreshToken());
-            assertEquals("FULL", createTokenRequest.getScope());
-            assertNull(createTokenRequest.getUsername());
-            assertNull(createTokenRequest.getPassword());
-        }
-    }
 }
