@@ -83,7 +83,7 @@ public class PkiRealm extends Realm implements CachingRealm {
     // pkg private for testing
     PkiRealm(RealmConfig config, UserRoleMapper roleMapper) {
         super(PkiRealmSettings.TYPE, config);
-        this.trustManager = trustManagers(config);
+        this.trustManager = trustManagers(config, logger);
         this.principalPattern = PkiRealmSettings.USERNAME_PATTERN_SETTING.get(config.settings());
         this.roleMapper = roleMapper;
         this.cache = CacheBuilder.<BytesKey, User>builder()
@@ -185,7 +185,7 @@ public class PkiRealm extends Realm implements CachingRealm {
         return true;
     }
 
-    static X509TrustManager trustManagers(RealmConfig realmConfig) {
+    static X509TrustManager trustManagers(RealmConfig realmConfig, Logger logger) {
         final Settings settings = realmConfig.settings();
         final Environment env = realmConfig.env();
         List<String> certificateAuthorities = settings.getAsList(PkiRealmSettings.SSL_SETTINGS.caPaths.getKey(), null);
@@ -197,12 +197,12 @@ public class PkiRealm extends Realm implements CachingRealm {
             final String caKey = RealmSettings.getFullSettingKey(realmConfig, PkiRealmSettings.SSL_SETTINGS.caPaths);
             throw new IllegalArgumentException("[" + pathKey + "] and [" + caKey + "] cannot be used at the same time");
         } else if (truststorePath != null) {
-            return trustManagersFromTruststore(truststorePath, realmConfig);
+            return trustManagersFromTruststore(truststorePath, realmConfig, logger);
         }
         return trustManagersFromCAs(settings, env);
     }
 
-    private static X509TrustManager trustManagersFromTruststore(String truststorePath, RealmConfig realmConfig) {
+    private static X509TrustManager trustManagersFromTruststore(String truststorePath, RealmConfig realmConfig, Logger logger) {
         final Settings settings = realmConfig.settings();
         if (PkiRealmSettings.SSL_SETTINGS.truststorePassword.exists(settings) == false
                 && PkiRealmSettings.SSL_SETTINGS.legacyTruststorePassword.exists(settings) == false) {
@@ -216,8 +216,8 @@ public class PkiRealm extends Realm implements CachingRealm {
             String trustStoreType = SSLConfigurationSettings.getKeyStoreType(PkiRealmSettings.SSL_SETTINGS.truststoreType,
                     settings, truststorePath);
             try {
-                return CertParsingUtils.trustManager(truststorePath, trustStoreType, password.getChars(), trustStoreAlgorithm, realmConfig
-                    .env());
+                return CertParsingUtils.trustManager(truststorePath, trustStoreType, password.getChars(), trustStoreAlgorithm,
+                    realmConfig.env(), logger);
             } catch (Exception e) {
                 throw new IllegalArgumentException("failed to load specified truststore", e);
             }

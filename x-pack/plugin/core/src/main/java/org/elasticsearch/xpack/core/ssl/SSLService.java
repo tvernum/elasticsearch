@@ -7,6 +7,7 @@ package org.elasticsearch.xpack.core.ssl;
 
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.nio.conn.ssl.SSLIOSessionStrategy;
+import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.CheckedSupplier;
@@ -38,6 +39,8 @@ import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +54,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Provides access to {@link SSLEngine} and {@link SSLSocketFactory} objects based on a provided configuration. All
@@ -398,9 +402,28 @@ public class SSLService extends AbstractComponent {
         if (logger.isDebugEnabled()) {
             logger.debug("using ssl settings [{}]", sslConfiguration);
         }
-        X509ExtendedTrustManager trustManager = sslConfiguration.trustConfig().createTrustManager(env);
+        X509ExtendedTrustManager trustManager = getTrustManager(sslConfiguration.trustConfig());
         X509ExtendedKeyManager keyManager = sslConfiguration.keyConfig().createKeyManager(env);
         return createSslContext(keyManager, trustManager, sslConfiguration);
+    }
+
+    private X509ExtendedTrustManager getTrustManager(TrustConfig trustConfig) {
+        X509ExtendedTrustManager trustManager = trustConfig.createTrustManager(env);
+        if (trustManager != null) {
+            if (trustManager.getAcceptedIssuers() == null || trustManager.getAcceptedIssuers().length == 0) {
+                logger.warn("TrustManager for configuration [{}] does not trust any issuing certificates (CAs)", trustConfig);
+            } else if (logger.isTraceEnabled()) {
+                final String issuerNames = Arrays.stream(trustManager.getAcceptedIssuers())
+                    .map(X509Certificate::getSubjectDN)
+                    .map(Principal::getName)
+                    .collect(Collectors.joining(","));
+                logger.trace(new ParameterizedMessage("TrustManager for configuration [{}] trusts certificate issuers [{}]",
+                    trustConfig, issuerNames));
+            }
+        } else {
+            logger.warn("Configuration [{}] does not have a TrustManager", trustConfig);
+        }
+        return trustManager;
     }
 
     /**
@@ -590,7 +613,7 @@ public class SSLService extends AbstractComponent {
             try {
                 X509ExtendedKeyManager loadedKeyManager = Optional.ofNullable(keyConfig.createKeyManager(env)).
                     orElse(getEmptyKeyManager());
-                X509ExtendedTrustManager loadedTrustManager = Optional.ofNullable(trustConfig.createTrustManager(env)).
+                X509ExtendedTrustManager loadedTrustManager = Optional.ofNullable(getTrustManager(trustConfig)).
                     orElse(getEmptyTrustManager());
                 SSLContext loadedSslContext = SSLContext.getInstance(sslContextAlgorithm(sslConfiguration.supportedProtocols()));
                 loadedSslContext.init(new X509ExtendedKeyManager[]{loadedKeyManager},

@@ -5,8 +5,10 @@
  */
 package org.elasticsearch.xpack.core.ssl;
 
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.xpack.core.ssl.cert.CertificateInfo;
@@ -46,6 +48,7 @@ class StoreKeyConfig extends KeyConfig {
     final String keyStoreAlgorithm;
     final SecureString keyPassword;
     final String trustStoreAlgorithm;
+    private final Logger logger;
 
     /**
      * Creates a new configuration that can be used to load key and trust material from a {@link KeyStore}
@@ -66,6 +69,7 @@ class StoreKeyConfig extends KeyConfig {
         this.keyPassword = Objects.requireNonNull(keyPassword).clone();
         this.keyStoreAlgorithm = keyStoreAlgorithm;
         this.trustStoreAlgorithm = trustStoreAlgorithm;
+        this.logger = Loggers.getLogger(getClass());
     }
 
     @Override
@@ -82,7 +86,8 @@ class StoreKeyConfig extends KeyConfig {
     @Override
     X509ExtendedTrustManager createTrustManager(@Nullable Environment environment) {
         try {
-            return CertParsingUtils.trustManager(keyStorePath, keyStoreType, keyStorePassword.getChars(), trustStoreAlgorithm, environment);
+            return CertParsingUtils.trustManager(keyStorePath, keyStoreType, keyStorePassword.getChars(), trustStoreAlgorithm, environment,
+                logger);
         } catch (Exception e) {
             throw new ElasticsearchException("failed to initialize a TrustManagerFactory", e);
         }

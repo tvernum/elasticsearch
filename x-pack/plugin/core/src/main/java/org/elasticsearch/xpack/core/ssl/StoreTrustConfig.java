@@ -5,8 +5,10 @@
  */
 package org.elasticsearch.xpack.core.ssl;
 
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.xpack.core.ssl.cert.CertificateInfo;
@@ -35,6 +37,7 @@ class StoreTrustConfig extends TrustConfig {
     final String trustStoreType;
     final SecureString trustStorePassword;
     final String trustStoreAlgorithm;
+    private final Logger logger;
 
     /**
      * Create a new configuration based on the provided parameters
@@ -50,13 +53,15 @@ class StoreTrustConfig extends TrustConfig {
         // clone the password and never close it during our uses below
         this.trustStorePassword = Objects.requireNonNull(trustStorePassword, "truststore password must be specified").clone();
         this.trustStoreAlgorithm = trustStoreAlgorithm;
+        this.logger = Loggers.getLogger(getClass());
     }
+
 
     @Override
     X509ExtendedTrustManager createTrustManager(@Nullable Environment environment) {
         try {
             return CertParsingUtils.trustManager(trustStorePath, trustStoreType, trustStorePassword.getChars(),
-                    trustStoreAlgorithm, environment);
+                    trustStoreAlgorithm, environment, logger);
         } catch (Exception e) {
             throw new ElasticsearchException("failed to initialize a TrustManagerFactory", e);
         }

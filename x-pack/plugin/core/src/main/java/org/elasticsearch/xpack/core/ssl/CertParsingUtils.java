@@ -6,6 +6,7 @@
 
 package org.elasticsearch.xpack.core.ssl;
 
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.SuppressForbidden;
 import org.elasticsearch.common.io.PathUtils;
@@ -51,6 +52,7 @@ public class CertParsingUtils {
     private CertParsingUtils() {
         throw new IllegalStateException("Utility class should not be instantiated");
     }
+
     /**
      * Resolves a path with or without an {@link Environment} as we may be running in a transport client where we do not have access to
      * the environment
@@ -259,13 +261,30 @@ public class CertParsingUtils {
      * @param trustStorePassword  the password to the truststore
      * @param trustStoreAlgorithm the algorithm to use for the truststore
      * @param env                 the environment to use for file resolution. May be {@code null}
+     * @param logger              the Logger to use for reporting warnings or informational messages about the truststore/TrustManager
      * @return a trust manager with the trust material from the store
      */
     public static X509ExtendedTrustManager trustManager(String trustStorePath, String trustStoreType, char[] trustStorePassword,
-                                                        String trustStoreAlgorithm, @Nullable Environment env)
-            throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException {
-        KeyStore trustStore = readKeyStore(resolvePath(trustStorePath, env), trustStoreType, trustStorePassword);
+                                                        String trustStoreAlgorithm, @Nullable Environment env, Logger logger)
+        throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException {
+        final KeyStore trustStore = readKeyStore(resolvePath(trustStorePath, env), trustStoreType, trustStorePassword);
+        if(hasCertificateEntry(trustStore) == false) {
+            logger.warn("The truststore at [{}] does not contain any trusted certificate (CA) entries", trustStorePath);
+        }
         return trustManager(trustStore, trustStoreAlgorithm);
+    }
+
+    private static boolean hasCertificateEntry(KeyStore trustStore) throws KeyStoreException {
+        final Enumeration<String> aliases = trustStore.aliases();
+        boolean hasCertificateEntry = false;
+        while (aliases.hasMoreElements()) {
+            final String alias = aliases.nextElement();
+            if (trustStore.isCertificateEntry(alias)) {
+                hasCertificateEntry = true;
+                break;
+            }
+        }
+        return hasCertificateEntry;
     }
 
     /**
