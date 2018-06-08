@@ -6,7 +6,6 @@
 
 package org.elasticsearch.client;
 
-import org.apache.http.Header;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.xpack.core.security.action.token.CreateTokenRequest;
@@ -26,7 +25,8 @@ public class XPackRestClient extends RestHighLevelClient {
         super(restClientBuilder, namedXContentEntries);
     }
 
-    protected XPackRestClient(RestClient restClient, CheckedConsumer<RestClient, IOException> doClose, List<NamedXContentRegistry.Entry> namedXContentEntries) {
+    protected XPackRestClient(RestClient restClient, CheckedConsumer<RestClient, IOException> doClose,
+                              List<NamedXContentRegistry.Entry> namedXContentEntries) {
         super(restClient, doClose, namedXContentEntries);
     }
 
@@ -36,10 +36,10 @@ public class XPackRestClient extends RestHighLevelClient {
      * See <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-tokens.html">Token Management APIs
      * on elastic.co</a>.
      */
-    public final CreateTokenResponse createToken(CreateTokenRequest createTokenRequest, Header... headers) throws IOException {
-        return performRequestAndParseEntity(createTokenRequest, XPackRequestConverters::createToken, CreateTokenResponse::fromXContent,
-            emptySet(), headers);
+    public final CreateTokenResponse createToken(CreateTokenRequest createTokenRequest, RequestOptions options) throws
+        IOException {
+        return performRequestAndParseEntity(createTokenRequest, XPackRequestConverters::createToken, options,
+            CreateTokenResponse::fromXContent, emptySet());
     }
-
 
 }

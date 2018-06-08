@@ -12,7 +12,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.test.ESTestCase;
 import org.hamcrest.Matchers;
 
-public class CreateTokenResponseTest extends ESTestCase {
+public class CreateTokenResponseTests extends ESTestCase {
 
     public void testToFromJson() throws Exception {
         final CreateTokenResponse response1 = new CreateTokenResponse(
