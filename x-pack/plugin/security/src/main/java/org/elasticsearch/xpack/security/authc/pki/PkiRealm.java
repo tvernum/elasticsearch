@@ -111,11 +111,11 @@ public class PkiRealm extends Realm implements CachingRealm {
             final BytesKey fingerprint = computeFingerprint(token.credentials()[0]);
             User user = cache.get(fingerprint);
             if (user != null) {
-                listener.onResponse(AuthenticationResult.success(user));
+                userLookup.lookupUser(token.principal(), token, (x, y) -> AuthenticationResult.success(user), listener);
             } else if (isCertificateChainTrusted(trustManager, token, logger) == false) {
                 listener.onResponse(AuthenticationResult.unsuccessful("Certificate for " + token.dn() + " is not trusted", null));
             } else {
-                userLookup.buildUser(token.principal(), token, ActionListener.wrap(result -> {
+                userLookup.lookupUser(token.principal(), token, this::buildUser, ActionListener.wrap(result -> {
                     if (result.isAuthenticated()) {
                         try (ReleasableLock ignored = readLock.acquire()) {
                             cache.put(fingerprint, result.getUser());
@@ -131,7 +131,7 @@ public class PkiRealm extends Realm implements CachingRealm {
 
     @Override
     public void initialize(Iterable<Realm> realms) {
-        userLookup = new LookupRealmSupport<>(realms, config, this::buildUser);
+        userLookup = new LookupRealmSupport<>(realms, config);
     }
 
     private void buildUser(X509AuthenticationToken token, ActionListener<AuthenticationResult> listener) {

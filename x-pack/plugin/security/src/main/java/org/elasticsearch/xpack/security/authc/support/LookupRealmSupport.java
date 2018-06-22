@@ -33,19 +33,17 @@ import java.util.function.BiConsumer;
 
 public class LookupRealmSupport<T extends AuthenticationToken> {
 
-    private final BiConsumer<T, ActionListener<AuthenticationResult>> defaultBuilder;
     private final List<Realm> lookupRealms;
 
-    public LookupRealmSupport(Iterable<Realm> allRealms, RealmConfig config,
-                              BiConsumer<T, ActionListener<AuthenticationResult>> buildAuthentication) {
+    public LookupRealmSupport(Iterable<Realm> allRealms, RealmConfig config) {
         final List<String> lookupRealms = LookupRealmSettings.LOOKUP_REALMS.get(config.settings());
-        this.defaultBuilder = buildAuthentication;
         this.lookupRealms = resolveRealms(allRealms, lookupRealms);
     }
 
-    public void buildUser(String username, T token, ActionListener<AuthenticationResult> resultListener) {
+    public void lookupUser(String username, T token, BiConsumer<T, ActionListener<AuthenticationResult>> defaultAuthentication,
+                           ActionListener<AuthenticationResult> resultListener) {
         if (lookupRealms.isEmpty()) {
-            this.defaultBuilder.accept(token, resultListener);
+            defaultAuthentication.accept(token, resultListener);
         } else {
             new LookupListener(username, resultListener).lookupUser();
         }
