@@ -31,12 +31,12 @@ import org.elasticsearch.xpack.core.ssl.CertParsingUtils;
 import org.elasticsearch.xpack.core.ssl.SSLConfigurationSettings;
 import org.elasticsearch.xpack.security.authc.BytesKey;
 import org.elasticsearch.xpack.security.authc.support.CachingRealm;
+import org.elasticsearch.xpack.security.authc.support.LookupRealmSupport;
 import org.elasticsearch.xpack.security.authc.support.UserRoleMapper;
 import org.elasticsearch.xpack.security.authc.support.mapper.CompositeRoleMapper;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
 
 import javax.net.ssl.X509TrustManager;
-
 import java.security.MessageDigest;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -64,6 +64,7 @@ public class PkiRealm extends Realm implements CachingRealm {
     // the cache the write lock must obtained to prevent any modifications
     private final ReleasableLock readLock;
     private final ReleasableLock writeLock;
+    private LookupRealmSupport<X509AuthenticationToken> userLookup;
 
     {
         final ReadWriteLock iterationLock = new ReentrantReadWriteLock();
@@ -104,6 +105,7 @@ public class PkiRealm extends Realm implements CachingRealm {
 
     @Override
     public void authenticate(AuthenticationToken authToken, ActionListener<AuthenticationResult> listener) {
+        assert userLookup != null : "Realm has not been initialized correctly";
         X509AuthenticationToken token = (X509AuthenticationToken)authToken;
         try {
             final BytesKey fingerprint = computeFingerprint(token.credentials()[0]);
@@ -113,21 +115,34 @@ public class PkiRealm extends Realm implements CachingRealm {
             } else if (isCertificateChainTrusted(trustManager, token, logger) == false) {
                 listener.onResponse(AuthenticationResult.unsuccessful("Certificate for " + token.dn() + " is not trusted", null));
             } else {
-                final Map<String, Object> metadata = Collections.singletonMap("pki_dn", token.dn());
-                final UserRoleMapper.UserData userData = new UserRoleMapper.UserData(token.principal(),
-                        token.dn(), Collections.emptySet(), metadata, this.config);
-                roleMapper.resolveRoles(userData, ActionListener.wrap(roles -> {
-                    final User computedUser =
-                            new User(token.principal(), roles.toArray(new String[roles.size()]), null, null, metadata, true);
-                    try (ReleasableLock ignored = readLock.acquire()) {
-                        cache.put(fingerprint, computedUser);
+                userLookup.buildUser(token.principal(), token, ActionListener.wrap(result -> {
+                    if (result.isAuthenticated()) {
+                        try (ReleasableLock ignored = readLock.acquire()) {
+                            cache.put(fingerprint, result.getUser());
+                        }
                     }
-                    listener.onResponse(AuthenticationResult.success(computedUser));
+                    listener.onResponse(result);
                 }, listener::onFailure));
             }
         } catch (CertificateEncodingException e) {
             listener.onResponse(AuthenticationResult.unsuccessful("Certificate for " + token.dn() + " has encoding issues", e));
         }
+    }
+
+    @Override
+    public void initialize(Iterable<Realm> realms) {
+        userLookup = new LookupRealmSupport<>(realms, config, this::buildUser);
+    }
+
+    private void buildUser(X509AuthenticationToken token, ActionListener<AuthenticationResult> listener) {
+        final Map<String, Object> metadata = Collections.singletonMap("pki_dn", token.dn());
+        final UserRoleMapper.UserData userData = new UserRoleMapper.UserData(token.principal(),
+                token.dn(), Collections.emptySet(), metadata, this.config);
+        roleMapper.resolveRoles(userData, ActionListener.wrap(roles -> {
+            final User computedUser =
+                    new User(token.principal(), roles.toArray(new String[roles.size()]), null, null, metadata, true);
+            listener.onResponse(AuthenticationResult.success(computedUser));
+        }, listener::onFailure));
     }
 
     @Override

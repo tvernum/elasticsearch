@@ -132,6 +132,14 @@ public abstract class Realm implements Comparable<Realm> {
     }
 
     /**
+     * This is no-op in the base class, but allows realms to interact with one another
+     *
+     * @see org.elasticsearch.xpack.core.security.authc.support.LookupRealmSettings
+     */
+    public void initialize(Iterable<Realm> realms) {
+    }
+
+    /**
      * A factory interface to construct a security realm.
      */
     public interface Factory {
