@@ -30,8 +30,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-public class LookupRealmSupport<T extends AuthenticationToken> {
+public class LookupRealmSupport {
 
     private final List<Realm> lookupRealms;
 
@@ -40,10 +41,10 @@ public class LookupRealmSupport<T extends AuthenticationToken> {
         this.lookupRealms = resolveRealms(allRealms, lookupRealms);
     }
 
-    public void lookupUser(String username, T token, BiConsumer<T, ActionListener<AuthenticationResult>> defaultAuthentication,
+    public void lookupUser(String username, Consumer<ActionListener<AuthenticationResult>> defaultAuthentication,
                            ActionListener<AuthenticationResult> resultListener) {
         if (lookupRealms.isEmpty()) {
-            defaultAuthentication.accept(token, resultListener);
+            defaultAuthentication.accept(resultListener);
         } else {
             new LookupListener(username, resultListener).lookupUser();
         }
