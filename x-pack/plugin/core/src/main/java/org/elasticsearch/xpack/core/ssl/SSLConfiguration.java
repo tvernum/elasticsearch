@@ -6,6 +6,7 @@
 package org.elasticsearch.xpack.core.ssl;
 
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.settings.SecureSettings;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
@@ -15,13 +16,16 @@ import org.elasticsearch.xpack.core.ssl.cert.CertificateInfo;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
-
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static org.elasticsearch.xpack.core.ssl.SSLConfigurationSettings.getKeyStoreType;
 
@@ -128,6 +132,58 @@ public final class SSLConfiguration {
         List<Path> paths = new ArrayList<>(keyConfig().filesToMonitor(environment));
         paths.addAll(trustConfig().filesToMonitor(environment));
         return paths;
+    }
+
+    public SSLConfiguration newConfigurationFromExistingPasswords(Settings settings) {
+        Settings.Builder builder = Settings.builder().put(settings, false);
+        Map<String, SecureString> secureSettings = new HashMap<>();
+        if (this.keyConfig instanceof StoreKeyConfig) {
+            final StoreKeyConfig keyConfig = (StoreKeyConfig) this.keyConfig;
+            if (settings.hasValue(SETTINGS_PARSER.x509KeyPair.legacyKeystorePassword.getKey()) == false) {
+                secureSettings.put(SETTINGS_PARSER.x509KeyPair.keystorePassword.getKey(), keyConfig.keyStorePassword);
+            }
+            if (settings.hasValue(SETTINGS_PARSER.x509KeyPair.legacyKeystoreKeyPassword.getKey()) == false) {
+                secureSettings.put(SETTINGS_PARSER.x509KeyPair.keystoreKeyPassword.getKey(), keyConfig.keyPassword);
+            }
+        } else if (keyConfig instanceof PEMKeyConfig) {
+            final PEMKeyConfig keyConfig = (PEMKeyConfig) this.keyConfig;
+            if (settings.hasValue(SETTINGS_PARSER.x509KeyPair.legacyKeyPassword.getKey()) == false) {
+                secureSettings.put(SETTINGS_PARSER.x509KeyPair.keyPassword.getKey(), keyConfig.keyPassword);
+            }
+        }
+        if (this.trustConfig instanceof StoreTrustConfig) {
+            final StoreTrustConfig trustConfig = (StoreTrustConfig) this.trustConfig;
+            if (settings.hasValue(SETTINGS_PARSER.legacyTruststorePassword.getKey()) == false) {
+                secureSettings.put(SETTINGS_PARSER.truststorePassword.getKey(), trustConfig.trustStorePassword);
+            }
+        }
+        builder.setSecureSettings(new SecureSettings() {
+            @Override
+            public boolean isLoaded() {
+                return true;
+            }
+
+            @Override
+            public Set<String> getSettingNames() {
+                return secureSettings.keySet();
+            }
+
+            @Override
+            public SecureString getString(String setting) {
+                return secureSettings.get(setting);
+            }
+
+            @Override
+            public InputStream getFile(String setting) {
+                throw new IllegalArgumentException("Secret setting " + setting + " is not a file");
+            }
+
+            @Override
+            public void close() throws IOException {
+                // no-op
+            }
+        });
+        return new SSLConfiguration(builder.build(), this);
     }
 
     @Override

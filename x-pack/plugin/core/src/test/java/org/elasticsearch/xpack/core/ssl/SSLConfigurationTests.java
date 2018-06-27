@@ -387,6 +387,33 @@ public class SSLConfigurationTests extends ESTestCase {
         assertSettingDeprecationsAndWarnings(new Setting<?>[] {SSLConfiguration.SETTINGS_PARSER.x509KeyPair.legacyKeyPassword});
     }
 
+    public void testBuildNewConfigurationWithExistingPasswords() {
+        final MockSecureSettings secureSettings = new MockSecureSettings();
+        secureSettings.setString("keystore.secure_password", "ks-password");
+        secureSettings.setString("keystore.secure_key_password", "key-password");
+        secureSettings.setString("truststore.secure_password", "ts-password");
+        final Settings settings1 = Settings.builder()
+            .put("keystore.path", "ks-path-1")
+            .put("truststore.path", "ts-path-1")
+            .setSecureSettings(secureSettings)
+            .build();
+        final SSLConfiguration sslConfiguration1 = new SSLConfiguration(settings1);
+
+        final Settings settings2 = Settings.builder()
+            .put("keystore.path", "ks-path-2")
+            .put("truststore.path", "ts-path-2")
+            .build();
+
+        SSLConfiguration sslConfiguration2 = sslConfiguration1.newConfigurationFromExistingPasswords(settings2);
+        assertThat(sslConfiguration2.keyConfig(), instanceOf(StoreKeyConfig.class));
+        assertThat(((StoreKeyConfig) sslConfiguration2.keyConfig()).keyStorePath, is(equalTo("ks-path-2")));
+        assertThat(((StoreKeyConfig) sslConfiguration2.keyConfig()).keyStorePassword, is(equalTo("ks-password")));
+        assertThat(((StoreKeyConfig) sslConfiguration2.keyConfig()).keyPassword, is(equalTo("key-password")));
+        assertThat(sslConfiguration2.trustConfig(), instanceOf(StoreTrustConfig.class));
+        assertThat(((StoreTrustConfig) sslConfiguration2.trustConfig()).trustStorePath, is(equalTo("ts-path-2")));
+        assertThat(((StoreTrustConfig) sslConfiguration2.trustConfig()).trustStorePassword, is(equalTo("ts-password")));
+    }
+
     private void assertCombiningTrustConfigContainsCorrectIssuers(SSLConfiguration sslConfiguration) {
         X509Certificate[] trustConfAcceptedIssuers = sslConfiguration.trustConfig().createTrustManager(null).getAcceptedIssuers();
         X509Certificate[] keyConfAcceptedIssuers = sslConfiguration.keyConfig().createTrustManager(null).getAcceptedIssuers();

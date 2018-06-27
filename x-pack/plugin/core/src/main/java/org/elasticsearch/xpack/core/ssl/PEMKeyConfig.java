@@ -36,7 +36,7 @@ import java.util.Objects;
 class PEMKeyConfig extends KeyConfig {
 
     private final String keyPath;
-    private final SecureString keyPassword;
+    final SecureString keyPassword;
     private final String certPath;
 
     /**

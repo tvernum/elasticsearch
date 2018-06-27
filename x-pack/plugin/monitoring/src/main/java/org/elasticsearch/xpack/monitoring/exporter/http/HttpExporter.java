@@ -445,14 +445,14 @@ public class HttpExporter extends Exporter {
      */
     private static void configureSecurity(final RestClientBuilder builder, final Config config, final SSLService sslService) {
         final Setting<Settings> concreteSetting = SSL_SETTING.getConcreteSettingForNamespace(config.name());
-        final SSLConfiguration sslConfiguration = sslService.getSSLConfiguration(concreteSetting.getKey());
-        final SSLIOSessionStrategy sslStrategy;
+        final Settings sslSettings = concreteSetting.get(config.settings());
+        SSLConfiguration sslConfiguration = sslService.getSSLConfiguration(concreteSetting.getKey());
         if (sslConfiguration == null) {
-            final Settings sslSettings = concreteSetting.get(config.settings());
-            sslStrategy = sslService.sslIOSessionStrategy(sslSettings);
+            sslConfiguration = sslService.sslConfiguration(sslSettings, Settings.EMPTY);
         } else {
-            sslStrategy = sslService.sslIOSessionStrategy(sslConfiguration);
+            sslConfiguration = sslConfiguration.newConfigurationFromExistingPasswords(sslSettings);
         }
+        final SSLIOSessionStrategy sslStrategy = sslService.sslIOSessionStrategy(sslConfiguration);
         final CredentialsProvider credentialsProvider = createCredentialsProvider(config);
         List<String> hostList = HOST_SETTING.getConcreteSettingForNamespace(config.name()).get(config.settings());;
         // sending credentials in plaintext!
