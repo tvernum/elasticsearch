@@ -74,7 +74,7 @@ public class HasPrivilegesRequestTests extends ESTestCase {
         request.clusterPrivileges(new String[0]);
         request.indexPrivileges(new IndicesPrivileges[0]);
         request.applicationPrivileges(new ApplicationResourcePrivileges[] {
-            ApplicationResourcePrivileges.builder().privileges("read").application("*").resources("item/1").build()
+            ApplicationResourcePrivileges.builder().privileges("read").application("*").resources("item/1").build(true)
         });
         final ActionRequestValidationException exception = request.validate();
         assertThat(exception, notNullValue());
@@ -118,7 +118,7 @@ public class HasPrivilegesRequestTests extends ESTestCase {
                 .application(randomAlphaOfLengthBetween(3, 8))
                 .resources(randomAlphaOfLengthBetween(5, 7) + (randomBoolean() ? "*" : ""))
                 .privileges(generateRandomStringArray(6, 7, false, false))
-                .build();
+                .build(true);
         }
         request.applicationPrivileges(appPrivileges);
         return request;

@@ -116,7 +116,7 @@ public class PutRoleRequestTests extends ESTestCase {
             .application(appName)
             .privileges(privileges)
             .resources(resources)
-            .build();
+            .build(true);
         request.addApplicationPrivileges(new ApplicationResourcePrivileges[]{privilege});
         return request;
     }
@@ -147,7 +147,7 @@ public class PutRoleRequestTests extends ESTestCase {
                 .application(stringWithInitialLowercase.get())
                 .privileges(randomArray(1, 3, String[]::new, stringWithInitialLowercase))
                 .resources(generateRandomStringArray(5, randomIntBetween(3, 8), false, false))
-                .build();
+                .build(true);
         }
         request.addApplicationPrivileges(applicationPrivileges);
 

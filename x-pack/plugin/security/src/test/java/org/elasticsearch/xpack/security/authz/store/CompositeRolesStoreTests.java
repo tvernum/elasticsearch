@@ -382,12 +382,12 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 .application("app1")
                 .resources("user/*")
                 .privileges("read", "write")
-                .build(),
+                .build(true),
             RoleDescriptor.ApplicationResourcePrivileges.builder()
                 .application("app1")
                 .resources("settings/*")
                 .privileges("read")
-                .build()
+                .build(true)
         }, new ConditionalClusterPrivilege[] { ccp1 },
         new String[]{"app-user-1"}, null, null);
 
@@ -404,12 +404,12 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 .application("app2a")
                 .resources("*")
                 .privileges("all")
-                .build(),
+                .build(true),
             RoleDescriptor.ApplicationResourcePrivileges.builder()
                 .application("app2b")
                 .resources("*")
                 .privileges("read")
-                .build()
+                .build(true)
         }, new ConditionalClusterPrivilege[] { ccp2 },
         new String[]{"app-user-2"}, null, null);
 

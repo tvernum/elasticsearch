@@ -68,7 +68,7 @@ public class RoleDescriptorTests extends ESTestCase {
                 .application("my_app")
                 .privileges("read", "write")
                 .resources("*")
-                .build()
+                .build(true)
         };
 
         final ConditionalClusterPrivilege[] conditionalClusterPrivileges = new ConditionalClusterPrivilege[]{
@@ -100,7 +100,7 @@ public class RoleDescriptorTests extends ESTestCase {
                 .application("my_app")
                 .privileges("read", "write")
                 .resources("*")
-                .build()
+                .build(true)
         };
         final ConditionalClusterPrivilege[] conditionalClusterPrivileges = {
             new ConditionalClusterPrivileges.ManageApplicationPrivileges(new LinkedHashSet<>(Arrays.asList("app01", "app02")))
@@ -227,7 +227,7 @@ public class RoleDescriptorTests extends ESTestCase {
                 .application("my_app")
                 .privileges("read", "write")
                 .resources("*")
-                .build()
+                .build(true)
         };
         final ConditionalClusterPrivilege[] conditionalClusterPrivileges = {
             new ConditionalClusterPrivileges.ManageApplicationPrivileges(new LinkedHashSet<>(Arrays.asList("app01", "app02")))

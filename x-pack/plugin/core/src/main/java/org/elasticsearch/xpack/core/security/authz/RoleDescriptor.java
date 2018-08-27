@@ -326,7 +326,7 @@ public class RoleDescriptor implements ToXContentObject {
                 clusterPrivileges = readStringArray(name, parser, true);
             } else if (Fields.APPLICATIONS.match(currentFieldName, parser.getDeprecationHandler())
                     || Fields.APPLICATION.match(currentFieldName, parser.getDeprecationHandler())) {
-                applicationPrivileges = parseApplicationPrivileges(name, parser);
+                applicationPrivileges = parseApplicationPrivileges(name, parser, true);
             } else if (Fields.GLOBAL.match(currentFieldName, parser.getDeprecationHandler())) {
                 conditionalClusterPrivileges = ConditionalClusterPrivileges.parse(parser);
             } else if (Fields.METADATA.match(currentFieldName, parser.getDeprecationHandler())) {
@@ -386,7 +386,7 @@ public class RoleDescriptor implements ToXContentObject {
                     clusterPrivileges = readStringArray(description, parser, true);
                 } else if (Fields.APPLICATIONS.match(currentFieldName, parser.getDeprecationHandler())
                         || Fields.APPLICATION.match(currentFieldName, parser.getDeprecationHandler())) {
-                    applicationPrivileges = parseApplicationPrivileges(description, parser);
+                    applicationPrivileges = parseApplicationPrivileges(description, parser, false);
                 } else {
                     throw new ElasticsearchParseException("failed to parse privileges check [{}]. unexpected field [{}]",
                             description, currentFieldName);
@@ -553,27 +553,29 @@ public class RoleDescriptor implements ToXContentObject {
                 .build();
     }
 
-    private static ApplicationResourcePrivileges[] parseApplicationPrivileges(String roleName, XContentParser parser)
-            throws IOException {
+    private static ApplicationResourcePrivileges[] parseApplicationPrivileges(String roleName, XContentParser parser,
+                                                                              boolean requireResources) throws IOException {
         if (parser.currentToken() != XContentParser.Token.START_ARRAY) {
             throw new ElasticsearchParseException("failed to parse application privileges for role [{}]. expected field [{}] value " +
                     "to be an array, but found [{}] instead", roleName, parser.currentName(), parser.currentToken());
         }
         List<ApplicationResourcePrivileges> privileges = new ArrayList<>();
         while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-            privileges.add(parseApplicationPrivilege(roleName, parser));
+            privileges.add(parseApplicationPrivilege(roleName, parser, requireResources));
         }
         return privileges.toArray(new ApplicationResourcePrivileges[privileges.size()]);
     }
 
-    private static ApplicationResourcePrivileges parseApplicationPrivilege(String roleName, XContentParser parser) throws IOException {
+    private static ApplicationResourcePrivileges parseApplicationPrivilege(String roleName, XContentParser parser, boolean requireResources)
+        throws IOException {
+
         XContentParser.Token token = parser.currentToken();
         if (token != XContentParser.Token.START_OBJECT) {
             throw new ElasticsearchParseException("failed to parse application privileges for role [{}]. expected field [{}] value to " +
                     "be an array of objects, but found an array element of type [{}]", roleName, parser.currentName(), token);
         }
         final ApplicationResourcePrivileges.Builder builder = ApplicationResourcePrivileges.PARSER.parse(parser, null);
-        if (builder.hasResources() == false) {
+        if (requireResources && builder.hasResources() == false) {
             throw new ElasticsearchParseException("failed to parse application privileges for role [{}]. missing required [{}] field",
                     roleName, Fields.RESOURCES.getPreferredName());
         }
@@ -581,7 +583,7 @@ public class RoleDescriptor implements ToXContentObject {
             throw new ElasticsearchParseException("failed to parse application privileges for role [{}]. missing required [{}] field",
                     roleName, Fields.PRIVILEGES.getPreferredName());
         }
-        return builder.build();
+        return builder.build(requireResources);
     }
 
     /**
@@ -814,7 +816,8 @@ public class RoleDescriptor implements ToXContentObject {
         static {
             PARSER.declareString(Builder::application, Fields.APPLICATION);
             PARSER.declareStringArray(Builder::privileges, Fields.PRIVILEGES);
-            PARSER.declareStringArray(Builder::resources, Fields.RESOURCES);
+            PARSER.declareField(Builder::resources, p -> XContentUtils.readStringArray(p, true), Fields.RESOURCES,
+                ObjectParser.ValueType.VALUE_ARRAY);
         }
 
         private String application;
@@ -947,15 +950,17 @@ public class RoleDescriptor implements ToXContentObject {
                 return applicationPrivileges.privileges != null;
             }
 
-            public ApplicationResourcePrivileges build() {
+            public ApplicationResourcePrivileges build(boolean requireResources) {
                 if (Strings.isNullOrEmpty(applicationPrivileges.application)) {
                     throw new IllegalArgumentException("application privileges must have an application name");
                 }
                 if (applicationPrivileges.privileges == null || applicationPrivileges.privileges.length == 0) {
                     throw new IllegalArgumentException("application privileges must define at least one privilege");
                 }
-                if (applicationPrivileges.resources == null || applicationPrivileges.resources.length == 0) {
-                    throw new IllegalArgumentException("application privileges must refer to at least one resource");
+                if (requireResources) {
+                    if (applicationPrivileges.resources == null || applicationPrivileges.resources.length == 0) {
+                        throw new IllegalArgumentException("application privileges must refer to at least one resource");
+                    }
                 }
                 return applicationPrivileges;
             }

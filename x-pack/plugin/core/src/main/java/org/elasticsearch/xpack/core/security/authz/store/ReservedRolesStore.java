@@ -30,7 +30,7 @@ public class ReservedRolesStore {
             new RoleDescriptor.IndicesPrivileges[] {
                     RoleDescriptor.IndicesPrivileges.builder().indices("*").privileges("all").build()},
             new RoleDescriptor.ApplicationResourcePrivileges[] {
-                RoleDescriptor.ApplicationResourcePrivileges.builder().application("*").privileges("*").resources("*").build()
+                RoleDescriptor.ApplicationResourcePrivileges.builder().application("*").privileges("*").resources("*").build(true)
             },
             null, new String[] { "*" },
             MetadataUtils.DEFAULT_RESERVED_METADATA, Collections.emptyMap());
@@ -50,7 +50,7 @@ public class ReservedRolesStore {
                         RoleDescriptor.IndicesPrivileges.builder().indices(".kibana*").privileges("manage", "read", "index", "delete")
                             .build() }, new RoleDescriptor.ApplicationResourcePrivileges[] {
                         RoleDescriptor.ApplicationResourcePrivileges.builder()
-                            .application("kibana-.kibana").resources("*").privileges("all").build() },
+                            .application("kibana-.kibana").resources("*").privileges("all").build(true) },
                         null, null,
                         MetadataUtils.DEFAULT_RESERVED_METADATA, null))
                 .put("monitoring_user", new RoleDescriptor("monitoring_user",
@@ -84,7 +84,7 @@ public class ReservedRolesStore {
                         },
                         new RoleDescriptor.ApplicationResourcePrivileges[] {
                             RoleDescriptor.ApplicationResourcePrivileges.builder()
-                            .application("kibana-.kibana").resources("*").privileges("read").build() },
+                            .application("kibana-.kibana").resources("*").privileges("read").build(true) },
                         null, null,
                         MetadataUtils.DEFAULT_RESERVED_METADATA,
                         null))

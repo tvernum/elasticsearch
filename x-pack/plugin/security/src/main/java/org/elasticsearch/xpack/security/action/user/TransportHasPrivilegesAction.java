@@ -14,6 +14,7 @@ import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.protocol.xpack.security.User;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
@@ -30,7 +31,6 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.support.Automatons;
-import org.elasticsearch.protocol.xpack.security.User;
 import org.elasticsearch.xpack.security.authz.AuthorizationService;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
 
@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +145,9 @@ public class TransportHasPrivilegesAction extends HandledTransportAction<HasPriv
             final Map<String, HasPrivilegesResponse.ResourcePrivileges> appPrivilegesByResource = new LinkedHashMap<>();
             for (RoleDescriptor.ApplicationResourcePrivileges p : request.applicationPrivileges()) {
                 if (applicationName.equals(p.getApplication())) {
-                    for (String resource : p.getResources()) {
+                    final Iterable<String> resources = p.getResources() != null ? Arrays.asList(p.getResources())
+                        : getAssignedResources(userRole, p, applicationPrivileges);
+                    for (String resource : resources) {
                         final Map<String, Boolean> privileges = new HashMap<>();
                         final HasPrivilegesResponse.ResourcePrivileges existing = appPrivilegesByResource.get(resource);
                         if (existing != null) {
@@ -170,6 +173,17 @@ public class TransportHasPrivilegesAction extends HandledTransportAction<HasPriv
         }
 
         listener.onResponse(new HasPrivilegesResponse(allMatch, cluster, indices.values(), privilegesByApplication));
+    }
+
+    private Collection<String> getAssignedResources(Role role, RoleDescriptor.ApplicationResourcePrivileges hasPrivilege,
+                                          Collection<ApplicationPrivilegeDescriptor> definedPrivileges) {
+        final Set<String> resources = new HashSet<>();
+        for (String checkPrivilegeName : hasPrivilege.getPrivileges()) {
+            final Set<String> nameSet = Collections.singleton(checkPrivilegeName);
+            final ApplicationPrivilege checkPrivilege = ApplicationPrivilege.get(hasPrivilege.getApplication(), nameSet, definedPrivileges);
+            resources.addAll(role.application().getDeclaredResources(checkPrivilege));
+        }
+        return resources;
     }
 
     private boolean testIndexMatch(String checkIndex, String checkPrivilegeName, Role userRole,

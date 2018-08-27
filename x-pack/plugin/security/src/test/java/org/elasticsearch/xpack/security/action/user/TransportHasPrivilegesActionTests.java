@@ -277,12 +277,12 @@ public class TransportHasPrivilegesActionTests extends ESTestCase {
                         .resources("*")
                         .application("kibana")
                         .privileges(Sets.union(kibanaRead.name(), kibanaWrite.name())) // read = Yes, write = No
-                        .build(),
+                        .build(true),
                 RoleDescriptor.ApplicationResourcePrivileges.builder()
                         .resources("space/engineering/project-*", "space/*") // project-* = Yes, space/* = Not
                         .application("kibana")
                         .privileges("space:view/dashboard")
-                        .build()
+                        .build(true)
         );
 
         final PlainActionFuture<HasPrivilegesResponse> future = new PlainActionFuture();
@@ -361,12 +361,12 @@ public class TransportHasPrivilegesActionTests extends ESTestCase {
                                 .application("app1")
                                 .resources("foo/1", "foo/bar/2", "foo/bar/baz", "baz/bar/foo")
                                 .privileges("read", "write", "all")
-                                .build(),
+                                .build(true),
                         RoleDescriptor.ApplicationResourcePrivileges.builder()
                                 .application("app2")
                                 .resources("foo/1", "foo/bar/2", "foo/bar/baz", "baz/bar/foo")
                                 .privileges("read", "write", "all")
-                                .build()
+                                .build(true)
                 }, Strings.EMPTY_ARRAY);
 
         assertThat(response.isCompleteMatch(), is(false));
@@ -417,7 +417,7 @@ public class TransportHasPrivilegesActionTests extends ESTestCase {
                     .application(appName)
                     .resources("user/hawkeye/name")
                     .privileges("DATA:read/user/*", "ACTION:" + action1, "ACTION:" + action2, action1, action2)
-                    .build()
+                    .build(true)
             },
             "monitor");
         assertThat(response.isCompleteMatch(), is(false));
@@ -464,16 +464,16 @@ public class TransportHasPrivilegesActionTests extends ESTestCase {
                                 .application("kibana")
                                 .resources("*")
                                 .privileges("read")
-                                .build()
+                                .build(true)
                 },
                 "monitor").isCompleteMatch(), is(true));
         assertThat(hasPrivileges(
                 new RoleDescriptor.IndicesPrivileges[]{indexPrivileges("read", "read-123", "read-456", "all-999")},
                 new RoleDescriptor.ApplicationResourcePrivileges[]{
                         RoleDescriptor.ApplicationResourcePrivileges.builder()
-                                .application("kibana").resources("*").privileges("read").build(),
+                                .application("kibana").resources("*").privileges("read").build(true),
                         RoleDescriptor.ApplicationResourcePrivileges.builder()
-                                .application("kibana").resources("*").privileges("write").build()
+                                .application("kibana").resources("*").privileges("write").build(true)
                 },
                 "monitor").isCompleteMatch(), is(false));
     }
