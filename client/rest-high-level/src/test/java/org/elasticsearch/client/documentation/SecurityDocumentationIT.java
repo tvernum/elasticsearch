@@ -26,6 +26,8 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.security.DisableUserRequest;
 import org.elasticsearch.client.security.EnableUserRequest;
+import org.elasticsearch.client.security.GetUserPrivilegesRequest;
+import org.elasticsearch.client.security.GetUserPrivilegesResponse;
 import org.elasticsearch.client.security.PutUserRequest;
 import org.elasticsearch.client.security.PutUserResponse;
 import org.elasticsearch.client.security.RefreshPolicy;
@@ -169,6 +171,45 @@ public class SecurityDocumentationIT extends ESRestHighLevelClientTestCase {
             // tag::disable-user-execute-async
             client.security().disableUserAsync(request, RequestOptions.DEFAULT, listener); // <1>
             // end::disable-user-execute-async
+
+            assertTrue(latch.await(30L, TimeUnit.SECONDS));
+        }
+    }
+
+    public void testGetUserPrivileges() throws Exception {
+        RestHighLevelClient client = highLevelClient();
+        {
+            //tag::get-user-privileges-execute
+            final GetUserPrivilegesRequest request = GetUserPrivilegesRequest.INSTANCE;
+            GetUserPrivilegesResponse response = client.security().getUserPrivileges(request, RequestOptions.DEFAULT);
+            //end::get-user-privileges-execute
+
+            assertNotNull(response);
+        }
+
+        {
+            //tag::get-user-privileges-execute-listener
+            ActionListener<GetUserPrivilegesResponse> listener = new ActionListener<GetUserPrivilegesResponse>() {
+                @Override
+                public void onResponse(GetUserPrivilegesResponse getUserPrivilegesResponse) {
+                    // <1>
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    // <2>
+                }
+            };
+            //end::get-user-privileges-execute-listener
+
+            // Replace the empty listener by a blocking listener in test
+            final CountDownLatch latch = new CountDownLatch(1);
+            listener = new LatchedActionListener<>(listener, latch);
+
+            // tag::get-user-privileges-execute-async
+            final GetUserPrivilegesRequest request = GetUserPrivilegesRequest.INSTANCE;
+            client.security().getUserPrivilegesAsync(request, RequestOptions.DEFAULT, listener); // <1>
+            // end::get-user-privileges-execute-async
 
             assertTrue(latch.await(30L, TimeUnit.SECONDS));
         }

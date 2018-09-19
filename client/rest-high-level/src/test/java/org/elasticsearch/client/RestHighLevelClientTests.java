@@ -728,9 +728,9 @@ public class RestHighLevelClientTests extends ESTestCase {
             } else {
                 //A few methods return a boolean rather than a response object
                 if (apiName.equals("ping") || apiName.contains("exist")) {
-                    assertThat(method.getReturnType().getSimpleName(), equalTo("boolean"));
+                    assertThat("Return type for method " + method, method.getReturnType().getSimpleName(), equalTo("boolean"));
                 } else {
-                    assertThat(method.getReturnType().getSimpleName(), endsWith("Response"));
+                    assertThat("Return type for method " + method, method.getReturnType().getSimpleName(), endsWith("Response"));
                 }
 
                 assertEquals(1, method.getExceptionTypes().length);
