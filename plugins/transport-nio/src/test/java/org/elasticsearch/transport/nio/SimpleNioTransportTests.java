@@ -56,7 +56,7 @@ public class SimpleNioTransportTests extends AbstractSimpleTransportTestCase {
     public static MockTransportService nioFromThreadPool(Settings settings, ThreadPool threadPool, final Version version,
                                                          ClusterSettings clusterSettings, boolean doHandshake) {
         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         Transport transport = new NioTransport(settings, threadPool,
             networkService, BigArrays.NON_RECYCLING_INSTANCE, new MockPageCacheRecycler(settings), namedWriteableRegistry,
             new NoneCircuitBreakerService()) {

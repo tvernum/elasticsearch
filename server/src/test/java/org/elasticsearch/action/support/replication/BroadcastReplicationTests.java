@@ -94,7 +94,7 @@ public class BroadcastReplicationTests extends ESTestCase {
         super.setUp();
         MockTcpTransport transport = new MockTcpTransport(Settings.EMPTY,
             threadPool, BigArrays.NON_RECYCLING_INSTANCE, circuitBreakerService, new NamedWriteableRegistry(Collections.emptyList()),
-            new NetworkService(Collections.emptyList()));
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()));
         clusterService = createClusterService(threadPool);
         transportService = new TransportService(clusterService.getSettings(), transport, threadPool,
                 TransportService.NOOP_TRANSPORT_INTERCEPTOR, x -> clusterService.localNode(), null, Collections.emptySet());

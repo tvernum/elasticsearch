@@ -78,4 +78,8 @@ public interface NetworkPlugin {
                                                                          HttpServerTransport.Dispatcher dispatcher) {
         return Collections.emptyMap();
     }
+
+    default Map<String, Supplier<NetworkService.SSLConfig>> getNamedSSLConfigurations(Settings settings) {
+        return Collections.emptyMap();
+    }
 }

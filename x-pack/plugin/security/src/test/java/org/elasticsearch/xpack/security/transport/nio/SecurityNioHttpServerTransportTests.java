@@ -69,8 +69,8 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true).build();
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
-            xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class),
+            mock(ThreadPool.class), xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
         SecurityNioHttpServerTransport.SecurityHttpChannelFactory factory = transport.channelFactory();
         SocketChannel socketChannel = mock(SocketChannel.class);
         when(socketChannel.getRemoteAddress()).thenReturn(address);
@@ -89,7 +89,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .put("xpack.security.http.ssl.client_authentication", value).build();
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
 
         SecurityNioHttpServerTransport.SecurityHttpChannelFactory factory = transport.channelFactory();
@@ -109,7 +109,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .put("xpack.security.http.ssl.client_authentication", value).build();
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
 
         SecurityNioHttpServerTransport.SecurityHttpChannelFactory factory = transport.channelFactory();
@@ -129,7 +129,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .put("xpack.security.http.ssl.client_authentication", value).build();
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
 
         SecurityNioHttpServerTransport.SecurityHttpChannelFactory factory = transport.channelFactory();
@@ -147,7 +147,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true).build();
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
         SecurityNioHttpServerTransport.SecurityHttpChannelFactory factory = transport.channelFactory();
         SocketChannel socketChannel = mock(SocketChannel.class);
@@ -162,7 +162,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
             .build();
         sslService = new SSLService(settings, TestEnvironment.newEnvironment(settings));
         transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
         factory = transport.channelFactory();
         channel = factory.createChannel(mock(NioSelector.class), socketChannel);
@@ -186,7 +186,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
 
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
             () -> new SecurityNioHttpServerTransport(settings,
-                new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+                new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
                 xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService));
         assertThat(e.getMessage(), containsString("key must be provided"));
     }
@@ -203,7 +203,7 @@ public class SecurityNioHttpServerTransportTests extends ESTestCase {
         env = TestEnvironment.newEnvironment(settings);
         sslService = new SSLService(settings, env);
         SecurityNioHttpServerTransport transport = new SecurityNioHttpServerTransport(settings,
-            new NetworkService(Collections.emptyList()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), mock(BigArrays.class), mock(PageCacheRecycler.class), mock(ThreadPool.class),
             xContentRegistry(), new NullDispatcher(), mock(IPFilter.class), sslService);
     }
 }

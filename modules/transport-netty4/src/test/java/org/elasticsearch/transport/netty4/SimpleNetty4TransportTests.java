@@ -54,7 +54,7 @@ public class SimpleNetty4TransportTests extends AbstractSimpleTransportTestCase 
     public static MockTransportService nettyFromThreadPool(Settings settings, ThreadPool threadPool, final Version version,
                                                            ClusterSettings clusterSettings, boolean doHandshake) {
         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
-        Transport transport = new Netty4Transport(settings, threadPool, new NetworkService(Collections.emptyList()),
+        Transport transport = new Netty4Transport(settings, threadPool, new NetworkService(Collections.emptyList(), Collections.emptyMap()),
             BigArrays.NON_RECYCLING_INSTANCE, namedWriteableRegistry, new NoneCircuitBreakerService()) {
 
             @Override

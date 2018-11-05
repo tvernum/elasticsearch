@@ -81,7 +81,7 @@ public class GceNetworkTests extends ESTestCase {
      * network.host: _local_
      */
     public void networkHostCoreLocal() throws IOException {
-        resolveGce("_local_", new NetworkService(Collections.emptyList())
+        resolveGce("_local_", new NetworkService(Collections.emptyList(), Collections.emptyMap())
             .resolveBindHostAddresses(new String[] { NetworkService.DEFAULT_NETWORK_HOST }));
     }
 
@@ -107,7 +107,7 @@ public class GceNetworkTests extends ESTestCase {
                 .build();
 
         GceMetadataServiceMock mock = new GceMetadataServiceMock(nodeSettings);
-        NetworkService networkService = new NetworkService(Collections.singletonList(new GceNameResolver(mock)));
+        NetworkService networkService = new NetworkService(Collections.singletonList(new GceNameResolver(mock)), Collections.emptyMap());
         try {
             InetAddress[] addresses = networkService.resolveBindHostAddresses(
                 NetworkService.GLOBAL_NETWORK_BINDHOST_SETTING.get(nodeSettings).toArray(Strings.EMPTY_ARRAY));

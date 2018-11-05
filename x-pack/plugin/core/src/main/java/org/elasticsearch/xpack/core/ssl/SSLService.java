@@ -13,6 +13,7 @@ import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.xpack.core.XPackSettings;
@@ -53,6 +54,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -155,6 +157,11 @@ public class SSLService {
     }
 
     public SSLIOSessionStrategy sslIOSessionStrategy(SSLConfiguration config) {
+        NetworkService.SSLConfig net = getNetworkSslConfig(config);
+        return sslIOSessionStrategy(net.context, net.protocols, net.cipherSuites, net.hostnameVerifier);
+    }
+
+    private NetworkService.SSLConfig getNetworkSslConfig(SSLConfiguration config) {
         SSLContext sslContext = sslContext(config);
         String[] ciphers = supportedCiphers(sslParameters(sslContext).getCipherSuites(), config.cipherSuites(), false);
         String[] supportedProtocols = config.supportedProtocols().toArray(Strings.EMPTY_ARRAY);
@@ -165,8 +172,9 @@ public class SSLService {
         } else {
             verifier = NoopHostnameVerifier.INSTANCE;
         }
-
-        return sslIOSessionStrategy(sslContext, supportedProtocols, ciphers, verifier);
+        final NetworkService.SSLConfig net = new NetworkService.SSLConfig(sslContext, supportedProtocols, ciphers, verifier);
+        logger.trace("getNetworkSslConfig({}) = {}", config, net);
+        return net;
     }
 
     /**
@@ -410,6 +418,14 @@ public class SSLService {
             }
         });
 
+        // The "reindex" context should not fallback to global config (because fallback is trappy)
+        final Settings reindex = settings.getByPrefix("xpack.reindex.ssl.");
+        if (reindex.isEmpty() == false) {
+            final SSLConfiguration configuration = new SSLConfiguration(reindex);
+            storeSslConfiguration("plugin.reindex", configuration);
+            sslContextHolders.computeIfAbsent(configuration, this::createSslContext);
+        }
+
         final Settings transportSSLSettings = settings.getByPrefix(XPackSettings.TRANSPORT_SSL_PREFIX);
         final SSLConfiguration transportSSLConfiguration = new SSLConfiguration(transportSSLSettings, globalSSLConfiguration);
         this.transportSSLConfiguration.set(transportSSLConfiguration);
@@ -429,6 +445,7 @@ public class SSLService {
         if (key.endsWith(".")) {
             key = key.substring(0, key.length() - 1);
         }
+        logger.debug("SSL Configuration [{}] is [{}]", key, configuration);
         sslConfigurations.put(key, configuration);
     }
 
@@ -531,7 +548,7 @@ public class SSLService {
     }
 
 
-    final class SSLContextHolder {
+    final class SSLContextHolder implements Supplier<SSLContext> {
         private volatile SSLContext context;
         private final KeyConfig keyConfig;
         private final TrustConfig trustConfig;
@@ -542,6 +559,11 @@ public class SSLService {
             this.sslConfiguration = sslConfiguration;
             this.keyConfig = sslConfiguration.keyConfig();
             this.trustConfig = sslConfiguration.trustConfig();
+        }
+
+        @Override
+        public SSLContext get() {
+            return context;
         }
 
         SSLContext sslContext() {
@@ -668,6 +690,17 @@ public class SSLService {
                 Strings.collectionToCommaDelimitedString(sslConfigurations.keySet()));
         }
         return configuration;
+    }
+
+    /**
+     * @see org.elasticsearch.plugins.NetworkPlugin#getNamedSSLConfigurations(Settings)
+     */
+    public Map<String, Supplier<NetworkService.SSLConfig>> getNamedSSLConfigs() {
+        final Map<String, Supplier<NetworkService.SSLConfig>> map = sslConfigurations.entrySet().stream()
+            .filter(e -> e.getKey().startsWith("plugin."))
+            .collect(Collectors.toMap(e -> e.getKey().substring(7), e -> () -> getNetworkSslConfig(e.getValue())));
+        logger.debug("SSL Configs = [{}]", map.keySet());
+        return map;
     }
 
     /**

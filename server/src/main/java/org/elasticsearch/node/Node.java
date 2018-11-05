@@ -58,6 +58,7 @@ import org.elasticsearch.cluster.routing.RoutingService;
 import org.elasticsearch.cluster.routing.allocation.DiskThresholdMonitor;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.StopWatch;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.component.Lifecycle;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Injector;
@@ -152,7 +153,6 @@ import org.elasticsearch.usage.UsageService;
 import org.elasticsearch.watcher.ResourceWatcherService;
 
 import javax.net.ssl.SNIHostName;
-
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
@@ -167,6 +167,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -175,6 +176,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -340,7 +342,8 @@ public class Node implements Closeable {
             scriptModule.registerClusterSettingsListeners(settingsModule.getClusterSettings());
             resourcesToClose.add(resourceWatcherService);
             final NetworkService networkService = new NetworkService(
-                getCustomNameResolvers(pluginsService.filterPlugins(DiscoveryPlugin.class)));
+                getCustomNameResolvers(pluginsService.filterPlugins(DiscoveryPlugin.class)),
+                getNamedSslConfigurations(pluginsService.filterPlugins(NetworkPlugin.class)));
 
             List<ClusterPlugin> clusterPlugins = pluginsService.filterPlugins(ClusterPlugin.class);
             final ClusterService clusterService = new ClusterService(settings, settingsModule.getClusterSettings(), threadPool);
@@ -970,6 +973,21 @@ public class Node implements Closeable {
             }
         }
         return customNameResolvers;
+    }
+
+    private Map<String, Supplier<NetworkService.SSLConfig>> getNamedSslConfigurations(List<NetworkPlugin> networkPlugins) {
+        final Map<String, Supplier<NetworkService.SSLConfig>> contexts = new HashMap<>();
+        for (NetworkPlugin plugin : networkPlugins) {
+            Map<String, Supplier<NetworkService.SSLConfig>> map = plugin.getNamedSSLConfigurations(settings);
+            final Set<String> existing = map.keySet().stream().filter(contexts::containsKey).collect(Collectors.toSet());
+            if (existing.isEmpty()) {
+                contexts.putAll(map);
+            } else {
+                throw new IllegalStateException("SSL configurations [" + Strings.collectionToCommaDelimitedString(existing)
+                    + "] already exist and cannot be defined by plugin [" + plugin + "]");
+            }
+        }
+        return contexts;
     }
 
     /** Constructs a ClusterInfoService which may be mocked for tests. */

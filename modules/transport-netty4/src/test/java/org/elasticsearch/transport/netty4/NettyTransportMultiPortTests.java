@@ -118,8 +118,9 @@ public class NettyTransportMultiPortTests extends ESTestCase {
 
     private TcpTransport startTransport(Settings settings, ThreadPool threadPool) {
         BigArrays bigArrays = new MockBigArrays(new MockPageCacheRecycler(Settings.EMPTY), new NoneCircuitBreakerService());
-        TcpTransport transport = new Netty4Transport(settings, threadPool, new NetworkService(Collections.emptyList()),
-            bigArrays, new NamedWriteableRegistry(Collections.emptyList()), new NoneCircuitBreakerService());
+        TcpTransport transport = new Netty4Transport(settings, threadPool,
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()), bigArrays,
+            new NamedWriteableRegistry(Collections.emptyList()), new NoneCircuitBreakerService());
         transport.start();
 
         assertThat(transport.lifecycleState(), is(Lifecycle.State.STARTED));

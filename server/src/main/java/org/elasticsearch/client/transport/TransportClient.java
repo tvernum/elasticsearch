@@ -140,7 +140,7 @@ public abstract class TransportClient extends AbstractClient {
         final List<Closeable> resourcesToClose = new ArrayList<>();
         final ThreadPool threadPool = new ThreadPool(settings);
         resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         try {
             final List<Setting<?>> additionalSettings = new ArrayList<>(pluginsService.getPluginSettings());
             final List<String> additionalSettingsFilter = new ArrayList<>(pluginsService.getPluginSettingsFilter());

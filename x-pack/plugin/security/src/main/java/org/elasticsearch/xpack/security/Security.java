@@ -224,6 +224,7 @@ import org.elasticsearch.xpack.security.transport.nio.SecurityNioTransport;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -584,9 +585,9 @@ public class Security extends Plugin implements ActionPlugin, IngestPlugin, Netw
         return getSettings(transportClientMode, securityExtensions);
     }
 
-        /**
-         * Get the {@link Setting setting configuration} for all security components, including those defined in extensions.
-         */
+    /**
+     * Get the {@link Setting setting configuration} for all security components, including those defined in extensions.
+     */
     public static List<Setting<?>> getSettings(boolean transportClientMode, List<SecurityExtension> securityExtensions) {
         List<Setting<?>> settingsList = new ArrayList<>();
 
@@ -620,6 +621,8 @@ public class Security extends Plugin implements ActionPlugin, IngestPlugin, Netw
         settingsList.add(TokenService.DELETE_TIMEOUT);
         settingsList.add(SecurityServerTransportInterceptor.TRANSPORT_TYPE_PROFILE_SETTING);
         settingsList.addAll(SSLConfigurationSettings.getProfileSettings());
+        // TODO(tvernum) this doesn't belong here
+        settingsList.addAll(SSLConfigurationSettings.withPrefix("xpack.reindex.ssl.").getAllSettings());
 
         // hide settings
         settingsList.add(Setting.listSetting(SecurityField.setting("hide_settings"), Collections.emptyList(), Function.identity(),
@@ -926,6 +929,11 @@ public class Security extends Plugin implements ActionPlugin, IngestPlugin, Netw
             pageCacheRecycler, threadPool, xContentRegistry, dispatcher, ipFilter.get(), getSslService()));
 
         return httpTransports;
+    }
+
+    @Override
+    public Map<String, Supplier<NetworkService.SSLConfig>> getNamedSSLConfigurations(Settings settings) {
+        return this.getSslService().getNamedSSLConfigs();
     }
 
     @Override

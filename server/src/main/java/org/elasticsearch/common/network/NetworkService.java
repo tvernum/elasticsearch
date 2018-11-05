@@ -19,11 +19,16 @@
 
 package org.elasticsearch.common.network;
 
+import org.apache.logging.log4j.LogManager;
+import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -31,9 +36,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class NetworkService {
 
@@ -76,10 +83,36 @@ public final class NetworkService {
         InetAddress[] resolveIfPossible(String value) throws IOException;
     }
 
-    private final List<CustomNameResolver> customNameResolvers;
+    public static final class SSLConfig {
+        public final SSLContext context;
+        public final String[] protocols;
+        public final String[] cipherSuites;
+        public final HostnameVerifier hostnameVerifier;
 
-    public NetworkService(List<CustomNameResolver> customNameResolvers) {
+        public SSLConfig(SSLContext context, String[] protocols, String[] cipherSuites, HostnameVerifier hostnameVerifier) {
+            this.context = context;
+            this.protocols = protocols;
+            this.cipherSuites = cipherSuites;
+            this.hostnameVerifier = hostnameVerifier;
+        }
+
+        @Override
+        public String toString() {
+            return "SSLConfig{" +
+                "context=" + context +
+                ", protocols=" + Arrays.toString(protocols) +
+                ", ciphers=" + Arrays.toString(cipherSuites) +
+                ", hostnameVerifier=" + hostnameVerifier +
+                '}';
+        }
+    }
+
+    private final List<CustomNameResolver> customNameResolvers;
+    private final Map<String, Supplier<SSLConfig>> sslConfigurations;
+
+    public NetworkService(List<CustomNameResolver> customNameResolvers, Map<String, Supplier<SSLConfig>> sslConfigurations) {
         this.customNameResolvers = Objects.requireNonNull(customNameResolvers, "customNameResolvers must be non null");
+        this.sslConfigurations = Objects.requireNonNull(sslConfigurations, "namedSslConfigurations must be non null");
     }
 
     /**
@@ -238,5 +271,19 @@ public final class NetworkService {
             }
         }
         return InetAddress.getAllByName(host);
+    }
+
+    @Nullable
+    public SSLConfig getNamedSSLConfig(String name) {
+        final Supplier<SSLConfig> supplier = this.sslConfigurations.get(name);
+        if (supplier == null) {
+            LogManager.getLogger(NetworkService.class).info("No SSL configuration for [{}] available names [{}]", name,
+                Strings.collectionToCommaDelimitedString(sslConfigurations.keySet()));
+            return null;
+        } else {
+            final SSLConfig config = supplier.get();
+            LogManager.getLogger(NetworkService.class).info("SSL configuration for [{}] is [{}]", name, config);
+            return config;
+        }
     }
 }

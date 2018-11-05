@@ -81,7 +81,7 @@ public class FileBasedUnicastHostsProviderTests extends ESTestCase {
         final MockTcpTransport transport = new MockTcpTransport(Settings.EMPTY, threadPool, BigArrays.NON_RECYCLING_INSTANCE,
             new NoneCircuitBreakerService(),
             new NamedWriteableRegistry(Collections.emptyList()),
-            new NetworkService(Collections.emptyList())) {
+            new NetworkService(Collections.emptyList(), Collections.emptyMap())) {
             @Override
             public BoundTransportAddress boundAddress() {
                 return new BoundTransportAddress(

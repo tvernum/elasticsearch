@@ -139,7 +139,7 @@ public class ZenFaultDetectionTests extends ESTestCase {
                     .putList(TransportService.TRACE_LOG_EXCLUDE_SETTING.getKey(), TransportLivenessAction.NAME)
                     .build(),
                 new MockTcpTransport(settings, threadPool, BigArrays.NON_RECYCLING_INSTANCE, circuitBreakerService,
-                    namedWriteableRegistry, new NetworkService(Collections.emptyList()), version),
+                    namedWriteableRegistry, new NetworkService(Collections.emptyList(), Collections.emptyMap()), version),
                 threadPool,
                 TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 (boundAddress) ->

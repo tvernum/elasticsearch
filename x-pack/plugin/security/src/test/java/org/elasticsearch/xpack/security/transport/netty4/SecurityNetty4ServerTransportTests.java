@@ -69,7 +69,7 @@ public class SecurityNetty4ServerTransportTests extends ESTestCase {
         return new SecurityNetty4ServerTransport(
                 settings,
                 mock(ThreadPool.class),
-                new NetworkService(Collections.emptyList()),
+                new NetworkService(Collections.emptyList(), Collections.emptyMap()),
                 mock(BigArrays.class),
                 mock(NamedWriteableRegistry.class),
                 mock(CircuitBreakerService.class),

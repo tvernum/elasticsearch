@@ -141,7 +141,7 @@ public class CommandLineHttpClient {
         }
 
         // we cannot do custom name resolution here...
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         try {
             InetAddress publishAddress = networkService.resolvePublishHostAddresses(httpPublishHost.toArray(Strings.EMPTY_ARRAY));
             int port = SETTING_HTTP_PUBLISH_PORT.get(settings);

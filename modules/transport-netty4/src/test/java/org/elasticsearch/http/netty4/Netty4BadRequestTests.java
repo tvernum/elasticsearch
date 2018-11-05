@@ -57,7 +57,7 @@ public class Netty4BadRequestTests extends ESTestCase {
 
     @Before
     public void setup() throws Exception {
-        networkService = new NetworkService(Collections.emptyList());
+        networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         bigArrays = new MockBigArrays(new MockPageCacheRecycler(Settings.EMPTY), new NoneCircuitBreakerService());
         threadPool = new TestThreadPool("test");
     }

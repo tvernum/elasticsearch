@@ -36,6 +36,8 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.ParentTaskAssigningClient;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
@@ -88,6 +90,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     protected final WorkerBulkByScrollTaskState worker;
     protected final ThreadPool threadPool;
     protected final ScriptService scriptService;
+    protected final NetworkService.SSLConfig sslConfig;
     protected final ClusterState clusterState;
 
     /**
@@ -112,8 +115,9 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     private final BiFunction<RequestWrapper<?>, ScrollableHitSource.Hit, RequestWrapper<?>> scriptApplier;
 
     public AbstractAsyncBulkByScrollAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-            ThreadPool threadPool, Request mainRequest, ScriptService scriptService, ClusterState clusterState,
-            ActionListener<BulkByScrollResponse> listener) {
+                                           ThreadPool threadPool, Request mainRequest, ScriptService scriptService,
+                                           @Nullable NetworkService.SSLConfig sslConfig, ClusterState clusterState,
+                                           ActionListener<BulkByScrollResponse> listener) {
 
         this.task = task;
         if (!task.isWorker()) {
@@ -125,6 +129,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
         this.client = client;
         this.threadPool = threadPool;
         this.scriptService = scriptService;
+        this.sslConfig = sslConfig;
         this.clusterState = clusterState;
         this.mainRequest = mainRequest;
         this.listener = listener;

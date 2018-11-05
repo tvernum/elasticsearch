@@ -62,7 +62,8 @@ public class SetupPasswordToolIT extends ESRestTestCase {
         String nodePublishAddress = (String) firstNodeHttp.get("publish_address");
         final int lastColonIndex = nodePublishAddress.lastIndexOf(':');
         InetAddress actualPublishAddress = InetAddresses.forString(nodePublishAddress.substring(0, lastColonIndex));
-        InetAddress expectedPublishAddress = new NetworkService(Collections.emptyList()).resolvePublishHostAddresses(Strings.EMPTY_ARRAY);
+        InetAddress expectedPublishAddress = new NetworkService(Collections.emptyList(), Collections.emptyMap())
+            .resolvePublishHostAddresses(Strings.EMPTY_ARRAY);
         final int port = Integer.valueOf(nodePublishAddress.substring(lastColonIndex + 1));
 
         List<String> lines = Files.readAllLines(configPath.resolve("elasticsearch.yml"));

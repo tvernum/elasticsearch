@@ -68,7 +68,7 @@ public class SimpleSecurityNetty4ServerTransportTests extends AbstractSimpleSecu
     public MockTransportService nettyFromThreadPool(Settings settings, ThreadPool threadPool, final Version version,
                                                     ClusterSettings clusterSettings, boolean doHandshake) {
         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         Settings settings1 = Settings.builder()
             .put(settings)
             .put("xpack.security.transport.ssl.enabled", true).build();

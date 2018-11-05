@@ -55,7 +55,7 @@ public class AbstractHttpServerTransportTests extends ESTestCase {
 
     @Before
     public void setup() throws Exception {
-        networkService = new NetworkService(Collections.emptyList());
+        networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         threadPool = new TestThreadPool("test");
         bigArrays = new MockBigArrays(new MockPageCacheRecycler(Settings.EMPTY), new NoneCircuitBreakerService());
     }

@@ -85,7 +85,7 @@ public class TransportUpdateByQueryAction extends HandledTransportAction<UpdateB
         AsyncIndexBySearchAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
                 ThreadPool threadPool, UpdateByQueryRequest request, ScriptService scriptService, ClusterState clusterState,
                 ActionListener<BulkByScrollResponse> listener) {
-            super(task, logger, client, threadPool, request, scriptService, clusterState, listener);
+            super(task, logger, client, threadPool, request, scriptService, null, clusterState, listener);
         }
 
         @Override

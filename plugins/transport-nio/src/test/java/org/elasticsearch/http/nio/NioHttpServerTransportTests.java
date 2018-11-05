@@ -94,7 +94,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
 
     @Before
     public void setup() throws Exception {
-        networkService = new NetworkService(Collections.emptyList());
+        networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         threadPool = new TestThreadPool("test");
         pageRecycler = new MockPageCacheRecycler(Settings.EMPTY);
         bigArrays = new MockBigArrays(pageRecycler, new NoneCircuitBreakerService());

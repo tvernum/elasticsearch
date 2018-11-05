@@ -59,14 +59,16 @@ public class Netty4ScheduledPingTests extends ESTestCase {
         CircuitBreakerService circuitBreakerService = new NoneCircuitBreakerService();
 
         NamedWriteableRegistry registry = new NamedWriteableRegistry(Collections.emptyList());
-        final Netty4Transport nettyA = new Netty4Transport(settings, threadPool, new NetworkService(Collections.emptyList()),
+        final Netty4Transport nettyA = new Netty4Transport(settings, threadPool,
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()),
             BigArrays.NON_RECYCLING_INSTANCE, registry, circuitBreakerService);
         MockTransportService serviceA = new MockTransportService(settings, nettyA, threadPool, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 null);
         serviceA.start();
         serviceA.acceptIncomingRequests();
 
-        final Netty4Transport nettyB = new Netty4Transport(settings, threadPool, new NetworkService(Collections.emptyList()),
+        final Netty4Transport nettyB = new Netty4Transport(settings, threadPool,
+            new NetworkService(Collections.emptyList(), Collections.emptyMap()),
             BigArrays.NON_RECYCLING_INSTANCE, registry, circuitBreakerService);
         MockTransportService serviceB = new MockTransportService(settings, nettyB, threadPool, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 null);

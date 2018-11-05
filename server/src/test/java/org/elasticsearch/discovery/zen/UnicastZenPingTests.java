@@ -140,7 +140,7 @@ public class UnicastZenPingTests extends ESTestCase {
         final Settings settingsMismatch =
             Settings.builder().put(settings).put("cluster.name", "mismatch").put(TcpTransport.PORT.getKey(), 0).build();
 
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
 
         final BiFunction<Settings, Version, Transport> supplier = (s, v) -> new MockTcpTransport(
             s,
@@ -264,7 +264,7 @@ public class UnicastZenPingTests extends ESTestCase {
         // use ephemeral ports
         final Settings settings = Settings.builder().put("cluster.name", "test").put(TcpTransport.PORT.getKey(), 0).build();
 
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
 
         final Map<String, TransportAddress[]> addresses = new HashMap<>();
         final BiFunction<Settings, Version, Transport> supplier = (s, v) -> new MockTcpTransport(
@@ -370,7 +370,7 @@ public class UnicastZenPingTests extends ESTestCase {
     }
 
     public void testPortLimit() throws InterruptedException {
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         final Transport transport = new MockTcpTransport(
             Settings.EMPTY,
             threadPool,
@@ -411,7 +411,7 @@ public class UnicastZenPingTests extends ESTestCase {
     }
 
     public void testRemovingLocalAddresses() throws InterruptedException {
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         final InetAddress loopbackAddress = InetAddress.getLoopbackAddress();
         final Transport transport = new MockTcpTransport(
             Settings.EMPTY,
@@ -456,7 +456,7 @@ public class UnicastZenPingTests extends ESTestCase {
 
     public void testUnknownHost() throws InterruptedException {
         final Logger logger = mock(Logger.class);
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         final String hostname = randomAlphaOfLength(8);
         final UnknownHostException unknownHostException = new UnknownHostException(hostname);
         final Transport transport = new MockTcpTransport(
@@ -504,7 +504,7 @@ public class UnicastZenPingTests extends ESTestCase {
 
     public void testResolveTimeout() throws InterruptedException {
         final Logger logger = mock(Logger.class);
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         final CountDownLatch latch = new CountDownLatch(1);
         final Transport transport = new MockTcpTransport(
             Settings.EMPTY,
@@ -570,7 +570,7 @@ public class UnicastZenPingTests extends ESTestCase {
     public void testResolveReuseExistingNodeConnections() throws ExecutionException, InterruptedException {
         final Settings settings = Settings.builder().put("cluster.name", "test").put(TcpTransport.PORT.getKey(), 0).build();
 
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
 
         final BiFunction<Settings, Version, Transport> supplier = (s, v) -> new MockTcpTransport(
             s,
@@ -636,7 +636,7 @@ public class UnicastZenPingTests extends ESTestCase {
     public void testPingingTemporalPings() throws ExecutionException, InterruptedException {
         final Settings settings = Settings.builder().put("cluster.name", "test").put(TcpTransport.PORT.getKey(), 0).build();
 
-        NetworkService networkService = new NetworkService(Collections.emptyList());
+        NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
 
         final BiFunction<Settings, Version, Transport> supplier = (s, v) -> new MockTcpTransport(
             s,
@@ -693,7 +693,7 @@ public class UnicastZenPingTests extends ESTestCase {
 
     public void testInvalidHosts() throws InterruptedException {
         final Logger logger = mock(Logger.class);
-        final NetworkService networkService = new NetworkService(Collections.emptyList());
+        final NetworkService networkService = new NetworkService(Collections.emptyList(), Collections.emptyMap());
         final Transport transport = new MockTcpTransport(
             Settings.EMPTY,
             threadPool,
