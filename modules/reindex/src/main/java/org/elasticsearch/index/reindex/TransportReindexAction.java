@@ -25,8 +25,10 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.nio.conn.SchemeIOSessionStrategy;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.automaton.Automata;
 import org.apache.lucene.util.automaton.Automaton;
@@ -66,6 +68,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.mapper.VersionFieldMapper;
 import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
+import org.elasticsearch.index.reindex.remote.RemoteReindexConfig;
 import org.elasticsearch.index.reindex.remote.RemoteScrollableHitSource;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
@@ -98,19 +101,21 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
     private final ScriptService scriptService;
     private final AutoCreateIndex autoCreateIndex;
     private final Client client;
+    private final RemoteReindexConfig remoteConfig;
     private final CharacterRunAutomaton remoteWhitelist;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
     @Inject
     public TransportReindexAction(Settings settings, ThreadPool threadPool, ActionFilters actionFilters,
-            IndexNameExpressionResolver indexNameExpressionResolver, ClusterService clusterService, ScriptService scriptService,
-            AutoCreateIndex autoCreateIndex, Client client, TransportService transportService) {
+                                  IndexNameExpressionResolver indexNameExpressionResolver, ClusterService clusterService, ScriptService scriptService,
+                                  AutoCreateIndex autoCreateIndex, Client client, RemoteReindexConfig remoteConfig, TransportService transportService) {
         super(ReindexAction.NAME, transportService, actionFilters, (Writeable.Reader<ReindexRequest>)ReindexRequest::new);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
         this.scriptService = scriptService;
         this.autoCreateIndex = autoCreateIndex;
         this.client = client;
+        this.remoteConfig = remoteConfig;
         remoteWhitelist = buildRemoteWhitelist(REMOTE_CLUSTER_WHITELIST.get(settings));
         this.indexNameExpressionResolver = indexNameExpressionResolver;
     }
@@ -129,8 +134,8 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
             () -> {
                 ParentTaskAssigningClient assigningClient = new ParentTaskAssigningClient(client, clusterService.localNode(),
                     bulkByScrollTask);
-                new AsyncIndexBySearchAction(bulkByScrollTask, logger, assigningClient, threadPool, request, scriptService, state,
-                    listener).start();
+                new AsyncIndexBySearchAction(bulkByScrollTask, logger, assigningClient, remoteConfig, threadPool, request, scriptService,
+                    state, listener).start();
             }
         );
     }
@@ -200,7 +205,8 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
      * @param taskId the id of the current task. This is added to the thread name for easier tracking
      * @param threadCollector a list in which we collect all the threads created by the client
      */
-    static RestClient buildRestClient(RemoteInfo remoteInfo, long taskId, List<Thread> threadCollector) {
+    static RestClient buildRestClient(RemoteInfo remoteInfo, RemoteReindexConfiguration<HttpAsyncClientBuilder> config, long taskId,
+                                      List<Thread> threadCollector) {
         Header[] clientHeaders = new Header[remoteInfo.getHeaders().size()];
         int i = 0;
         for (Map.Entry<String, String> header : remoteInfo.getHeaders().entrySet()) {
@@ -233,6 +239,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
                 });
                 // Limit ourselves to one reactor thread because for now the search process is single threaded.
                 c.setDefaultIOReactorConfig(IOReactorConfig.custom().setIoThreadCount(1).build());
+                config.configure(c);
                 return c;
             });
         if (Strings.hasLength(remoteInfo.getPathPrefix()) && "/".equals(remoteInfo.getPathPrefix()) == false) {
@@ -256,10 +263,10 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
          */
         private List<Thread> createdThreads = emptyList();
 
-        AsyncIndexBySearchAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
+        AsyncIndexBySearchAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client, RemoteReindexConfig remoteConfig,
                 ThreadPool threadPool, ReindexRequest request, ScriptService scriptService, ClusterState clusterState,
                 ActionListener<BulkByScrollResponse> listener) {
-            super(task, logger, client, threadPool, request, scriptService, clusterState, listener);
+            super(task, logger, client, remoteConfig, threadPool, request, scriptService, clusterState, listener);
         }
 
         @Override
@@ -276,7 +283,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
             if (mainRequest.getRemoteInfo() != null) {
                 RemoteInfo remoteInfo = mainRequest.getRemoteInfo();
                 createdThreads = synchronizedList(new ArrayList<>());
-                RestClient restClient = buildRestClient(remoteInfo, task.getId(), createdThreads);
+                RestClient restClient = buildRestClient(remoteInfo, remoteConfig, task.getId(), createdThreads);
                 return new RemoteScrollableHitSource(logger, backoffPolicy, threadPool, worker::countSearchRetry, this::finishHim,
                     restClient, remoteInfo.getQuery(), mainRequest.getSearchRequest());
             }

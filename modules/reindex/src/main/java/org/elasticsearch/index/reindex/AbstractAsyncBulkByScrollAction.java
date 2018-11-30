@@ -47,6 +47,7 @@ import org.elasticsearch.index.mapper.SourceFieldMapper;
 import org.elasticsearch.index.mapper.TypeFieldMapper;
 import org.elasticsearch.index.mapper.VersionFieldMapper;
 import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
+import org.elasticsearch.index.reindex.remote.RemoteReindexConfig;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.UpdateScript;
@@ -89,6 +90,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     protected final ThreadPool threadPool;
     protected final ScriptService scriptService;
     protected final ClusterState clusterState;
+    protected final RemoteReindexConfig remoteConfig;
 
     /**
      * The request for this action. Named mainRequest because we create lots of <code>request</code> variables all representing child
@@ -112,8 +114,8 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     private final BiFunction<RequestWrapper<?>, ScrollableHitSource.Hit, RequestWrapper<?>> scriptApplier;
 
     public AbstractAsyncBulkByScrollAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-            ThreadPool threadPool, Request mainRequest, ScriptService scriptService, ClusterState clusterState,
-            ActionListener<BulkByScrollResponse> listener) {
+                                           RemoteReindexConfig remoteConfig, ThreadPool threadPool, Request mainRequest, ScriptService scriptService,
+                                           ClusterState clusterState, ActionListener<BulkByScrollResponse> listener) {
 
         this.task = task;
         if (!task.isWorker()) {
@@ -123,6 +125,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
 
         this.logger = logger;
         this.client = client;
+        this.remoteConfig = remoteConfig;
         this.threadPool = threadPool;
         this.scriptService = scriptService;
         this.clusterState = clusterState;

@@ -62,6 +62,8 @@ public class SSLService {
 
     private static final Logger logger = LogManager.getLogger(SSLService.class);
 
+    public static final String REINDEX_SSL_CONTEXT = "xpack.reindex.ssl";
+
     private final Settings settings;
 
     /**
@@ -415,6 +417,14 @@ public class SSLService {
                 sslContextHolders.computeIfAbsent(configuration, this::createSslContext);
             }
         });
+
+        final Settings reindex = settings.getByPrefix(REINDEX_SSL_CONTEXT + ".");
+        if (reindex.isEmpty() == false) {
+            // Don't fallback to global settings
+            final SSLConfiguration configuration = new SSLConfiguration(reindex);
+            storeSslConfiguration(REINDEX_SSL_CONTEXT, configuration);
+            sslContextHolders.computeIfAbsent(configuration, this::createSslContext);
+        }
 
         final Settings transportSSLSettings = settings.getByPrefix(XPackSettings.TRANSPORT_SSL_PREFIX);
         final SSLConfiguration transportSSLConfiguration = new SSLConfiguration(transportSSLSettings, globalSSLConfiguration);

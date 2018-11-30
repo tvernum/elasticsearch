@@ -677,7 +677,7 @@ public class AsyncBulkByScrollActionTests extends ESTestCase {
     private class DummyAsyncBulkByScrollAction extends AbstractAsyncBulkByScrollAction<DummyAbstractBulkByScrollRequest> {
         DummyAsyncBulkByScrollAction() {
             super(testTask, AsyncBulkByScrollActionTests.this.logger, new ParentTaskAssigningClient(client, localNode, testTask),
-                    client.threadPool(), testRequest, null, null, listener);
+                    null, client.threadPool(), testRequest, null, null, listener);
         }
 
         @Override

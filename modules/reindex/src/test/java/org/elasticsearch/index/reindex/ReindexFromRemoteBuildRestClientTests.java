@@ -39,7 +39,7 @@ public class ReindexFromRemoteBuildRestClientTests extends RestClientBuilderTest
                 RemoteInfo.DEFAULT_SOCKET_TIMEOUT, RemoteInfo.DEFAULT_CONNECT_TIMEOUT);
             long taskId = randomLong();
             List<Thread> threads = synchronizedList(new ArrayList<>());
-            RestClient client = TransportReindexAction.buildRestClient(remoteInfo, taskId, threads);
+            RestClient client = TransportReindexAction.buildRestClient(remoteInfo, x -> {}, taskId, threads);
             try {
                 assertBusy(() -> assertThat(threads, hasSize(2)));
                 int i = 0;
@@ -63,7 +63,7 @@ public class ReindexFromRemoteBuildRestClientTests extends RestClientBuilderTest
             headers, RemoteInfo.DEFAULT_SOCKET_TIMEOUT, RemoteInfo.DEFAULT_CONNECT_TIMEOUT);
         long taskId = randomLong();
         List<Thread> threads = synchronizedList(new ArrayList<>());
-        RestClient client = TransportReindexAction.buildRestClient(remoteInfo, taskId, threads);
+        RestClient client = TransportReindexAction.buildRestClient(remoteInfo, x-> {}, taskId, threads);
         try {
             assertHeaders(client, headers);
         } finally {

@@ -103,7 +103,7 @@ public class ReindexScriptTests extends AbstractAsyncBulkByScrollActionScriptTes
 
     @Override
     protected TransportReindexAction.AsyncIndexBySearchAction action(ScriptService scriptService, ReindexRequest request) {
-        return new TransportReindexAction.AsyncIndexBySearchAction(task, logger, null, threadPool, request, scriptService,
+        return new TransportReindexAction.AsyncIndexBySearchAction(task, logger, null, null, threadPool, request, scriptService,
                 null, listener());
     }
 }
