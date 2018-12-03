@@ -7,7 +7,7 @@ esplugin {
     description 'Elasticsearch Expanded Pack Plugin - Security'
     classname 'org.elasticsearch.xpack.security.Security'
     requiresKeystore true
-    extendedPlugins = ['x-pack-core', 'reindex']
+    extendedPlugins = ['x-pack-core']
 }
 
 archivesBaseName = 'x-pack-security'
@@ -17,6 +17,9 @@ dependencies {
     compileOnly project(path: xpackModule('core'), configuration: 'default')
     compileOnly project(path: ':modules:transport-netty4', configuration: 'runtime')
     compileOnly project(path: ':plugins:transport-nio', configuration: 'runtime')
+    compileOnly project(path: ':modules:http-client', configuration: 'runtime')
+
+    compile "commons-codec:commons-codec:${versions.commonscodec}"
 
     testCompile project(path: xpackModule('monitoring'))
     testCompile project(path: xpackModule('sql:sql-action'))

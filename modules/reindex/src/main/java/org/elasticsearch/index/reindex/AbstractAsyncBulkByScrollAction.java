@@ -39,6 +39,7 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
+import org.elasticsearch.http.client.HttpClientConfigurator;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.mapper.IdFieldMapper;
 import org.elasticsearch.index.mapper.IndexFieldMapper;
@@ -47,7 +48,6 @@ import org.elasticsearch.index.mapper.SourceFieldMapper;
 import org.elasticsearch.index.mapper.TypeFieldMapper;
 import org.elasticsearch.index.mapper.VersionFieldMapper;
 import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
-import org.elasticsearch.index.reindex.remote.RemoteReindexConfig;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.UpdateScript;
@@ -90,7 +90,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     protected final ThreadPool threadPool;
     protected final ScriptService scriptService;
     protected final ClusterState clusterState;
-    protected final RemoteReindexConfig remoteConfig;
+    protected final HttpClientConfigurator httpClientConfigurator;
 
     /**
      * The request for this action. Named mainRequest because we create lots of <code>request</code> variables all representing child
@@ -114,8 +114,8 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
     private final BiFunction<RequestWrapper<?>, ScrollableHitSource.Hit, RequestWrapper<?>> scriptApplier;
 
     public AbstractAsyncBulkByScrollAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-                                           RemoteReindexConfig remoteConfig, ThreadPool threadPool, Request mainRequest, ScriptService scriptService,
-                                           ClusterState clusterState, ActionListener<BulkByScrollResponse> listener) {
+            HttpClientConfigurator restConfig, ThreadPool threadPool, Request mainRequest, ScriptService scriptService,
+            ClusterState clusterState, ActionListener<BulkByScrollResponse> listener) {
 
         this.task = task;
         if (!task.isWorker()) {
@@ -125,7 +125,7 @@ public abstract class AbstractAsyncBulkByScrollAction<Request extends AbstractBu
 
         this.logger = logger;
         this.client = client;
-        this.remoteConfig = remoteConfig;
+        this.httpClientConfigurator = restConfig;
         this.threadPool = threadPool;
         this.scriptService = scriptService;
         this.clusterState = clusterState;

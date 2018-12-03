@@ -17,9 +17,25 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+package org.elasticsearch.http.client;
 
-public interface RemoteReindexConfiguration<T> {
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 
-    void configure(T clientBuilder);
+/**
+ * A functional interface for configuring a {@link HttpAsyncClientBuilder}
+ */
+@FunctionalInterface
+public interface HttpClientConfigurator {
+
+    HttpClientConfigurator NO_OP = (context, httpClientBuilder) -> {
+        // no-op
+    };
+
+    /**
+     * Configure a http client in a named context
+     * @param context The name of the context in which the client is to be used (typically a module or plugin name)
+     * @param httpClientBuilder The builder to be configured
+     */
+    void configure(String context, HttpAsyncClientBuilder httpClientBuilder);
+
 }

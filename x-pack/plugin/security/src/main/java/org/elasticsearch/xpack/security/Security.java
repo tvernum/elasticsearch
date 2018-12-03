@@ -187,7 +187,7 @@ import org.elasticsearch.xpack.security.authz.store.FileRolesStore;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
 import org.elasticsearch.xpack.security.authz.store.NativeRolesStore;
 import org.elasticsearch.xpack.security.ingest.SetSecurityUserProcessor;
-import org.elasticsearch.xpack.security.reindex.ReindexSslConfiguration;
+import org.elasticsearch.xpack.core.security.reindex.ReindexSslConfiguration;
 import org.elasticsearch.xpack.security.rest.SecurityRestFilter;
 import org.elasticsearch.xpack.security.rest.action.RestAuthenticateAction;
 import org.elasticsearch.xpack.security.rest.action.oauth2.RestGetTokenAction;
