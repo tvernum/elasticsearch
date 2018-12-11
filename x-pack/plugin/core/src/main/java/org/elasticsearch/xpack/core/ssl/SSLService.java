@@ -17,6 +17,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.common.socket.SocketAccess;
+import org.elasticsearch.xpack.core.security.reindex.ReindexSslConfiguration;
 import org.elasticsearch.xpack.core.ssl.cert.CertificateInfo;
 
 import javax.net.ssl.HostnameVerifier;
@@ -415,6 +416,14 @@ public class SSLService {
                 sslContextHolders.computeIfAbsent(configuration, this::createSslContext);
             }
         });
+
+        final Settings reindex = settings.getByPrefix(ReindexSslConfiguration.REINDEX_SSL_CONTEXT + ".");
+        if (reindex.isEmpty() == false) {
+            // Don't fallback to global settings
+            final SSLConfiguration configuration = new SSLConfiguration(reindex);
+            storeSslConfiguration(ReindexSslConfiguration.REINDEX_SSL_CONTEXT, configuration);
+            sslContextHolders.computeIfAbsent(configuration, this::createSslContext);
+        }
 
         final Settings transportSSLSettings = settings.getByPrefix(XPackSettings.TRANSPORT_SSL_PREFIX);
         final SSLConfiguration transportSSLConfiguration = new SSLConfiguration(transportSSLSettings, globalSSLConfiguration);

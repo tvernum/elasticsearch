@@ -18,6 +18,7 @@ esplugin {
   classname 'org.elasticsearch.xpack.core.XPackPlugin'
   hasNativeController false
   requiresKeystore false
+  extendedPlugins = ['http-client']
 }
 
 dependencyLicenses {
@@ -27,13 +28,7 @@ dependencyLicenses {
 
 dependencies {
     compileOnly "org.elasticsearch:elasticsearch:${version}"
-    compile "org.apache.httpcomponents:httpclient:${versions.httpclient}"
-    compile "org.apache.httpcomponents:httpcore:${versions.httpcore}"
-    compile "org.apache.httpcomponents:httpcore-nio:${versions.httpcore}"
-    compile "org.apache.httpcomponents:httpasyncclient:${versions.httpasyncclient}"
-
-    compile "commons-logging:commons-logging:${versions.commonslogging}"
-    compile "commons-codec:commons-codec:${versions.commonscodec}"
+    compileOnly project(path: ':modules:http-client', configuration: 'runtime')
 
     // security deps
     compile 'com.unboundid:unboundid-ldapsdk:4.0.8'

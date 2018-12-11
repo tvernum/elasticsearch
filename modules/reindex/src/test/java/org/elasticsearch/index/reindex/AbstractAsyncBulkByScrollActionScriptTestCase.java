@@ -22,6 +22,7 @@ package org.elasticsearch.index.reindex;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.index.reindex.AbstractAsyncBulkByScrollAction.OpType;
 import org.elasticsearch.index.reindex.AbstractAsyncBulkByScrollAction.RequestWrapper;
 import org.elasticsearch.script.ScriptService;
@@ -41,7 +42,8 @@ import static org.mockito.Mockito.when;
 
 public abstract class AbstractAsyncBulkByScrollActionScriptTestCase<
                 Request extends AbstractBulkIndexByScrollRequest<Request>,
-                Response extends BulkByScrollResponse>
+                Response extends BulkByScrollResponse,
+                Action extends TransportAction<Request, Response>>
         extends AbstractAsyncBulkByScrollActionTestCase<Request, Response> {
 
     protected ScriptService scriptService;
@@ -62,7 +64,7 @@ public abstract class AbstractAsyncBulkByScrollActionScriptTestCase<
             }
         };;
         when(scriptService.compile(any(), eq(UpdateScript.CONTEXT))).thenReturn(factory);
-        AbstractAsyncBulkByScrollAction<Request> action = action(scriptService, request().setScript(mockScript("")));
+        AbstractAsyncBulkByScrollAction<Request, Action> action = action(scriptService, request().setScript(mockScript("")));
         RequestWrapper<?> result = action.buildScriptApplier().apply(AbstractAsyncBulkByScrollAction.wrap(index), doc);
         return (result != null) ? (T) result.self() : null;
     }
@@ -104,5 +106,5 @@ public abstract class AbstractAsyncBulkByScrollActionScriptTestCase<
         assertThat(e.getMessage(), equalTo("Operation type [unknown] not allowed, only [noop, index, delete] are allowed"));
     }
 
-    protected abstract AbstractAsyncBulkByScrollAction<Request> action(ScriptService scriptService, Request request);
+    protected abstract AbstractAsyncBulkByScrollAction<Request, Action> action(ScriptService scriptService, Request request);
 }

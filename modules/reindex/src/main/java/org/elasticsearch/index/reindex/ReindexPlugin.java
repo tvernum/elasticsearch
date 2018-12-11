@@ -73,4 +73,5 @@ public class ReindexPlugin extends Plugin implements ActionPlugin {
     public List<Setting<?>> getSettings() {
         return singletonList(TransportReindexAction.REMOTE_CLUSTER_WHITELIST);
     }
+
 }

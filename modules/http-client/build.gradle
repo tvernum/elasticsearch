@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
-
-import org.elasticsearch.action.support.TransportAction;
-
-public abstract class AbstractAsyncBulkByScrollActionMetadataTestCase<
-                Request extends AbstractBulkByScrollRequest<Request>,
-                Response extends BulkByScrollResponse,
-                Action extends TransportAction<Request, Response>>
-        extends AbstractAsyncBulkByScrollActionTestCase<Request, Response> {
-
-    protected ScrollableHitSource.BasicHit doc() {
-        return new ScrollableHitSource.BasicHit("index", "type", "id", 0);
-    }
-
-    protected abstract AbstractAsyncBulkByScrollAction<Request, Action> action();
+esplugin {
+  description 'Common Http Client configuration for Elasticsearch plugins'
+  classname 'org.elasticsearch.http.client.HttpClientPlugin'
+  hasClientJar = true 
 }
+
+dependencies {
+    compile "org.apache.httpcomponents:httpclient:${versions.httpclient}"
+    compile "org.apache.httpcomponents:httpcore:${versions.httpcore}"
+    compile "org.apache.httpcomponents:httpcore-nio:${versions.httpcore}"
+    compile "org.apache.httpcomponents:httpasyncclient:${versions.httpasyncclient}"
+
+    compile "commons-logging:commons-logging:${versions.commonslogging}"
+    compile "commons-codec:commons-codec:${versions.commonscodec}"
+}
+

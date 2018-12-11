@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.reindex;
 
+import org.elasticsearch.http.client.HttpClientPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.ESIntegTestCase.ClusterScope;
@@ -38,7 +39,7 @@ import static org.elasticsearch.test.ESIntegTestCase.Scope.SUITE;
 public abstract class ReindexTestCase extends ESIntegTestCase {
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(ReindexPlugin.class);
+        return Arrays.asList(HttpClientPlugin.class, ReindexPlugin.class);
     }
 
     @Override

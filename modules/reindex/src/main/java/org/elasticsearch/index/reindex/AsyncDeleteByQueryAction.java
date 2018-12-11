@@ -23,18 +23,16 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.client.ParentTaskAssigningClient;
-import org.elasticsearch.cluster.ClusterState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
 
 /**
  * Implementation of delete-by-query using scrolling and bulk.
  */
-public class AsyncDeleteByQueryAction extends AbstractAsyncBulkByScrollAction<DeleteByQueryRequest> {
-    public AsyncDeleteByQueryAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-                                    ThreadPool threadPool, DeleteByQueryRequest request, ScriptService scriptService,
-                                    ClusterState clusterState, ActionListener<BulkByScrollResponse> listener) {
-        super(task, logger, client, threadPool, request, scriptService, clusterState, listener);
+public class AsyncDeleteByQueryAction extends AbstractAsyncBulkByScrollAction<DeleteByQueryRequest, TransportDeleteByQueryAction> {
+    public AsyncDeleteByQueryAction(TransportDeleteByQueryAction action, BulkByScrollTask task, Logger logger,
+                                    ParentTaskAssigningClient client, ThreadPool threadPool, DeleteByQueryRequest request,
+                                    ActionListener<BulkByScrollResponse> listener) {
+        super(task, logger, client, threadPool, request, action, listener);
     }
 
     @Override

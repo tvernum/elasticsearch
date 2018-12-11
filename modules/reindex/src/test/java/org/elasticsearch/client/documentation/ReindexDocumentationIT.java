@@ -23,6 +23,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.http.client.HttpClientPlugin;
 import org.elasticsearch.index.IndexModule;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -75,7 +76,7 @@ public class ReindexDocumentationIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(ReindexPlugin.class, ReindexCancellationPlugin.class);
+        return Arrays.asList(HttpClientPlugin.class, ReindexPlugin.class, ReindexCancellationPlugin.class);
     }
 
     @Override

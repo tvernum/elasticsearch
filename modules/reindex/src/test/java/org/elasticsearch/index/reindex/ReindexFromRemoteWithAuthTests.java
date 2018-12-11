@@ -41,6 +41,7 @@ import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.NodeEnvironment;
+import org.elasticsearch.http.client.HttpClientPlugin;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestStatus;
@@ -71,6 +72,7 @@ public class ReindexFromRemoteWithAuthTests extends ESSingleNodeTestCase {
     protected Collection<Class<? extends Plugin>> getPlugins() {
         return Arrays.asList(
             Netty4Plugin.class,
+            HttpClientPlugin.class,
             ReindexFromRemoteWithAuthTests.TestPlugin.class,
             ReindexPlugin.class);
     }

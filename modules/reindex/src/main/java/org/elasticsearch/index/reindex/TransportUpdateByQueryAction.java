@@ -71,8 +71,7 @@ public class TransportUpdateByQueryAction extends HandledTransportAction<UpdateB
                 ClusterState state = clusterService.state();
                 ParentTaskAssigningClient assigningClient = new ParentTaskAssigningClient(client, clusterService.localNode(),
                     bulkByScrollTask);
-                new AsyncIndexBySearchAction(bulkByScrollTask, logger, assigningClient, threadPool, request, scriptService, state,
-                    listener).start();
+                new AsyncIndexBySearchAction(this, bulkByScrollTask, logger, assigningClient, threadPool, request, listener).start();
             }
         );
     }
@@ -80,11 +79,11 @@ public class TransportUpdateByQueryAction extends HandledTransportAction<UpdateB
     /**
      * Simple implementation of update-by-query using scrolling and bulk.
      */
-    static class AsyncIndexBySearchAction extends AbstractAsyncBulkByScrollAction<UpdateByQueryRequest> {
-        AsyncIndexBySearchAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-                ThreadPool threadPool, UpdateByQueryRequest request, ScriptService scriptService, ClusterState clusterState,
-                ActionListener<BulkByScrollResponse> listener) {
-            super(task, logger, client, threadPool, request, scriptService, clusterState, listener);
+    static class AsyncIndexBySearchAction extends AbstractAsyncBulkByScrollAction<UpdateByQueryRequest, TransportUpdateByQueryAction> {
+        AsyncIndexBySearchAction(TransportUpdateByQueryAction action, BulkByScrollTask task, Logger logger,
+                                 ParentTaskAssigningClient client, ThreadPool threadPool, UpdateByQueryRequest request,
+                                 ActionListener<BulkByScrollResponse> listener) {
+            super(task, logger, client, threadPool, request, action, listener);
         }
 
         @Override
@@ -100,7 +99,7 @@ public class TransportUpdateByQueryAction extends HandledTransportAction<UpdateB
         public BiFunction<RequestWrapper<?>, ScrollableHitSource.Hit, RequestWrapper<?>> buildScriptApplier() {
             Script script = mainRequest.getScript();
             if (script != null) {
-                return new UpdateByQueryScriptApplier(worker, scriptService, script, script.getParams());
+                return new UpdateByQueryScriptApplier(worker, mainAction.scriptService, script, script.getParams());
             }
             return super.buildScriptApplier();
         }

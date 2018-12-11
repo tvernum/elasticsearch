@@ -23,7 +23,7 @@ import org.elasticsearch.index.reindex.ScrollableHitSource.Hit;
 import org.elasticsearch.action.index.IndexRequest;
 
 public class UpdateByQueryMetadataTests
-        extends AbstractAsyncBulkByScrollActionMetadataTestCase<UpdateByQueryRequest, BulkByScrollResponse> {
+        extends AbstractAsyncBulkByScrollActionMetadataTestCase<UpdateByQueryRequest, BulkByScrollResponse, TransportUpdateByQueryAction> {
     public void testRoutingIsCopied() throws Exception {
         IndexRequest index = new IndexRequest();
         action().copyMetadata(AbstractAsyncBulkByScrollAction.wrap(index), doc().setRouting("foo"));
@@ -42,8 +42,8 @@ public class UpdateByQueryMetadataTests
 
     private class TestAction extends TransportUpdateByQueryAction.AsyncIndexBySearchAction {
         TestAction() {
-            super(UpdateByQueryMetadataTests.this.task, UpdateByQueryMetadataTests.this.logger, null,
-                    UpdateByQueryMetadataTests.this.threadPool, request(), null, null, listener());
+            super(null, UpdateByQueryMetadataTests.this.task, UpdateByQueryMetadataTests.this.logger, null,
+                    UpdateByQueryMetadataTests.this.threadPool, request(), listener());
         }
 
         @Override

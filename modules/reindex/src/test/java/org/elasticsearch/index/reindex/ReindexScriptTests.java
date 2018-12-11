@@ -20,9 +20,14 @@
 package org.elasticsearch.index.reindex;
 
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.common.lucene.uid.Versions;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.transport.TransportService;
+import org.mockito.Mockito;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -30,7 +35,8 @@ import static org.hamcrest.Matchers.containsString;
 /**
  * Tests index-by-search with a script modifying the documents.
  */
-public class ReindexScriptTests extends AbstractAsyncBulkByScrollActionScriptTestCase<ReindexRequest, BulkByScrollResponse> {
+public class ReindexScriptTests
+    extends AbstractAsyncBulkByScrollActionScriptTestCase<ReindexRequest, BulkByScrollResponse, TransportReindexAction> {
 
     public void testSetIndex() throws Exception {
         Object dest = randomFrom(new Object[] {234, 234L, "pancake"});
@@ -103,7 +109,9 @@ public class ReindexScriptTests extends AbstractAsyncBulkByScrollActionScriptTes
 
     @Override
     protected TransportReindexAction.AsyncIndexBySearchAction action(ScriptService scriptService, ReindexRequest request) {
-        return new TransportReindexAction.AsyncIndexBySearchAction(task, logger, null, threadPool, request, scriptService,
-                null, listener());
+        TransportService transportService = Mockito.mock(TransportService.class);
+        TransportReindexAction transportAction = new TransportReindexAction(Settings.EMPTY, threadPool,
+            new ActionFilters(Collections.emptySet()), null, null, scriptService, null, null, null, transportService);
+        return new TransportReindexAction.AsyncIndexBySearchAction(transportAction, task, logger, null, threadPool, request, listener());
     }
 }

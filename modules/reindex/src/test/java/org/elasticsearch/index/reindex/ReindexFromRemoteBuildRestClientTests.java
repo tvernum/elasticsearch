@@ -22,6 +22,7 @@ package org.elasticsearch.index.reindex;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilderTestCase;
 import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.http.client.HttpClientConfigurationCallback;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +40,7 @@ public class ReindexFromRemoteBuildRestClientTests extends RestClientBuilderTest
                 RemoteInfo.DEFAULT_SOCKET_TIMEOUT, RemoteInfo.DEFAULT_CONNECT_TIMEOUT);
             long taskId = randomLong();
             List<Thread> threads = synchronizedList(new ArrayList<>());
-            RestClient client = TransportReindexAction.buildRestClient(remoteInfo, taskId, threads);
+            RestClient client = TransportReindexAction.buildRestClient(remoteInfo, HttpClientConfigurationCallback.NO_OP, taskId, threads);
             try {
                 assertBusy(() -> assertThat(threads, hasSize(2)));
                 int i = 0;
@@ -63,7 +64,7 @@ public class ReindexFromRemoteBuildRestClientTests extends RestClientBuilderTest
             headers, RemoteInfo.DEFAULT_SOCKET_TIMEOUT, RemoteInfo.DEFAULT_CONNECT_TIMEOUT);
         long taskId = randomLong();
         List<Thread> threads = synchronizedList(new ArrayList<>());
-        RestClient client = TransportReindexAction.buildRestClient(remoteInfo, taskId, threads);
+        RestClient client = TransportReindexAction.buildRestClient(remoteInfo, HttpClientConfigurationCallback.NO_OP, taskId, threads);
         try {
             assertHeaders(client, headers);
         } finally {

@@ -17,19 +17,17 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+grant {
+   // reindex opens socket connections using the rest client
+   permission java.net.SocketPermission "*", "connect";
+};
 
-import org.elasticsearch.action.support.TransportAction;
+grant codeBase "${codebase.elasticsearch-rest-client}" {
+  // rest client uses system properties which gets the default proxy
+  permission java.net.NetPermission "getProxySelector";
+};
 
-public abstract class AbstractAsyncBulkByScrollActionMetadataTestCase<
-                Request extends AbstractBulkByScrollRequest<Request>,
-                Response extends BulkByScrollResponse,
-                Action extends TransportAction<Request, Response>>
-        extends AbstractAsyncBulkByScrollActionTestCase<Request, Response> {
-
-    protected ScrollableHitSource.BasicHit doc() {
-        return new ScrollableHitSource.BasicHit("index", "type", "id", 0);
-    }
-
-    protected abstract AbstractAsyncBulkByScrollAction<Request, Action> action();
-}
+grant codeBase "${codebase.httpasyncclient}" {
+  // rest client uses system properties which gets the default proxy
+  permission java.net.NetPermission "getProxySelector";
+};

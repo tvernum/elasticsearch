@@ -25,7 +25,8 @@ import org.elasticsearch.action.index.IndexRequest;
 /**
  * Index-by-search test for ttl, timestamp, and routing.
  */
-public class ReindexMetadataTests extends AbstractAsyncBulkByScrollActionMetadataTestCase<ReindexRequest, BulkByScrollResponse> {
+public class ReindexMetadataTests
+    extends AbstractAsyncBulkByScrollActionMetadataTestCase<ReindexRequest, BulkByScrollResponse, TransportReindexAction> {
     public void testRoutingCopiedByDefault() throws Exception {
         IndexRequest index = new IndexRequest();
         action().copyMetadata(AbstractAsyncBulkByScrollAction.wrap(index), doc().setRouting("foo"));
@@ -76,8 +77,8 @@ public class ReindexMetadataTests extends AbstractAsyncBulkByScrollActionMetadat
 
     private class TestAction extends TransportReindexAction.AsyncIndexBySearchAction {
         TestAction() {
-            super(ReindexMetadataTests.this.task, ReindexMetadataTests.this.logger, null, ReindexMetadataTests.this.threadPool, request(),
-                    null, null, listener());
+            super(null, ReindexMetadataTests.this.task, ReindexMetadataTests.this.logger, null, ReindexMetadataTests.this.threadPool,
+                request(), listener());
         }
 
         public ReindexRequest mainRequest() {
