@@ -33,3 +33,17 @@ dependencies {
     compile "commons-codec:commons-codec:${versions.commonscodec}"
 }
 
+dependencyLicenses {
+  mapping from: /http.*/, to: 'httpclient' // pulled in by rest client
+  mapping from: /commons-.*/, to: 'commons' // pulled in by rest client
+}
+
+thirdPartyAudit.excludes = [
+  // Commons logging
+  'javax.servlet.ServletContextEvent',
+  'javax.servlet.ServletContextListener',
+  'org.apache.avalon.framework.logger.Logger',
+  'org.apache.log.Hierarchy',
+  'org.apache.log.Logger',
+]
+
