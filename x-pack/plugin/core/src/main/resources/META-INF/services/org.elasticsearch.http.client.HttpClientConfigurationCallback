@@ -1,1 +1,1 @@
-org.elasticsearch.xpack.core.security.reindex.ReindexSslConfiguration
+org.elasticsearch.xpack.core.ssl.reindex.ReindexSslConfiguration

@@ -21,6 +21,8 @@ package org.elasticsearch.http.client;
 
 import org.apache.http.HttpHost;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
@@ -29,6 +31,7 @@ import java.util.List;
  */
 public class HttpClientService implements HttpClientConfigurationCallback {
     private final List<HttpClientConfigurationCallback> callbacks;
+    private final Logger logger;
 
     /**
      * Construct a new service using a list of configuration callback
@@ -36,11 +39,13 @@ public class HttpClientService implements HttpClientConfigurationCallback {
      *                  operation of the service.
      */
     HttpClientService(List<HttpClientConfigurationCallback> callbacks) {
+        this.logger = LogManager.getLogger(getClass());
         this.callbacks = callbacks;
     }
 
     @Override
     public void configureHttpClient(String context, HttpHost host, HttpAsyncClientBuilder httpClientBuilder) {
+        logger.trace("Calling [{}] callbacks for HTTP context [{}] to host [{}]", callbacks.size(), context, host);
         this.callbacks.forEach(c -> c.configureHttpClient(context, host, httpClientBuilder));
     }
 

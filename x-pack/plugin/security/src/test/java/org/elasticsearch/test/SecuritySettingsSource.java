@@ -14,6 +14,7 @@ import org.elasticsearch.common.settings.SecureSettings;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.http.client.HttpClientPlugin;
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.ESIntegTestCase.Scope;
@@ -171,8 +172,8 @@ public class SecuritySettingsSource extends NodeConfigurationSource {
 
     @Override
     public Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(LocalStateSecurity.class, Netty4Plugin.class, ReindexPlugin.class, CommonAnalysisPlugin.class,
-            InternalSettingsPlugin.class);
+        return Arrays.asList(LocalStateSecurity.class, Netty4Plugin.class, HttpClientPlugin.class, ReindexPlugin.class,
+            CommonAnalysisPlugin.class, InternalSettingsPlugin.class);
     }
 
     @Override
@@ -340,7 +341,7 @@ public class SecuritySettingsSource extends NodeConfigurationSource {
         return resolvedPaths.toArray(new String[resolvedPaths.size()]);
     }
 
-    private static Path resolveResourcePath(String resourcePathToStore) {
+    public static Path resolveResourcePath(String resourcePathToStore) {
         try {
             Path path = createTempFile();
             try (InputStream resourceInput = SecuritySettingsSource.class.getResourceAsStream(resourcePathToStore)) {
