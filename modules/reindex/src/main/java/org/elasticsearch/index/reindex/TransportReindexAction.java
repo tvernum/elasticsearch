@@ -63,6 +63,7 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.mapper.VersionFieldMapper;
 import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
@@ -72,6 +73,7 @@ import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
+import org.elasticsearch.watcher.ResourceWatcherService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -101,10 +103,13 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
     private final CharacterRunAutomaton remoteWhitelist;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
+    // TODO MAae this not static ...
+    private static ReindexSslConfig sslConfig;
+
     @Inject
-    public TransportReindexAction(Settings settings, ThreadPool threadPool, ActionFilters actionFilters,
+    public TransportReindexAction(Settings settings, Environment environment, ThreadPool threadPool, ActionFilters actionFilters,
             IndexNameExpressionResolver indexNameExpressionResolver, ClusterService clusterService, ScriptService scriptService,
-            AutoCreateIndex autoCreateIndex, Client client, TransportService transportService) {
+            AutoCreateIndex autoCreateIndex, Client client, TransportService transportService, ResourceWatcherService resourceWatcher) {
         super(ReindexAction.NAME, transportService, actionFilters, (Writeable.Reader<ReindexRequest>)ReindexRequest::new);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
@@ -113,6 +118,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
         this.client = client;
         remoteWhitelist = buildRemoteWhitelist(REMOTE_CLUSTER_WHITELIST.get(settings));
         this.indexNameExpressionResolver = indexNameExpressionResolver;
+        sslConfig = new ReindexSslConfig(settings, environment, resourceWatcher);
     }
 
     @Override
@@ -233,6 +239,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
                 });
                 // Limit ourselves to one reactor thread because for now the search process is single threaded.
                 c.setDefaultIOReactorConfig(IOReactorConfig.custom().setIoThreadCount(1).build());
+                c.setSSLStrategy(sslConfig.getStrategy());
                 return c;
             });
         if (Strings.hasLength(remoteInfo.getPathPrefix()) && "/".equals(remoteInfo.getPathPrefix()) == false) {

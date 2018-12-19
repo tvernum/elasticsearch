@@ -35,6 +35,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.tasks.Task;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
@@ -71,6 +72,9 @@ public class ReindexPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<Setting<?>> getSettings() {
-        return singletonList(TransportReindexAction.REMOTE_CLUSTER_WHITELIST);
+        final List<Setting<?>> settings = new ArrayList<>();
+        settings.add(TransportReindexAction.REMOTE_CLUSTER_WHITELIST);
+        settings.addAll(ReindexSslConfig.getSettings());
+        return settings;
     }
 }
