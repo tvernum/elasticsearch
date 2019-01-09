@@ -72,6 +72,11 @@ thirdPartyAudit.ignoreMissingClasses (
   'org.apache.log.Logger',
 )
 
+forbiddenPatterns {
+    // PKCS#12 file are not UTF-8
+    exclude '**/*.p12'
+}
+
 // Support for testing reindex-from-remote against old Elaticsearch versions
 configurations {
   oldesFixture

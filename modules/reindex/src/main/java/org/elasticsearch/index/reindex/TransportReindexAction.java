@@ -63,7 +63,6 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.mapper.VersionFieldMapper;
 import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
@@ -73,7 +72,6 @@ import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
-import org.elasticsearch.watcher.ResourceWatcherService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -103,13 +101,12 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
     private final CharacterRunAutomaton remoteWhitelist;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
-    // TODO MAae this not static ...
-    private static ReindexSslConfig sslConfig;
+    private ReindexSslConfig sslConfig;
 
     @Inject
-    public TransportReindexAction(Settings settings, Environment environment, ThreadPool threadPool, ActionFilters actionFilters,
+    public TransportReindexAction(Settings settings, ThreadPool threadPool, ActionFilters actionFilters,
             IndexNameExpressionResolver indexNameExpressionResolver, ClusterService clusterService, ScriptService scriptService,
-            AutoCreateIndex autoCreateIndex, Client client, TransportService transportService, ResourceWatcherService resourceWatcher) {
+            AutoCreateIndex autoCreateIndex, Client client, TransportService transportService, ReindexSslConfig sslConfig) {
         super(ReindexAction.NAME, transportService, actionFilters, (Writeable.Reader<ReindexRequest>)ReindexRequest::new);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
@@ -118,7 +115,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
         this.client = client;
         remoteWhitelist = buildRemoteWhitelist(REMOTE_CLUSTER_WHITELIST.get(settings));
         this.indexNameExpressionResolver = indexNameExpressionResolver;
-        sslConfig = new ReindexSslConfig(settings, environment, resourceWatcher);
+        this.sslConfig = sslConfig;
     }
 
     @Override
@@ -135,7 +132,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
             () -> {
                 ParentTaskAssigningClient assigningClient = new ParentTaskAssigningClient(client, clusterService.localNode(),
                     bulkByScrollTask);
-                new AsyncIndexBySearchAction(bulkByScrollTask, logger, assigningClient, threadPool, request, scriptService, state,
+                new AsyncIndexBySearchAction(bulkByScrollTask, logger, assigningClient, threadPool, this, request, state,
                     listener).start();
             }
         );
@@ -203,10 +200,11 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
     /**
      * Build the {@link RestClient} used for reindexing from remote clusters.
      * @param remoteInfo connection information for the remote cluster
+     * @param sslConfig configuration for potential outgoing HTTPS connections
      * @param taskId the id of the current task. This is added to the thread name for easier tracking
      * @param threadCollector a list in which we collect all the threads created by the client
      */
-    static RestClient buildRestClient(RemoteInfo remoteInfo, long taskId, List<Thread> threadCollector) {
+    static RestClient buildRestClient(RemoteInfo remoteInfo, ReindexSslConfig sslConfig, long taskId, List<Thread> threadCollector) {
         Header[] clientHeaders = new Header[remoteInfo.getHeaders().size()];
         int i = 0;
         for (Map.Entry<String, String> header : remoteInfo.getHeaders().entrySet()) {
@@ -254,7 +252,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
      * but this makes no attempt to do any of them so it can be as simple
      * possible.
      */
-    static class AsyncIndexBySearchAction extends AbstractAsyncBulkByScrollAction<ReindexRequest> {
+    static class AsyncIndexBySearchAction extends AbstractAsyncBulkByScrollAction<ReindexRequest, TransportReindexAction> {
         /**
          * List of threads created by this process. Usually actions don't create threads in Elasticsearch. Instead they use the builtin
          * {@link ThreadPool}s. But reindex-from-remote uses Elasticsearch's {@link RestClient} which doesn't use the
@@ -264,9 +262,9 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
         private List<Thread> createdThreads = emptyList();
 
         AsyncIndexBySearchAction(BulkByScrollTask task, Logger logger, ParentTaskAssigningClient client,
-                ThreadPool threadPool, ReindexRequest request, ScriptService scriptService, ClusterState clusterState,
-                ActionListener<BulkByScrollResponse> listener) {
-            super(task, logger, client, threadPool, request, scriptService, clusterState, listener);
+                                 ThreadPool threadPool, TransportReindexAction action, ReindexRequest request,
+                                 ClusterState clusterState, ActionListener<BulkByScrollResponse> listener) {
+            super(task, logger, client, threadPool, action, request, clusterState, listener);
         }
 
         @Override
@@ -283,7 +281,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
             if (mainRequest.getRemoteInfo() != null) {
                 RemoteInfo remoteInfo = mainRequest.getRemoteInfo();
                 createdThreads = synchronizedList(new ArrayList<>());
-                RestClient restClient = buildRestClient(remoteInfo, task.getId(), createdThreads);
+                RestClient restClient = buildRestClient(remoteInfo, mainAction.sslConfig, task.getId(), createdThreads);
                 return new RemoteScrollableHitSource(logger, backoffPolicy, threadPool, worker::countSearchRetry, this::finishHim,
                     restClient, remoteInfo.getQuery(), mainRequest.getSearchRequest());
             }
@@ -306,7 +304,7 @@ public class TransportReindexAction extends HandledTransportAction<ReindexReques
         public BiFunction<RequestWrapper<?>, ScrollableHitSource.Hit, RequestWrapper<?>> buildScriptApplier() {
             Script script = mainRequest.getScript();
             if (script != null) {
-                return new ReindexScriptApplier(worker, scriptService, script, script.getParams());
+                return new ReindexScriptApplier(worker, mainAction.scriptService, script, script.getParams());
             }
             return super.buildScriptApplier();
         }

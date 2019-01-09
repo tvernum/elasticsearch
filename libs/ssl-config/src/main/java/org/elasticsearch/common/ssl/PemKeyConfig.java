@@ -38,12 +38,12 @@ import java.util.Objects;
 /**
  * A {@link SslKeyConfig} that reads from PEM formatted paths.
  */
-final class PemKeyConfig implements SslKeyConfig {
+public final class PemKeyConfig implements SslKeyConfig {
     private final Path certificate;
     private final Path key;
     private final char[] keyPassword;
 
-    PemKeyConfig(Path certificate, Path key, char[] keyPassword) {
+    public PemKeyConfig(Path certificate, Path key, char[] keyPassword) {
         this.certificate = Objects.requireNonNull(certificate, "Certificate cannot be null");
         this.key = Objects.requireNonNull(key, "Key cannot be null");
         this.keyPassword = Objects.requireNonNull(keyPassword, "Key password cannot be null (but may be empty)");

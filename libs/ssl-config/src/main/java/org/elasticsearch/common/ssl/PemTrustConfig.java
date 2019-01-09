@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  * Strictly speaking, this class does not require PEM certificates, and will load any file that can be read by
  * {@link java.security.cert.CertificateFactory#generateCertificate(InputStream)}.
  */
-final class PemTrustConfig implements SslTrustConfig {
+public final class PemTrustConfig implements SslTrustConfig {
     private final List<Path> certificateAuthorities;
 
     /**
@@ -58,7 +58,7 @@ final class PemTrustConfig implements SslTrustConfig {
      * </li>
      * </ol>
      */
-    PemTrustConfig(List<Path> certificateAuthorities) {
+    public PemTrustConfig(List<Path> certificateAuthorities) {
         this.certificateAuthorities = Collections.unmodifiableList(certificateAuthorities);
     }
 

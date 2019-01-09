@@ -36,6 +36,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hamcrest.Matchers.containsString;
+
 public class StoreTrustConfigTests extends ESTestCase {
 
     private static final char[] P12_PASS = "p12-pass".toCharArray();
@@ -73,6 +75,13 @@ public class StoreTrustConfigTests extends ESTestCase {
         final StoreTrustConfig trustConfig = new StoreTrustConfig(ks, new char[0], randomFrom("PKCS12", "jks"), DEFAULT_ALGORITHM);
         assertThat(trustConfig.getDependentFiles(), Matchers.containsInAnyOrder(ks));
         assertFileNotFound(trustConfig, ks);
+    }
+
+    public void testIncorrectPasswordFailsWithMeaningfulMessage() throws Exception {
+        final Path ks = getDataPath("/certs/ca1/ca.p12");
+        final StoreTrustConfig trustConfig = new StoreTrustConfig(ks, new char[0], "PKCS12", DEFAULT_ALGORITHM);
+        assertThat(trustConfig.getDependentFiles(), Matchers.containsInAnyOrder(ks));
+        assertPasswordIsIncorrect(trustConfig, ks);
     }
 
     public void testMissingTrustEntriesFailsWithMeaningfulMessage() throws Exception {
@@ -141,6 +150,13 @@ public class StoreTrustConfigTests extends ESTestCase {
         assertThat(exception.getMessage(), Matchers.containsString("keystore"));
         assertThat(exception.getMessage(), Matchers.containsString(file.toAbsolutePath().toString()));
         assertThat(exception.getCause(), Matchers.instanceOf(NoSuchFileException.class));
+    }
+
+    private void assertPasswordIsIncorrect(StoreTrustConfig trustConfig, Path key) {
+        final SslConfigException exception = expectThrows(SslConfigException.class, trustConfig::createTrustManager);
+        assertThat(exception.getMessage(), containsString("keystore"));
+        assertThat(exception.getMessage(), containsString(key.toAbsolutePath().toString()));
+        assertThat(exception.getMessage(), containsString("password"));
     }
 
     private void assertNoCertificateEntries(StoreTrustConfig trustConfig, Path file) {

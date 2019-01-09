@@ -71,8 +71,7 @@ class ReindexSslConfig {
         }
         for (String key : SslConfigurationKeys.getSecureStringKeys()) {
             String settingName = "reindex.ssl." + key;
-            final Setting.Property[] properties = SslConfigurationKeys.isDeprecated(key) ? deprecatedProperties : defaultProperties;
-            SECURE_SETTINGS.put(settingName, SecureSetting.secureString(settingName, null, properties));
+            SECURE_SETTINGS.put(settingName, SecureSetting.secureString(settingName, null));
         }
     }
 
@@ -110,7 +109,7 @@ class ReindexSslConfig {
         };
         configuration = loader.load(environment.configFile());
         reload();
-            
+
         final FileChangesListener listener = new FileChangesListener() {
             @Override
             public void onFileCreated(Path file) {

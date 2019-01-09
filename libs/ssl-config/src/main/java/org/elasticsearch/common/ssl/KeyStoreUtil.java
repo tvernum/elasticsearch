@@ -81,7 +81,8 @@ final class KeyStoreUtil {
             throw new SslConfigException("cannot read a [" + type + "] keystore from [" + path.toAbsolutePath()
                 + "] because the file does not exist", e);
         } catch (IOException e) {
-            throw new SslConfigException("cannot read a [" + type + "] keystore from [" + path.toAbsolutePath() + "]", e);
+            throw new SslConfigException("cannot read a [" + type + "] keystore from [" + path.toAbsolutePath() + "] - " + e.getMessage(),
+                e);
         }
     }
 
