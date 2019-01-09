@@ -31,13 +31,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.util.Collection;
 import java.util.Locale;
@@ -77,10 +77,11 @@ final class KeyStoreUtil {
                 keyStore.load(in, password);
             }
             return keyStore;
-        } catch (FileNotFoundException e) {
-            throw new SslConfigException("Cannot read a keystore from [" + path.toAbsolutePath() + "] because the file does not exist", e);
+        } catch (FileNotFoundException | NoSuchFileException e) {
+            throw new SslConfigException("cannot read a [" + type + "] keystore from [" + path.toAbsolutePath()
+                + "] because the file does not exist", e);
         } catch (IOException e) {
-            throw new SslConfigException("Cannot read a keystore from [" + path.toAbsolutePath() + "]", e);
+            throw new SslConfigException("cannot read a [" + type + "] keystore from [" + path.toAbsolutePath() + "]", e);
         }
     }
 
@@ -121,8 +122,7 @@ final class KeyStoreUtil {
     /**
      * Creates a {@link X509ExtendedKeyManager} based on the key material in the provided {@link KeyStore}
      */
-    static X509ExtendedKeyManager createKeyManager(KeyStore keyStore, char[] password, String algorithm)
-        throws NoSuchAlgorithmException, UnrecoverableKeyException, KeyStoreException {
+    static X509ExtendedKeyManager createKeyManager(KeyStore keyStore, char[] password, String algorithm) throws GeneralSecurityException {
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
         kmf.init(keyStore, password);
         KeyManager[] keyManagers = kmf.getKeyManagers();
@@ -131,7 +131,7 @@ final class KeyStoreUtil {
                 return (X509ExtendedKeyManager) keyManager;
             }
         }
-        throw new IllegalStateException("failed to find a X509ExtendedKeyManager in the key manager factory for [" + algorithm
+        throw new SslConfigException("failed to find a X509ExtendedKeyManager in the key manager factory for [" + algorithm
             + "] and keystore [" + keyStore + "]");
     }
 

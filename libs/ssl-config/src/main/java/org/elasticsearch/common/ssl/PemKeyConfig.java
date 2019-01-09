@@ -23,6 +23,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -74,7 +75,7 @@ final class PemKeyConfig implements SslKeyConfig {
                 throw new SslConfigException("could not load ssl private key file [" + key + "]");
             }
             return privateKey;
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | NoSuchFileException e) {
             throw new SslConfigException("the configured ssl private key file [" + key.toAbsolutePath() + "] does not exist", e);
         } catch (IOException e) {
             throw new SslConfigException("the configured ssl private key file [" + key.toAbsolutePath() + "] cannot be read", e);
@@ -86,7 +87,7 @@ final class PemKeyConfig implements SslKeyConfig {
     private List<Certificate> getCertificates() {
         try {
             return PemUtils.readCertificates(Collections.singleton(certificate));
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | NoSuchFileException e) {
             throw new SslConfigException("the configured ssl certificate file [" + certificate.toAbsolutePath() + "] does not exist", e);
         } catch (IOException e) {
             throw new SslConfigException("the configured ssl certificate file [" + certificate .toAbsolutePath()+ "] cannot be read", e);

@@ -24,6 +24,7 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -80,7 +81,7 @@ final class PemTrustConfig implements SslTrustConfig {
     private List<Certificate> loadCertificates() throws CertificateException {
         try {
             return PemUtils.readCertificates(this.certificateAuthorities);
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | NoSuchFileException e) {
             throw new SslConfigException("cannot configure trust using PEM certificates [" + caPathsAsString()
                 + "] because one or more files do not exist", e);
         } catch (IOException e) {

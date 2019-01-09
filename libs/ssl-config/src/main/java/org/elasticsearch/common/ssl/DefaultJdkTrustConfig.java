@@ -30,22 +30,35 @@ import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.function.BiFunction;
 
 /**
  * This class represents a trust configuration that corresponds to the default trusted CAs of the JDK
  */
 final class DefaultJdkTrustConfig implements SslTrustConfig {
 
-    private char[] trustStorePassword;
+    private final BiFunction<String, String, String> systemProperties;
+    private final char[] trustStorePassword;
 
+    /**
+     * Create a trust config that uses System properties to determine the TrustStore type, and the relevant password.
+     */
     DefaultJdkTrustConfig() {
-        this(isPkcs11Truststore() ? getSystemTrustStorePassword() : null);
+        this(System::getProperty);
+    }
+
+    /**
+     * Create a trust config that uses supplied {@link BiFunction} to determine the TrustStore type, and the relevant password.
+     */
+    DefaultJdkTrustConfig(BiFunction<String, String, String> systemProperties) {
+        this(systemProperties, isPkcs11Truststore(systemProperties) ? getSystemTrustStorePassword(systemProperties) : null);
     }
 
     /**
      * @param trustStorePassword the password for the truststore. It applies only when PKCS#11 tokens are used, is null otherwise
      */
-    DefaultJdkTrustConfig(@Nullable char[] trustStorePassword) {
+    DefaultJdkTrustConfig(BiFunction<String, String, String> systemProperties, @Nullable char[] trustStorePassword) {
+        this.systemProperties = systemProperties;
         this.trustStorePassword = trustStorePassword;
     }
 
@@ -66,7 +79,7 @@ final class DefaultJdkTrustConfig implements SslTrustConfig {
      * @return the KeyStore used as truststore for PKCS#11 initialized with the password, null otherwise
      */
     private KeyStore getSystemTrustStore() {
-        if (isPkcs11Truststore() && trustStorePassword != null) {
+        if (isPkcs11Truststore(systemProperties) && trustStorePassword != null) {
             try {
                 KeyStore keyStore = KeyStore.getInstance("PKCS11");
                 keyStore.load(null, trustStorePassword);
@@ -78,14 +91,13 @@ final class DefaultJdkTrustConfig implements SslTrustConfig {
         return null;
     }
 
-    private static boolean isPkcs11Truststore() {
-        return System.getProperty("javax.net.ssl.trustStoreType", "").equalsIgnoreCase("PKCS11");
+    private static boolean isPkcs11Truststore(BiFunction<String, String, String> systemProperties) {
+        return systemProperties.apply("javax.net.ssl.trustStoreType", "").equalsIgnoreCase("PKCS11");
     }
 
-    private static char[] getSystemTrustStorePassword() {
-        return System.getProperty("javax.net.ssl.trustStorePassword", "").toCharArray();
+    private static char[] getSystemTrustStorePassword(BiFunction<String, String, String> systemProperties) {
+        return systemProperties.apply("javax.net.ssl.trustStorePassword", "").toCharArray();
     }
-
 
     @Override
     public Collection<Path> getDependentFiles() {

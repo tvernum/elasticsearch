@@ -29,11 +29,13 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
@@ -98,12 +100,12 @@ final class PemUtils {
                 line = bReader.readLine();
             }
             if (null == line) {
-                throw new IllegalStateException("Error parsing Private Key from: " + keyPath.toString() + ". File is empty");
+                throw new SslConfigException("Error parsing Private Key [" + keyPath.toAbsolutePath() + "], file is empty");
             }
             if (PKCS8_ENCRYPTED_HEADER.equals(line.trim())) {
                 char[] password = passwordSupplier.get();
                 if (password == null) {
-                    throw new IllegalArgumentException("cannot read encrypted key without a password");
+                    throw new SslConfigException("cannot read encrypted key [" + keyPath.toAbsolutePath() + "] without a password");
                 }
                 return parsePKCS8Encrypted(bReader, password);
             } else if (PKCS8_HEADER.equals(line.trim())) {
@@ -119,9 +121,13 @@ final class PemUtils {
             } else if (OPENSSL_EC_PARAMS_HEADER.equals(line.trim())) {
                 return parseOpenSslEC(removeECHeaders(bReader), passwordSupplier);
             } else {
-                throw new IllegalStateException("Error parsing Private Key from: " + keyPath.toString() + ". File did not contain a " +
-                    "supported key format");
+                throw new SslConfigException("error parsing Private Key [" + keyPath.toAbsolutePath()
+                    + "], file does not contain a supported key format");
             }
+        } catch (FileNotFoundException | NoSuchFileException e) {
+            throw new SslConfigException("private key file [" + keyPath.toAbsolutePath() + "] does not exist", e);
+        } catch (IOException | GeneralSecurityException e) {
+            throw new SslConfigException("private key file [" + keyPath.toAbsolutePath() + "] cannot be parsed", e);
         }
     }
 
@@ -400,15 +406,20 @@ final class PemUtils {
      */
     private static Cipher getCipherFromParameters(String dekHeaderValue, char[] password) throws
         GeneralSecurityException, IOException {
-        String padding = "PKCS5Padding";
-        SecretKey encryptionKey;
-        String[] valueTokens = dekHeaderValue.split(",");
+        final String padding = "PKCS5Padding";
+        final SecretKey encryptionKey;
+        final String[] valueTokens = dekHeaderValue.split(",");
         if (valueTokens.length != 2) {
             throw new IOException("Malformed PEM file, DEK-Info PEM header is invalid");
         }
-        String algorithm = valueTokens[0];
-        String ivString = valueTokens[1];
-        byte[] iv = hexStringToByteArray(ivString);
+        final String algorithm = valueTokens[0];
+        final String ivString = valueTokens[1];
+        final byte[] iv;
+        try {
+            iv = hexStringToByteArray(ivString);
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Malformed PEM file, DEK-Info IV is invalid", e);
+        }
         if ("DES-CBC".equals(algorithm)) {
             byte[] key = generateOpenSslKey(password, iv, 8);
             encryptionKey = new SecretKeySpec(key, "DES");
@@ -425,7 +436,7 @@ final class PemUtils {
             byte[] key = generateOpenSslKey(password, iv, 32);
             encryptionKey = new SecretKeySpec(key, "AES");
         } else {
-            throw new GeneralSecurityException("Private Key encrypted with unsupported algorithm: " + algorithm);
+            throw new GeneralSecurityException("Private Key encrypted with unsupported algorithm [" + algorithm + "]");
         }
         String transformation = encryptionKey.getAlgorithm() + "/" + "CBC" + "/" + padding;
         Cipher cipher = Cipher.getInstance(transformation);
@@ -473,13 +484,14 @@ final class PemUtils {
                 final int k = Character.digit(hexString.charAt(i), 16);
                 final int l = Character.digit(hexString.charAt(i + 1), 16);
                 if (k == -1 || l == -1) {
-                    throw new IllegalStateException("String is not hexadecimal");
+                    throw new IllegalStateException("String [" + hexString + "] is not hexadecimal");
                 }
                 data[i / 2] = (byte) ((k << 4) + l);
             }
             return data;
         } else {
-            throw new IllegalStateException("Hexadeciamal string length is odd, can't convert to byte array");
+            throw new IllegalStateException("Hexadecimal string [" + hexString +
+                "] has odd length and cannot be converted to a byte array");
         }
     }
 
@@ -572,8 +584,8 @@ final class PemUtils {
             case "1.2.840.10045.2.1":
                 return "EC";
         }
-        throw new GeneralSecurityException("Error parsing key algorithm identifier. Algorithm with OID: "+oidString+ " is not " +
-            "supported");
+        throw new GeneralSecurityException("Error parsing key algorithm identifier. Algorithm with OID [" + oidString +
+            "] is not żsupported");
     }
 
     static List<Certificate> readCertificates(Collection<Path> certPaths) throws CertificateException, IOException {
@@ -591,7 +603,7 @@ final class PemUtils {
         try {
             return MessageDigest.getInstance(digestAlgorithm);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("unexpected exception creating MessageDigest instance for [" + digestAlgorithm + "]", e);
+            throw new SslConfigException("unexpected exception creating MessageDigest instance for [" + digestAlgorithm + "]", e);
         }
     }
 }

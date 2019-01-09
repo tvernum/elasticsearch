@@ -25,6 +25,8 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.UnrecoverableKeyException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -40,13 +42,13 @@ public class StoreKeyConfig implements SslKeyConfig {
     private final String algorithm;
 
     /**
-     * @param path The path to the keystore file
+     * @param path          The path to the keystore file
      * @param storePassword The password for the keystore
-     * @param type The {@link KeyStore#getType() type} of the keystore (typically "PKCS12" or "jks").
-     *             See {@link KeyStoreUtil#inferKeyStoreType(Path)}.
-     * @param keyPassword The password for the key(s) within the keystore
-     *                    (see {@link javax.net.ssl.KeyManagerFactory#init(KeyStore, char[])}).
-     * @param algorithm The algorithm to use for the Key Manager (see {@link KeyManagerFactory#getAlgorithm()}).
+     * @param type          The {@link KeyStore#getType() type} of the keystore (typically "PKCS12" or "jks").
+     *                      See {@link KeyStoreUtil#inferKeyStoreType(Path)}.
+     * @param keyPassword   The password for the key(s) within the keystore
+     *                      (see {@link javax.net.ssl.KeyManagerFactory#init(KeyStore, char[])}).
+     * @param algorithm     The algorithm to use for the Key Manager (see {@link KeyManagerFactory#getAlgorithm()}).
      */
     StoreKeyConfig(Path path, char[] storePassword, String type, char[] keyPassword, String algorithm) {
         this.path = path;
@@ -67,6 +69,15 @@ public class StoreKeyConfig implements SslKeyConfig {
             final KeyStore keyStore = KeyStoreUtil.readKeyStore(path, type, storePassword);
             checkKeyStore(keyStore);
             return KeyStoreUtil.createKeyManager(keyStore, keyPassword, algorithm);
+        } catch (UnrecoverableKeyException e) {
+            String message = "failed to load a KeyManager for keystore [" + path.toAbsolutePath()
+                + "], this is usually caused by an incorrect key-password";
+            if (keyPassword.length == 0) {
+                message += " (no key-password was provided)";
+            } else if (Arrays.equals(storePassword, keyPassword)) {
+                message += " (we tried to access the key using the same password as the keystore)";
+            }
+            throw new SslConfigException(message, e);
         } catch (GeneralSecurityException e) {
             throw new SslConfigException("failed to load a KeyManager for keystore [" + path + "] of type [" + type + "]", e);
         }

@@ -27,6 +27,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,8 +68,8 @@ import static org.elasticsearch.common.ssl.SslConfigurationKeys.VERIFICATION_MOD
  */
 public abstract class SslConfigurationLoader {
 
-    private static final List<String> DEFAULT_PROTOCOLS = Arrays.asList("TLSv1.2", "TLSv1.1", "TLSv1");
-    private static final List<String> DEFAULT_CIPHERS = loadDefaultCiphers();
+    static final List<String> DEFAULT_PROTOCOLS = Arrays.asList("TLSv1.2", "TLSv1.1", "TLSv1");
+    static final List<String> DEFAULT_CIPHERS = loadDefaultCiphers();
     private static final char[] EMPTY_PASSWORD = new char[0];
 
     private final String settingPrefix;
@@ -193,6 +194,7 @@ public abstract class SslConfigurationLoader {
      * @throws SslConfigException For any problems with the configuration, or with loading the required SSL classes.
      */
     public SslConfiguration load(Path basePath) {
+        Objects.requireNonNull(basePath, "Base Path cannot be null");
         final List<String> protocols = resolveListSetting(PROTOCOLS, Function.identity(), defaultProtocols);
         final List<String> ciphers = resolveListSetting(CIPHERS, Function.identity(), defaultCiphers);
         final SslVerificationMode verificationMode = resolveSetting(VERIFICATION_MODE, SslVerificationMode::parse, defaultVerificationMode);
