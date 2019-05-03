@@ -5,24 +5,8 @@
  */
 package org.elasticsearch.xpack.security.authc;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.settings.Settings;
@@ -38,6 +22,21 @@ import org.elasticsearch.xpack.core.security.authc.esnative.NativeRealmSettings;
 import org.elasticsearch.xpack.core.security.authc.file.FileRealmSettings;
 import org.elasticsearch.xpack.core.security.authc.kerberos.KerberosRealmSettings;
 import org.elasticsearch.xpack.security.authc.esnative.ReservedRealm;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Serves as a realms registry (also responsible for ordering the realms appropriately)
@@ -317,4 +316,19 @@ public class Realms implements Iterable<Realm> {
         }
     }
 
+    public void replace(String name, Realm newRealm) {
+        this.realms.replaceAll(oldRealm -> {
+            if (oldRealm.name().equals(name)) {
+                if (oldRealm.getClass() == newRealm.getClass()) {
+                    return newRealm;
+                } else {
+                    throw new IllegalArgumentException("Cannot replace realm [" + name + "] with a different realm type ([" +
+                        oldRealm.getClass().getSimpleName() + "] vs [" + newRealm.getClass().getSimpleName() + "])");
+                }
+            } else {
+                return oldRealm;
+            }
+        });
+        Collections.sort(realms);
+    }
 }

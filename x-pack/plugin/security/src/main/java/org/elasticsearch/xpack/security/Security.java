@@ -177,6 +177,7 @@ import org.elasticsearch.xpack.security.authc.Realms;
 import org.elasticsearch.xpack.security.authc.TokenService;
 import org.elasticsearch.xpack.security.authc.esnative.NativeUsersStore;
 import org.elasticsearch.xpack.security.authc.esnative.ReservedRealm;
+import org.elasticsearch.xpack.security.authc.saml.SamlRealm;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
 import org.elasticsearch.xpack.security.authz.AuthorizationService;
 import org.elasticsearch.xpack.security.authz.SecuritySearchOperationListener;
@@ -435,6 +436,9 @@ public class Security extends Plugin implements ActionPlugin, IngestPlugin, Netw
         components.add(nativeRoleMappingStore);
         components.add(realms);
         components.add(reservedRealm);
+
+        // HACK
+        SamlRealm.registerClusterSettingConsumers(clusterService.getClusterSettings(), realms, getSslService(), resourceWatcherService);
 
         securityIndex.get().addIndexStateListener(nativeRoleMappingStore::onSecurityIndexStateChange);
 

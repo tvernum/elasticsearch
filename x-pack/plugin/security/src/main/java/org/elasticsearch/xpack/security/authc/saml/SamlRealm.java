@@ -14,8 +14,8 @@ import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.ExceptionsHelper;
@@ -27,7 +27,9 @@ import org.elasticsearch.common.SuppressForbidden;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Setting;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.CollectionUtils;
@@ -45,8 +47,8 @@ import org.elasticsearch.xpack.core.security.authc.RealmConfig;
 import org.elasticsearch.xpack.core.security.authc.RealmSettings;
 import org.elasticsearch.xpack.core.security.authc.saml.SamlRealmSettings;
 import org.elasticsearch.xpack.core.security.user.User;
-import org.elasticsearch.xpack.core.ssl.SSLConfiguration;
 import org.elasticsearch.xpack.core.ssl.CertParsingUtils;
+import org.elasticsearch.xpack.core.ssl.SSLConfiguration;
 import org.elasticsearch.xpack.core.ssl.SSLService;
 import org.elasticsearch.xpack.core.ssl.X509KeyPairSettings;
 import org.elasticsearch.xpack.security.authc.Realms;
@@ -204,6 +206,43 @@ public final class SamlRealm extends Realm implements Releasable {
         realm.releasables.add(() -> metadataResolver.destroy());
 
         return realm;
+    }
+
+
+    public static void registerClusterSettingConsumers(ClusterSettings clusterSettings, Realms realms,
+                                                       SSLService sslService, ResourceWatcherService watcherService) {
+        final List<Setting.AffixSetting<?>> idpSettings = Arrays.asList(
+            IDP_ENTITY_ID, IDP_METADATA_PATH, IDP_METADATA_HTTP_REFRESH, IDP_SINGLE_LOGOUT);
+        clusterSettings.addAffixGroupUpdateConsumer(idpSettings, (name, realm) -> realms.replace(name, realm), (realmName, settings) -> {
+            final Realm realm = realms.realm(realmName);
+            if (realm == null) {
+                throw new IllegalArgumentException("Realm [" + realmName + "] does not exist");
+            }
+            if (realm instanceof SamlRealm) {
+                try {
+                    return reconfigureRealm((SamlRealm) realm, settings, sslService, watcherService);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Cannot reconfigure realm [" + realmName + "]", e);
+                }
+            } else {
+                throw new IllegalArgumentException("Realm [" + realm + "] is not a SAML realm");
+            }
+        });
+    }
+
+    private static SamlRealm reconfigureRealm(SamlRealm oldRealm, Settings settings, SSLService sslService,
+                                              ResourceWatcherService watcherService) throws Exception {
+        final Settings mergedSettings = Settings.builder().put(oldRealm.config.settings(), true).put(settings, false).build();
+        final RealmConfig config = new RealmConfig(
+            oldRealm.config.identifier(), mergedSettings, oldRealm.config.env(), oldRealm.config.threadContext());
+        final Tuple<AbstractReloadingMetadataResolver, Supplier<EntityDescriptor>> tuple
+            = initializeResolver(logger, config, sslService, watcherService);
+        final AbstractReloadingMetadataResolver metadataResolver = tuple.v1();
+        final Supplier<EntityDescriptor> idpDescriptor = tuple.v2();
+        final IdpConfiguration idp = getIdpConfiguration(config, metadataResolver, idpDescriptor);
+        final SamlAuthenticator authenticator = new SamlAuthenticator(oldRealm.authenticator, idp, oldRealm.serviceProvider);
+        final SamlLogoutRequestHandler logoutHandler = new SamlLogoutRequestHandler(oldRealm.logoutHandler, idp, oldRealm.serviceProvider);
+        return new SamlRealm(config, oldRealm.roleMapper, authenticator, logoutHandler, idpDescriptor, oldRealm.serviceProvider);
     }
 
     // For testing

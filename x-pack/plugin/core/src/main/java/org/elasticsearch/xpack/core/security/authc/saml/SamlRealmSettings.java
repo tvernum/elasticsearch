@@ -30,18 +30,18 @@ public class SamlRealmSettings {
     private static final String IDP_METADATA_SETTING_PREFIX = "idp.metadata.";
 
     public static final Setting.AffixSetting<String> IDP_ENTITY_ID
-            = RealmSettings.simpleString(TYPE, "idp.entity_id", Setting.Property.NodeScope);
+            = RealmSettings.simpleString(TYPE, "idp.entity_id", Setting.Property.NodeScope, Setting.Property.Dynamic);
 
     public static final Setting.AffixSetting<String> IDP_METADATA_PATH
-            = RealmSettings.simpleString(TYPE, IDP_METADATA_SETTING_PREFIX + "path", Setting.Property.NodeScope);
+            = RealmSettings.simpleString(TYPE, IDP_METADATA_SETTING_PREFIX + "path", Setting.Property.NodeScope, Setting.Property.Dynamic);
 
     public static final Setting.AffixSetting<TimeValue> IDP_METADATA_HTTP_REFRESH = Setting.affixKeySetting(
             RealmSettings.realmSettingPrefix(TYPE), IDP_METADATA_SETTING_PREFIX + "http.refresh",
-            key -> Setting.timeSetting(key, TimeValue.timeValueHours(1), Setting.Property.NodeScope));
+            key -> Setting.timeSetting(key, TimeValue.timeValueHours(1), Setting.Property.NodeScope, Setting.Property.Dynamic));
 
     public static final Setting.AffixSetting<Boolean> IDP_SINGLE_LOGOUT = Setting.affixKeySetting(
             RealmSettings.realmSettingPrefix(TYPE), "idp.use_single_logout",
-            key -> Setting.boolSetting(key, true, Setting.Property.NodeScope));
+            key -> Setting.boolSetting(key, true, Setting.Property.NodeScope, Setting.Property.Dynamic));
 
     public static final Setting.AffixSetting<String> SP_ENTITY_ID
             = RealmSettings.simpleString(TYPE, "sp.entity_id", Setting.Property.NodeScope);
@@ -93,8 +93,6 @@ public class SamlRealmSettings {
             RealmSettings.realmSettingPrefix(TYPE), "allowed_clock_skew",
             key -> Setting.positiveTimeSetting(key, TimeValue.timeValueMinutes(3), Setting.Property.NodeScope));
 
-    public static final String SSL_PREFIX = "ssl.";
-
     private SamlRealmSettings() {
     }
 
@@ -103,7 +101,7 @@ public class SamlRealmSettings {
      */
     public static Set<Setting.AffixSetting<?>> getSettings() {
         final Set<Setting.AffixSetting<?>> set = Sets.newHashSet(
-                IDP_ENTITY_ID, IDP_METADATA_PATH, IDP_SINGLE_LOGOUT,
+                IDP_ENTITY_ID, IDP_METADATA_PATH, IDP_METADATA_HTTP_REFRESH, IDP_SINGLE_LOGOUT,
                 SP_ENTITY_ID, SP_ACS, SP_LOGOUT,
                 NAMEID_FORMAT, NAMEID_ALLOW_CREATE, NAMEID_SP_QUALIFIER, FORCE_AUTHN,
                 POPULATE_USER_METADATA, CLOCK_SKEW,

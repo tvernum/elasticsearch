@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -304,13 +305,18 @@ public abstract class AbstractScopedSettings {
      * </p>
      */
     public synchronized void addAffixGroupUpdateConsumer(List<Setting.AffixSetting<?>> settings, BiConsumer<String, Settings> consumer) {
+        addAffixGroupUpdateConsumer(settings, consumer, (name, update) -> update);
+    }
+
+    public synchronized <T> void addAffixGroupUpdateConsumer(List<Setting.AffixSetting<?>> settings, BiConsumer<String, T> updater,
+            BiFunction<String, Settings, T> parser) {
         List<SettingUpdater> affixUpdaters = new ArrayList<>(settings.size());
         for (Setting.AffixSetting<?> setting : settings) {
             ensureSettingIsRegistered(setting);
             affixUpdaters.add(setting.newAffixUpdater((a,b)-> {}, logger, (a,b)-> {}));
         }
 
-        addSettingsUpdater(new SettingUpdater<Map<String, Settings>>() {
+        addSettingsUpdater(new SettingUpdater<Map<String, T>>() {
 
             @Override
             public boolean hasChanged(Settings current, Settings previous) {
@@ -318,27 +324,29 @@ public abstract class AbstractScopedSettings {
             }
 
             @Override
-            public Map<String, Settings> getValue(Settings current, Settings previous) {
+            public Map<String, T> getValue(Settings current, Settings previous) {
                 Set<String> namespaces = new HashSet<>();
                 for (Setting.AffixSetting<?> setting : settings) {
                     SettingUpdater affixUpdaterA = setting.newAffixUpdater((k, v) -> namespaces.add(k), logger, (a, b) ->{});
                     affixUpdaterA.apply(current, previous);
                 }
-                Map<String, Settings> namespaceToSettings = new HashMap<>(namespaces.size());
+                Map<String, T> namespaceToSettings = new HashMap<>(namespaces.size());
                 for (String namespace : namespaces) {
                     Set<String> concreteSettings = new HashSet<>(settings.size());
                     for (Setting.AffixSetting<?> setting : settings) {
                         concreteSettings.add(setting.getConcreteSettingForNamespace(namespace).getKey());
                     }
-                    namespaceToSettings.put(namespace, current.filter(concreteSettings::contains));
+                    final Settings filtered = current.filter(concreteSettings::contains);
+                    final T value = parser.apply(namespace, filtered);
+                    namespaceToSettings.put(namespace, value);
                 }
                 return namespaceToSettings;
             }
 
             @Override
-            public void apply(Map<String, Settings> values, Settings current, Settings previous) {
-                for (Map.Entry<String, Settings> entry : values.entrySet()) {
-                    consumer.accept(entry.getKey(), entry.getValue());
+            public void apply(Map<String, T> values, Settings current, Settings previous) {
+                for (Map.Entry<String, T> entry : values.entrySet()) {
+                    updater.accept(entry.getKey(), entry.getValue());
                 }
             }
         });
