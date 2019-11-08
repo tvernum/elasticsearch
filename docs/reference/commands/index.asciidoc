@@ -7,7 +7,6 @@
 {es} provides the following tools for configuring security and performing other 
 tasks from the command line:
 
-* <<certgen>>
 * <<certutil>>
 * <<elasticsearch-croneval>>
 * <<node-tool>>
