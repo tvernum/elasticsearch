@@ -38,17 +38,37 @@ public class RestSetEnabledAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/{username}/_enable", this,
-            POST, "/_xpack/security/user/{username}/_enable", deprecationLogger);
+            POST,
+            "/_security/user/{username}/_enable",
+            this,
+            POST,
+            "/_xpack/security/user/{username}/_enable",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/user/{username}/_enable", this,
-            PUT, "/_xpack/security/user/{username}/_enable", deprecationLogger);
+            PUT,
+            "/_security/user/{username}/_enable",
+            this,
+            PUT,
+            "/_xpack/security/user/{username}/_enable",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/{username}/_disable", this,
-            POST, "/_xpack/security/user/{username}/_disable", deprecationLogger);
+            POST,
+            "/_security/user/{username}/_disable",
+            this,
+            POST,
+            "/_xpack/security/user/{username}/_disable",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/user/{username}/_disable", this,
-            PUT, "/_xpack/security/user/{username}/_disable", deprecationLogger);
+            PUT,
+            "/_security/user/{username}/_disable",
+            this,
+            PUT,
+            "/_xpack/security/user/{username}/_disable",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -61,8 +81,7 @@ public class RestSetEnabledAction extends SecurityBaseRestHandler {
         final boolean enabled = request.path().endsWith("_enable");
         assert enabled || request.path().endsWith("_disable");
         final String username = request.param("username");
-        return channel -> new SetEnabledRequestBuilder(client)
-            .username(username)
+        return channel -> new SetEnabledRequestBuilder(client).username(username)
             .enabled(enabled)
             .execute(new RestBuilderListener<>(channel) {
                 @Override

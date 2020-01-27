@@ -55,11 +55,24 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
     private final IPFilter ipFilter;
 
     @Inject
-    public SecurityUsageTransportAction(TransportService transportService, ClusterService clusterService, ThreadPool threadPool,
-                                        ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
-                                        Settings settings, XPackLicenseState licenseState, SecurityUsageServices securityServices) {
-        super(XPackUsageFeatureAction.SECURITY.name(), transportService, clusterService, threadPool,
-              actionFilters, indexNameExpressionResolver);
+    public SecurityUsageTransportAction(
+        TransportService transportService,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        Settings settings,
+        XPackLicenseState licenseState,
+        SecurityUsageServices securityServices
+    ) {
+        super(
+            XPackUsageFeatureAction.SECURITY.name(),
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            indexNameExpressionResolver
+        );
         this.enabledInSettings = XPackSettings.SECURITY_ENABLED.get(settings);
         this.settings = settings;
         this.licenseState = licenseState;
@@ -70,8 +83,12 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
     }
 
     @Override
-    protected void masterOperation(Task task, XPackUsageRequest request, ClusterState state,
-                                   ActionListener<XPackUsageFeatureResponse> listener) {
+    protected void masterOperation(
+        Task task,
+        XPackUsageRequest request,
+        ClusterState state,
+        ActionListener<XPackUsageFeatureResponse> listener
+    ) {
         Map<String, Object> sslUsage = sslUsage(settings);
         Map<String, Object> tokenServiceUsage = tokenServiceUsage(settings);
         Map<String, Object> apiKeyServiceUsage = apiKeyServiceUsage(settings);
@@ -87,31 +104,39 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
         final Runnable doCountDown = () -> {
             if (countDown.countDown()) {
                 boolean enabled = enabledInSettings && licenseState.isSecurityDisabledByLicenseDefaults() == false;
-                var usage = new SecurityFeatureSetUsage(licenseState.isSecurityAvailable(), enabled,
-                        realmsUsageRef.get(), rolesUsageRef.get(), roleMappingUsageRef.get(), sslUsage, auditUsage,
-                        ipFilterUsage, anonymousUsage, tokenServiceUsage, apiKeyServiceUsage, fips140Usage);
+                var usage = new SecurityFeatureSetUsage(
+                    licenseState.isSecurityAvailable(),
+                    enabled,
+                    realmsUsageRef.get(),
+                    rolesUsageRef.get(),
+                    roleMappingUsageRef.get(),
+                    sslUsage,
+                    auditUsage,
+                    ipFilterUsage,
+                    anonymousUsage,
+                    tokenServiceUsage,
+                    apiKeyServiceUsage,
+                    fips140Usage
+                );
                 listener.onResponse(new XPackUsageFeatureResponse(usage));
             }
         };
 
-        final ActionListener<Map<String, Object>> rolesStoreUsageListener =
-                ActionListener.wrap(rolesStoreUsage -> {
-                    rolesUsageRef.set(rolesStoreUsage);
-                    doCountDown.run();
-                }, listener::onFailure);
+        final ActionListener<Map<String, Object>> rolesStoreUsageListener = ActionListener.wrap(rolesStoreUsage -> {
+            rolesUsageRef.set(rolesStoreUsage);
+            doCountDown.run();
+        }, listener::onFailure);
 
-        final ActionListener<Map<String, Object>> roleMappingStoreUsageListener =
-                ActionListener.wrap(nativeRoleMappingStoreUsage -> {
-                    Map<String, Object> usage = singletonMap("native", nativeRoleMappingStoreUsage);
-                    roleMappingUsageRef.set(usage);
-                    doCountDown.run();
-                }, listener::onFailure);
+        final ActionListener<Map<String, Object>> roleMappingStoreUsageListener = ActionListener.wrap(nativeRoleMappingStoreUsage -> {
+            Map<String, Object> usage = singletonMap("native", nativeRoleMappingStoreUsage);
+            roleMappingUsageRef.set(usage);
+            doCountDown.run();
+        }, listener::onFailure);
 
-        final ActionListener<Map<String, Object>> realmsUsageListener =
-            ActionListener.wrap(realmsUsage -> {
-                realmsUsageRef.set(realmsUsage);
-                doCountDown.run();
-            }, listener::onFailure);
+        final ActionListener<Map<String, Object>> realmsUsageListener = ActionListener.wrap(realmsUsage -> {
+            realmsUsageRef.set(realmsUsage);
+            doCountDown.run();
+        }, listener::onFailure);
 
         if (rolesStore == null) {
             rolesStoreUsageListener.onResponse(Collections.emptyMap());
@@ -133,7 +158,7 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
 
     static Map<String, Object> sslUsage(Settings settings) {
         // If security has been explicitly disabled in the settings, then SSL is also explicitly disabled, and we don't want to report
-        //  these http/transport settings as they would be misleading (they could report `true` even though they were ignored)
+        // these http/transport settings as they would be misleading (they could report `true` even though they were ignored)
         // But, if security has not been explicitly configured, but has defaulted to off due to the current license type,
         // then these SSL settings are still respected (that is SSL might be enabled, while the rest of security is disabled).
         if (XPackSettings.SECURITY_ENABLED.get(settings)) {

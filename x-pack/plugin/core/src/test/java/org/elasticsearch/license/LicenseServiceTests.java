@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.license;
 
-
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.cluster.AckedClusterStateUpdateTask;
 import org.elasticsearch.cluster.ClusterState;
@@ -70,8 +69,10 @@ public class LicenseServiceTests extends ESTestCase {
      * Tests loading a license when {@link LicenseService#ALLOWED_LICENSE_TYPES_SETTING} is on its default value (all license types)
      */
     public void testRegisterLicenseWithoutTypeRestrictions() throws Exception {
-        assertRegisterValidLicense(Settings.EMPTY,
-            randomValueOtherThan(License.LicenseType.BASIC, () -> randomFrom(License.LicenseType.values())));
+        assertRegisterValidLicense(
+            Settings.EMPTY,
+            randomValueOtherThan(License.LicenseType.BASIC, () -> randomFrom(License.LicenseType.values()))
+        );
     }
 
     /**
@@ -80,11 +81,11 @@ public class LicenseServiceTests extends ESTestCase {
      */
     public void testSuccessfullyRegisterLicenseMatchingTypeRestrictions() throws Exception {
         final List<License.LicenseType> allowed = randomSubsetOf(
-            randomIntBetween(1, LicenseService.ALLOWABLE_UPLOAD_TYPES.size() - 1), LicenseService.ALLOWABLE_UPLOAD_TYPES);
+            randomIntBetween(1, LicenseService.ALLOWABLE_UPLOAD_TYPES.size() - 1),
+            LicenseService.ALLOWABLE_UPLOAD_TYPES
+        );
         final List<String> allowedNames = allowed.stream().map(License.LicenseType::getTypeName).collect(Collectors.toUnmodifiableList());
-        final Settings settings = Settings.builder()
-            .putList("xpack.license.upload.types", allowedNames)
-            .build();
+        final Settings settings = Settings.builder().putList("xpack.license.upload.types", allowedNames).build();
         assertRegisterValidLicense(settings, randomFrom(allowed));
     }
 
@@ -94,32 +95,39 @@ public class LicenseServiceTests extends ESTestCase {
      */
     public void testFailToRegisterLicenseNotMatchingTypeRestrictions() throws Exception {
         final List<License.LicenseType> allowed = randomSubsetOf(
-            randomIntBetween(1, LicenseService.ALLOWABLE_UPLOAD_TYPES.size() - 2), LicenseService.ALLOWABLE_UPLOAD_TYPES);
+            randomIntBetween(1, LicenseService.ALLOWABLE_UPLOAD_TYPES.size() - 2),
+            LicenseService.ALLOWABLE_UPLOAD_TYPES
+        );
         final List<String> allowedNames = allowed.stream().map(License.LicenseType::getTypeName).collect(Collectors.toUnmodifiableList());
-        final Settings settings = Settings.builder()
-            .putList("xpack.license.upload.types", allowedNames)
-            .build();
+        final Settings settings = Settings.builder().putList("xpack.license.upload.types", allowedNames).build();
         final License.LicenseType notAllowed = randomValueOtherThanMany(
             test -> allowed.contains(test),
-            () -> randomFrom(LicenseService.ALLOWABLE_UPLOAD_TYPES));
+            () -> randomFrom(LicenseService.ALLOWABLE_UPLOAD_TYPES)
+        );
         assertRegisterDisallowedLicenseType(settings, notAllowed);
     }
 
     private void assertRegisterValidLicense(Settings baseSettings, License.LicenseType licenseType) throws IOException {
-        tryRegisterLicense(baseSettings, licenseType,
-            future -> assertThat(future.actionGet().status(), equalTo(LicensesStatus.VALID)));
+        tryRegisterLicense(baseSettings, licenseType, future -> assertThat(future.actionGet().status(), equalTo(LicensesStatus.VALID)));
     }
 
     private void assertRegisterDisallowedLicenseType(Settings baseSettings, License.LicenseType licenseType) throws IOException {
         tryRegisterLicense(baseSettings, licenseType, future -> {
             final IllegalArgumentException exception = expectThrows(IllegalArgumentException.class, future::actionGet);
-            assertThat(exception, TestMatchers.throwableWithMessage(
-                "Registering [" + licenseType.getTypeName() + "] licenses is not allowed on " + "this cluster"));
+            assertThat(
+                exception,
+                TestMatchers.throwableWithMessage(
+                    "Registering [" + licenseType.getTypeName() + "] licenses is not allowed on " + "this cluster"
+                )
+            );
         });
     }
 
-    private void tryRegisterLicense(Settings baseSettings, License.LicenseType licenseType,
-                                    Consumer<PlainActionFuture<PutLicenseResponse>> assertion) throws IOException {
+    private void tryRegisterLicense(
+        Settings baseSettings,
+        License.LicenseType licenseType,
+        Consumer<PlainActionFuture<PutLicenseResponse>> assertion
+    ) throws IOException {
         final Settings settings = Settings.builder()
             .put(baseSettings)
             .put("path.home", createTempDir())

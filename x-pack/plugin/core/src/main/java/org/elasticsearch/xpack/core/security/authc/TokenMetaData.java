@@ -62,7 +62,6 @@ public final class TokenMetaData extends AbstractNamedDiffable<ClusterState.Cust
         return TYPE;
     }
 
-
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         // never render this to the user
@@ -71,10 +70,12 @@ public final class TokenMetaData extends AbstractNamedDiffable<ClusterState.Cust
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
-        TokenMetaData that = (TokenMetaData)o;
+        TokenMetaData that = (TokenMetaData) o;
         return keys.equals(that.keys) && Arrays.equals(currentKeyHash, that.currentKeyHash);
     }
 

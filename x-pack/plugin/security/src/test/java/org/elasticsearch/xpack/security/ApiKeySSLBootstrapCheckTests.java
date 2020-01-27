@@ -25,8 +25,9 @@ public class ApiKeySSLBootstrapCheckTests extends AbstractBootstrapCheckTestCase
         assertTrue(new ApiKeySSLBootstrapCheck().check(createTestContext(settings, null)).isFailure());
 
         settings = Settings.builder()
-                .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true)
-                .put(XPackSettings.API_KEY_SERVICE_ENABLED_SETTING.getKey(), true).build();
+            .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true)
+            .put(XPackSettings.API_KEY_SERVICE_ENABLED_SETTING.getKey(), true)
+            .build();
         assertTrue(new ApiKeySSLBootstrapCheck().check(createTestContext(settings, null)).isSuccess());
     }
 }

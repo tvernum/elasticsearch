@@ -38,18 +38,17 @@ public class RestXPackUsageAction extends BaseRestHandler {
     @Override
     public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         final TimeValue masterTimeout = request.paramAsTime("master_timeout", MasterNodeRequest.DEFAULT_MASTER_NODE_TIMEOUT);
-        return channel -> new XPackUsageRequestBuilder(client)
-                .setMasterNodeTimeout(masterTimeout)
-                .execute(new RestBuilderListener<>(channel) {
-                    @Override
-                    public RestResponse buildResponse(XPackUsageResponse response, XContentBuilder builder) throws Exception {
-                        builder.startObject();
-                        for (XPackFeatureSet.Usage usage : response.getUsages()) {
-                            builder.field(usage.name(), usage);
-                        }
-                        builder.endObject();
-                        return new BytesRestResponse(OK, builder);
+        return channel -> new XPackUsageRequestBuilder(client).setMasterNodeTimeout(masterTimeout)
+            .execute(new RestBuilderListener<>(channel) {
+                @Override
+                public RestResponse buildResponse(XPackUsageResponse response, XContentBuilder builder) throws Exception {
+                    builder.startObject();
+                    for (XPackFeatureSet.Usage usage : response.getUsages()) {
+                        builder.field(usage.name(), usage);
                     }
-                });
+                    builder.endObject();
+                    return new BytesRestResponse(OK, builder);
+                }
+            });
     }
 }

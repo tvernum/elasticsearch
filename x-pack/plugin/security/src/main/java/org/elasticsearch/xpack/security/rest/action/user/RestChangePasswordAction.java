@@ -40,24 +40,48 @@ public class RestChangePasswordAction extends SecurityBaseRestHandler implements
     private final SecurityContext securityContext;
     private final Hasher passwordHasher;
 
-    public RestChangePasswordAction(Settings settings, RestController controller, SecurityContext securityContext,
-                                    XPackLicenseState licenseState) {
+    public RestChangePasswordAction(
+        Settings settings,
+        RestController controller,
+        SecurityContext securityContext,
+        XPackLicenseState licenseState
+    ) {
         super(settings, licenseState);
         this.securityContext = securityContext;
         passwordHasher = Hasher.resolve(XPackSettings.PASSWORD_HASHING_ALGORITHM.get(settings));
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/{username}/_password", this,
-            POST, "/_xpack/security/user/{username}/_password", deprecationLogger);
+            POST,
+            "/_security/user/{username}/_password",
+            this,
+            POST,
+            "/_xpack/security/user/{username}/_password",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/user/{username}/_password", this,
-            PUT, "/_xpack/security/user/{username}/_password", deprecationLogger);
+            PUT,
+            "/_security/user/{username}/_password",
+            this,
+            PUT,
+            "/_xpack/security/user/{username}/_password",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/_password", this,
-            POST, "/_xpack/security/user/_password", deprecationLogger);
+            POST,
+            "/_security/user/_password",
+            this,
+            POST,
+            "/_xpack/security/user/_password",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/user/_password", this,
-            PUT, "/_xpack/security/user/_password", deprecationLogger);
+            PUT,
+            "/_security/user/_password",
+            this,
+            PUT,
+            "/_xpack/security/user/_password",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -77,8 +101,7 @@ public class RestChangePasswordAction extends SecurityBaseRestHandler implements
 
         final String refresh = request.param("refresh");
         final BytesReference content = request.requiredContent();
-        return channel -> new ChangePasswordRequestBuilder(client)
-            .username(username)
+        return channel -> new ChangePasswordRequestBuilder(client).username(username)
             .source(content, request.getXContentType(), passwordHasher)
             .setRefreshPolicy(refresh)
             .execute(new RestBuilderListener<>(channel) {

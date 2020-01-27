@@ -34,18 +34,29 @@ public class ApplicationPrivilegeDescriptorTests extends ESTestCase {
     public void testEqualsAndHashCode() {
         final ApplicationPrivilegeDescriptor privilege = randomPrivilege();
         final EqualsHashCodeTestUtils.MutateFunction<ApplicationPrivilegeDescriptor> mutate = randomFrom(
+            orig -> new ApplicationPrivilegeDescriptor("x" + orig.getApplication(), orig.getName(), orig.getActions(), orig.getMetadata()),
+            orig -> new ApplicationPrivilegeDescriptor(orig.getApplication(), "x" + orig.getName(), orig.getActions(), orig.getMetadata()),
             orig -> new ApplicationPrivilegeDescriptor(
-                "x" + orig.getApplication(), orig.getName(), orig.getActions(), orig.getMetadata()),
+                orig.getApplication(),
+                orig.getName(),
+                Collections.singleton("*"),
+                orig.getMetadata()
+            ),
             orig -> new ApplicationPrivilegeDescriptor(
-                orig.getApplication(), "x" + orig.getName(), orig.getActions(), orig.getMetadata()),
-            orig -> new ApplicationPrivilegeDescriptor(
-                orig.getApplication(), orig.getName(), Collections.singleton("*"), orig.getMetadata()),
-            orig -> new ApplicationPrivilegeDescriptor(
-                orig.getApplication(), orig.getName(), orig.getActions(), Collections.singletonMap("mutate", -1L))
+                orig.getApplication(),
+                orig.getName(),
+                orig.getActions(),
+                Collections.singletonMap("mutate", -1L)
+            )
         );
-        EqualsHashCodeTestUtils.checkEqualsAndHashCode(privilege,
+        EqualsHashCodeTestUtils.checkEqualsAndHashCode(
+            privilege,
             original -> new ApplicationPrivilegeDescriptor(
-                original.getApplication(), original.getName(), original.getActions(), original.getMetadata()),
+                original.getApplication(),
+                original.getName(),
+                original.getActions(),
+                original.getMetadata()
+            ),
             mutate
         );
     }
@@ -79,10 +90,12 @@ public class ApplicationPrivilegeDescriptorTests extends ESTestCase {
 
             final byte[] bytes = out.toByteArray();
             try (XContentParser parser = xContent.createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, bytes)) {
-                final ApplicationPrivilegeDescriptor clone = ApplicationPrivilegeDescriptor.parse(parser,
+                final ApplicationPrivilegeDescriptor clone = ApplicationPrivilegeDescriptor.parse(
+                    parser,
                     randomBoolean() ? randomAlphaOfLength(3) : null,
                     randomBoolean() ? randomAlphaOfLength(3) : null,
-                    includeTypeField);
+                    includeTypeField
+                );
                 assertThat(clone, Matchers.equalTo(original));
                 assertThat(original, Matchers.equalTo(clone));
             }
@@ -104,11 +117,7 @@ public class ApplicationPrivilegeDescriptorTests extends ESTestCase {
     }
 
     public void testParseXContentWithoutUsingDefaultNames() throws IOException {
-        final String json = "{" +
-            "  \"application\": \"your_app\"," +
-            "  \"name\": \"write\"," +
-            "  \"actions\": [ \"data:write\" ]" +
-            "}";
+        final String json = "{" + "  \"application\": \"your_app\"," + "  \"name\": \"write\"," + "  \"actions\": [ \"data:write\" ]" + "}";
         final XContent xContent = XContentType.JSON.xContent();
         try (XContentParser parser = xContent.createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, json)) {
             final ApplicationPrivilegeDescriptor privilege = ApplicationPrivilegeDescriptor.parse(parser, "my_app", "read", false);

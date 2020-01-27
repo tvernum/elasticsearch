@@ -31,9 +31,15 @@ import static org.elasticsearch.common.xcontent.ConstructingObjectParser.optiona
  */
 public final class CreateApiKeyResponse extends ActionResponse implements ToXContentObject {
 
-    static final ConstructingObjectParser<CreateApiKeyResponse, Void> PARSER = new ConstructingObjectParser<>("create_api_key_response",
-            args -> new CreateApiKeyResponse((String) args[0], (String) args[1], new SecureString((String) args[2]),
-                    (args[3] == null) ? null : Instant.ofEpochMilli((Long) args[3])));
+    static final ConstructingObjectParser<CreateApiKeyResponse, Void> PARSER = new ConstructingObjectParser<>(
+        "create_api_key_response",
+        args -> new CreateApiKeyResponse(
+            (String) args[0],
+            (String) args[1],
+            new SecureString((String) args[2]),
+            (args[3] == null) ? null : Instant.ofEpochMilli((Long) args[3])
+        )
+    );
     static {
         PARSER.declareString(constructorArg(), new ParseField("name"));
         PARSER.declareString(constructorArg(), new ParseField("id"));
@@ -53,7 +59,7 @@ public final class CreateApiKeyResponse extends ActionResponse implements ToXCon
         // As we do not yet support the nanosecond precision when we serialize to JSON,
         // here creating the 'Instant' of milliseconds precision.
         // This Instant can then be used for date comparison.
-        this.expiration = (expiration != null) ? Instant.ofEpochMilli(expiration.toEpochMilli()): null;
+        this.expiration = (expiration != null) ? Instant.ofEpochMilli(expiration.toEpochMilli()) : null;
     }
 
     public CreateApiKeyResponse(StreamInput in) throws IOException {
@@ -112,9 +118,7 @@ public final class CreateApiKeyResponse extends ActionResponse implements ToXCon
                 return false;
         } else if (!Objects.equals(expiration, other.expiration))
             return false;
-        return Objects.equals(id, other.id)
-                && Objects.equals(key, other.key)
-                && Objects.equals(name, other.name);
+        return Objects.equals(id, other.id) && Objects.equals(key, other.key) && Objects.equals(name, other.name);
     }
 
     @Override
@@ -139,9 +143,7 @@ public final class CreateApiKeyResponse extends ActionResponse implements ToXCon
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
-            .field("id", id)
-            .field("name", name);
+        builder.startObject().field("id", id).field("name", name);
         if (expiration != null) {
             builder.field("expiration", expiration.toEpochMilli());
         }

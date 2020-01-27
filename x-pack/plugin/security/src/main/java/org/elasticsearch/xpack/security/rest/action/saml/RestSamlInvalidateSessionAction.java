@@ -34,10 +34,13 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
  */
 public class RestSamlInvalidateSessionAction extends SamlBaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(RestSamlInvalidateSessionAction.class));
-    static final ObjectParser<SamlInvalidateSessionRequest, RestSamlInvalidateSessionAction> PARSER =
-            new ObjectParser<>("saml_invalidate_session", SamlInvalidateSessionRequest::new);
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestSamlInvalidateSessionAction.class)
+    );
+    static final ObjectParser<SamlInvalidateSessionRequest, RestSamlInvalidateSessionAction> PARSER = new ObjectParser<>(
+        "saml_invalidate_session",
+        SamlInvalidateSessionRequest::new
+    );
 
     static {
         PARSER.declareString(SamlInvalidateSessionRequest::setQueryString, new ParseField("queryString"));
@@ -49,8 +52,13 @@ public class RestSamlInvalidateSessionAction extends SamlBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/saml/invalidate", this,
-            POST, "/_xpack/security/saml/invalidate", deprecationLogger);
+            POST,
+            "/_security/saml/invalidate",
+            this,
+            POST,
+            "/_xpack/security/saml/invalidate",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -62,18 +70,21 @@ public class RestSamlInvalidateSessionAction extends SamlBaseRestHandler {
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final SamlInvalidateSessionRequest invalidateRequest = PARSER.parse(parser, this);
-            return channel -> client.execute(SamlInvalidateSessionAction.INSTANCE, invalidateRequest,
-                    new RestBuilderListener<SamlInvalidateSessionResponse>(channel) {
-                        @Override
-                        public RestResponse buildResponse(SamlInvalidateSessionResponse resp, XContentBuilder builder) throws Exception {
-                            builder.startObject();
-                            builder.field("realm", resp.getRealmName());
-                            builder.field("invalidated", resp.getCount());
-                            builder.field("redirect", resp.getRedirectUrl());
-                            builder.endObject();
-                            return new BytesRestResponse(RestStatus.OK, builder);
-                        }
-                    });
+            return channel -> client.execute(
+                SamlInvalidateSessionAction.INSTANCE,
+                invalidateRequest,
+                new RestBuilderListener<SamlInvalidateSessionResponse>(channel) {
+                    @Override
+                    public RestResponse buildResponse(SamlInvalidateSessionResponse resp, XContentBuilder builder) throws Exception {
+                        builder.startObject();
+                        builder.field("realm", resp.getRealmName());
+                        builder.field("invalidated", resp.getCount());
+                        builder.field("redirect", resp.getRedirectUrl());
+                        builder.endObject();
+                        return new BytesRestResponse(RestStatus.OK, builder);
+                    }
+                }
+            );
         }
     }
 

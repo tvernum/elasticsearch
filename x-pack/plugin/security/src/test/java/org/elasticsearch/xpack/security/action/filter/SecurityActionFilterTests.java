@@ -70,15 +70,16 @@ public class SecurityActionFilterTests extends ESTestCase {
         threadContext = new ThreadContext(Settings.EMPTY);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         failDestructiveOperations = randomBoolean();
-        Settings settings = Settings.builder()
-                .put(DestructiveOperations.REQUIRES_NAME_SETTING.getKey(), failDestructiveOperations).build();
-        DestructiveOperations destructiveOperations = new DestructiveOperations(settings,
-                new ClusterSettings(settings, Collections.singleton(DestructiveOperations.REQUIRES_NAME_SETTING)));
+        Settings settings = Settings.builder().put(DestructiveOperations.REQUIRES_NAME_SETTING.getKey(), failDestructiveOperations).build();
+        DestructiveOperations destructiveOperations = new DestructiveOperations(
+            settings,
+            new ClusterSettings(settings, Collections.singleton(DestructiveOperations.REQUIRES_NAME_SETTING))
+        );
         ClusterState state = mock(ClusterState.class);
         DiscoveryNodes nodes = DiscoveryNodes.builder()
-                .add(new DiscoveryNode("id1", buildNewFakeTransportAddress(), Version.CURRENT))
-                .add(new DiscoveryNode("id2", buildNewFakeTransportAddress(), Version.CURRENT.minimumCompatibilityVersion()))
-                .build();
+            .add(new DiscoveryNode("id1", buildNewFakeTransportAddress(), Version.CURRENT))
+            .add(new DiscoveryNode("id2", buildNewFakeTransportAddress(), Version.CURRENT.minimumCompatibilityVersion()))
+            .build();
         when(state.nodes()).thenReturn(nodes);
 
         SecurityContext securityContext = new SecurityContext(settings, threadContext);
@@ -93,8 +94,7 @@ public class SecurityActionFilterTests extends ESTestCase {
         User user = new User("username", "r1", "r2");
         Authentication authentication = new Authentication(user, new RealmRef("test", "test", "foo"), null);
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[3];
+            ActionListener callback = (ActionListener) i.getArguments()[3];
             callback.onResponse(authentication);
             return Void.TYPE;
         }).when(authcService).authenticate(eq("_action"), eq(request), eq(SystemUser.INSTANCE), any(ActionListener.class));
@@ -117,8 +117,7 @@ public class SecurityActionFilterTests extends ESTestCase {
         User user = new User("username", "r1", "r2");
         Authentication authentication = new Authentication(user, new RealmRef("test", "test", "foo"), null);
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[3];
+            ActionListener callback = (ActionListener) i.getArguments()[3];
             assertNull(threadContext.getTransient(AuthenticationField.AUTHENTICATION_KEY));
             threadContext.putTransient(AuthenticationField.AUTHENTICATION_KEY, authentication);
             callback.onResponse(authentication);
@@ -159,8 +158,7 @@ public class SecurityActionFilterTests extends ESTestCase {
             assertNull(threadContext.getTransient(AuthenticationField.AUTHENTICATION_KEY));
         }
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[3];
+            ActionListener callback = (ActionListener) i.getArguments()[3];
             callback.onResponse(threadContext.getTransient(AuthenticationField.AUTHENTICATION_KEY));
             return Void.TYPE;
         }).when(authcService).authenticate(eq(action), eq(request), eq(SystemUser.INSTANCE), any(ActionListener.class));
@@ -185,8 +183,9 @@ public class SecurityActionFilterTests extends ESTestCase {
 
     public void testApplyDestructiveOperations() throws Exception {
         ActionRequest request = new MockIndicesRequest(
-                IndicesOptions.fromOptions(randomBoolean(), randomBoolean(), randomBoolean(), randomBoolean()),
-                randomFrom("*", "_all", "test*"));
+            IndicesOptions.fromOptions(randomBoolean(), randomBoolean(), randomBoolean(), randomBoolean()),
+            randomFrom("*", "_all", "test*")
+        );
         String action = randomFrom(CloseIndexAction.NAME, OpenIndexAction.NAME, DeleteIndexAction.NAME);
         ActionListener listener = mock(ActionListener.class);
         ActionFilterChain chain = mock(ActionFilterChain.class);
@@ -194,8 +193,7 @@ public class SecurityActionFilterTests extends ESTestCase {
         User user = new User("username", "r1", "r2");
         Authentication authentication = new Authentication(user, new RealmRef("test", "test", "foo"), null);
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[3];
+            ActionListener callback = (ActionListener) i.getArguments()[3];
             callback.onResponse(authentication);
             return Void.TYPE;
         }).when(authcService).authenticate(eq(action), eq(request), eq(SystemUser.INSTANCE), any(ActionListener.class));
@@ -224,8 +222,7 @@ public class SecurityActionFilterTests extends ESTestCase {
         User user = new User("username", "r1", "r2");
         Authentication authentication = new Authentication(user, new RealmRef("test", "test", "foo"), null);
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[3];
+            ActionListener callback = (ActionListener) i.getArguments()[3];
             callback.onResponse(authentication);
             return Void.TYPE;
         }).when(authcService).authenticate(eq("_action"), eq(request), eq(SystemUser.INSTANCE), any(ActionListener.class));

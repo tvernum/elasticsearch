@@ -41,21 +41,31 @@ public class TemplateUpgraderTests extends SecurityIntegTestCase {
         Client client = internalCluster().getInstance(Client.class, internalCluster().getMasterName());
         UnaryOperator<Map<String, IndexTemplateMetaData>> indexTemplateMetaDataUpgraders = map -> {
             map.remove("removed-template");
-            map.put("added-template", IndexTemplateMetaData.builder("added-template")
+            map.put(
+                "added-template",
+                IndexTemplateMetaData.builder("added-template")
                     .order(1)
-                    .patterns(Collections.singletonList(randomAlphaOfLength(10))).build());
+                    .patterns(Collections.singletonList(randomAlphaOfLength(10)))
+                    .build()
+            );
             return map;
         };
 
-        AcknowledgedResponse putIndexTemplateResponse = client().admin().indices().preparePutTemplate("removed-template")
-                .setOrder(1)
-                .setPatterns(Collections.singletonList(randomAlphaOfLength(10)))
-                .get();
+        AcknowledgedResponse putIndexTemplateResponse = client().admin()
+            .indices()
+            .preparePutTemplate("removed-template")
+            .setOrder(1)
+            .setPatterns(Collections.singletonList(randomAlphaOfLength(10)))
+            .get();
         assertAcked(putIndexTemplateResponse);
         assertTemplates("removed-template", "added-template");
 
-        TemplateUpgradeService templateUpgradeService = new TemplateUpgradeService(client, clusterService, threadPool,
-                Collections.singleton(indexTemplateMetaDataUpgraders));
+        TemplateUpgradeService templateUpgradeService = new TemplateUpgradeService(
+            client,
+            clusterService,
+            threadPool,
+            Collections.singleton(indexTemplateMetaDataUpgraders)
+        );
 
         // ensure the cluster listener gets triggered
         ClusterChangedEvent event = new ClusterChangedEvent("testing", clusterService.state(), clusterService.state());

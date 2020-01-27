@@ -37,12 +37,15 @@ public class RestGetUsersAction extends SecurityBaseRestHandler {
     public RestGetUsersAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
+        controller.registerWithDeprecatedHandler(GET, "/_security/user/", this, GET, "/_xpack/security/user/", deprecationLogger);
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/user/", this,
-            GET, "/_xpack/security/user/", deprecationLogger);
-        controller.registerWithDeprecatedHandler(
-            GET, "/_security/user/{username}", this,
-            GET, "/_xpack/security/user/{username}", deprecationLogger);
+            GET,
+            "/_security/user/{username}",
+            this,
+            GET,
+            "/_xpack/security/user/{username}",
+            deprecationLogger
+        );
     }
 
     @Override

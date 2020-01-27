@@ -56,33 +56,32 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class LicensingTests extends SecurityIntegTestCase {
-    private static final String ROLES =
-            SecuritySettingsSource.TEST_ROLE + ":\n" +
-                    "  cluster: [ all ]\n" +
-                    "  indices:\n" +
-                    "    - names: '*'\n" +
-                    "      privileges: [manage]\n" +
-                    "    - names: '/.*/'\n" +
-                    "      privileges: [write]\n" +
-                    "    - names: 'test'\n" +
-                    "      privileges: [read]\n" +
-                    "    - names: 'test1'\n" +
-                    "      privileges: [read]\n" +
-                    "\n" +
-                    "role_a:\n" +
-                    "  indices:\n" +
-                    "    - names: 'a'\n" +
-                    "      privileges: [all]\n" +
-                    "\n" +
-                    "role_b:\n" +
-                    "  indices:\n" +
-                    "    - names: 'b'\n" +
-                    "      privileges: [all]\n";
+    private static final String ROLES = SecuritySettingsSource.TEST_ROLE
+        + ":\n"
+        + "  cluster: [ all ]\n"
+        + "  indices:\n"
+        + "    - names: '*'\n"
+        + "      privileges: [manage]\n"
+        + "    - names: '/.*/'\n"
+        + "      privileges: [write]\n"
+        + "    - names: 'test'\n"
+        + "      privileges: [read]\n"
+        + "    - names: 'test1'\n"
+        + "      privileges: [read]\n"
+        + "\n"
+        + "role_a:\n"
+        + "  indices:\n"
+        + "    - names: 'a'\n"
+        + "      privileges: [all]\n"
+        + "\n"
+        + "role_b:\n"
+        + "  indices:\n"
+        + "    - names: 'b'\n"
+        + "      privileges: [all]\n";
 
-    private static final String USERS_ROLES =
-            SecuritySettingsSource.CONFIG_STANDARD_USER_ROLES +
-                    "role_a:user_a,user_b\n" +
-                    "role_b:user_b\n";
+    private static final String USERS_ROLES = SecuritySettingsSource.CONFIG_STANDARD_USER_ROLES
+        + "role_a:user_a,user_b\n"
+        + "role_b:user_b\n";
 
     @Override
     protected String configRoles() {
@@ -91,9 +90,7 @@ public class LicensingTests extends SecurityIntegTestCase {
 
     @Override
     protected String configUsers() {
-        return SecuritySettingsSource.CONFIG_STANDARD_USER +
-            "user_a:{plain}passwd\n" +
-            "user_b:{plain}passwd\n";
+        return SecuritySettingsSource.CONFIG_STANDARD_USER + "user_a:{plain}passwd\n" + "user_b:{plain}passwd\n";
     }
 
     @Override
@@ -129,17 +126,10 @@ public class LicensingTests extends SecurityIntegTestCase {
     }
 
     public void testEnableDisableBehaviour() throws Exception {
-        IndexResponse indexResponse = index("test", jsonBuilder()
-                .startObject()
-                .field("name", "value")
-                .endObject());
+        IndexResponse indexResponse = index("test", jsonBuilder().startObject().field("name", "value").endObject());
         assertEquals(DocWriteResponse.Result.CREATED, indexResponse.getResult());
 
-
-        indexResponse = index("test1", jsonBuilder()
-                .startObject()
-                .field("name", "value1")
-                .endObject());
+        indexResponse = index("test1", jsonBuilder().startObject().field("name", "value1").endObject());
         assertEquals(DocWriteResponse.Result.CREATED, indexResponse.getResult());
 
         refresh();
@@ -174,23 +164,33 @@ public class LicensingTests extends SecurityIntegTestCase {
         Response unauthorizedRootResponse = getRestClient().performRequest(new Request("GET", "/"));
         // the default of the licensing tests is basic
         assertThat(unauthorizedRootResponse.getStatusLine().getStatusCode(), is(200));
-        ResponseException e = expectThrows(ResponseException.class,
-            () -> getRestClient().performRequest(new Request("GET", "/_security/_authenticate")));
+        ResponseException e = expectThrows(
+            ResponseException.class,
+            () -> getRestClient().performRequest(new Request("GET", "/_security/_authenticate"))
+        );
         assertThat(e.getResponse().getStatusLine().getStatusCode(), is(403));
 
         // generate a new license with a mode that enables auth
-        License.OperationMode mode = randomFrom(License.OperationMode.GOLD, License.OperationMode.TRIAL,
-                License.OperationMode.PLATINUM, License.OperationMode.STANDARD);
+        License.OperationMode mode = randomFrom(
+            License.OperationMode.GOLD,
+            License.OperationMode.TRIAL,
+            License.OperationMode.PLATINUM,
+            License.OperationMode.STANDARD
+        );
         enableLicensing(mode);
         e = expectThrows(ResponseException.class, () -> getRestClient().performRequest(new Request("GET", "/")));
         assertThat(e.getResponse().getStatusLine().getStatusCode(), is(401));
-        e = expectThrows(ResponseException.class,
-            () -> getRestClient().performRequest(new Request("GET", "/_security/_authenticate")));
+        e = expectThrows(ResponseException.class, () -> getRestClient().performRequest(new Request("GET", "/_security/_authenticate")));
         assertThat(e.getResponse().getStatusLine().getStatusCode(), is(401));
 
         RequestOptions.Builder optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-        optionsBuilder.addHeader("Authorization", UsernamePasswordToken.basicAuthHeaderValue(SecuritySettingsSource.TEST_USER_NAME,
-                new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())));
+        optionsBuilder.addHeader(
+            "Authorization",
+            UsernamePasswordToken.basicAuthHeaderValue(
+                SecuritySettingsSource.TEST_USER_NAME,
+                new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())
+            )
+        );
         RequestOptions options = optionsBuilder.build();
 
         Request rootRequest = new Request("GET", "/");
@@ -207,8 +207,15 @@ public class LicensingTests extends SecurityIntegTestCase {
         License.OperationMode mode = randomFrom(License.OperationMode.GOLD, License.OperationMode.PLATINUM, License.OperationMode.STANDARD);
         enableLicensing(mode);
 
-        final List<String> seedHosts = internalCluster().masterClient().admin().cluster().nodesInfo(new NodesInfoRequest()).get()
-            .getNodes().stream().map(n -> n.getTransport().getAddress().publishAddress().toString()).distinct()
+        final List<String> seedHosts = internalCluster().masterClient()
+            .admin()
+            .cluster()
+            .nodesInfo(new NodesInfoRequest())
+            .get()
+            .getNodes()
+            .stream()
+            .map(n -> n.getTransport().getAddress().publishAddress().toString())
+            .distinct()
             .collect(Collectors.toList());
 
         Path home = createTempDir();

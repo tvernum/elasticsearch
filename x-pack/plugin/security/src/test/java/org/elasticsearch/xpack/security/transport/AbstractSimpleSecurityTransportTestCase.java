@@ -105,8 +105,16 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
 
     public void testConnectException() throws UnknownHostException {
         try {
-            connectToNode(serviceA, new DiscoveryNode("C", new TransportAddress(InetAddress.getByName("localhost"), 9876),
-                emptyMap(), emptySet(), Version.CURRENT));
+            connectToNode(
+                serviceA,
+                new DiscoveryNode(
+                    "C",
+                    new TransportAddress(InetAddress.getByName("localhost"), 9876),
+                    emptyMap(),
+                    emptySet(),
+                    Version.CURRENT
+                )
+            );
             fail("Expected ConnectTransportException");
         } catch (ConnectTransportException e) {
             assertThat(e.getMessage(), containsString("connect_exception"));
@@ -124,8 +132,14 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
 
         ConnectionProfile connectionProfile = ConnectionProfile.buildDefaultConnectionProfile(Settings.EMPTY);
         try (TransportService service = buildService("TS_TPC", Version.CURRENT, Settings.EMPTY)) {
-            DiscoveryNode node = new DiscoveryNode("TS_TPC", "TS_TPC", service.boundAddress().publishAddress(), emptyMap(), emptySet(),
-                version0);
+            DiscoveryNode node = new DiscoveryNode(
+                "TS_TPC",
+                "TS_TPC",
+                service.boundAddress().publishAddress(),
+                emptyMap(),
+                emptySet(),
+                version0
+            );
             PlainActionFuture<Transport.Connection> future = PlainActionFuture.newFuture();
             originalTransport.openConnection(node, connectionProfile, future);
             try (TcpTransport.NodeChannels connection = (TcpTransport.NodeChannels) future.actionGet()) {
@@ -136,11 +150,11 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
 
     @SuppressForbidden(reason = "Need to open socket connection")
     public void testRenegotiation() throws Exception {
-        assumeFalse("BCTLS doesn't support renegotiation: https://github.com/bcgit/bc-java/issues/593#issuecomment-533518845",
-            inFipsJvm());
+        assumeFalse("BCTLS doesn't support renegotiation: https://github.com/bcgit/bc-java/issues/593#issuecomment-533518845", inFipsJvm());
         // force TLSv1.2 since renegotiation is not supported by 1.3
-        SSLService sslService =
-            createSSLService(Settings.builder().put("xpack.security.transport.ssl.supported_protocols", "TLSv1.2").build());
+        SSLService sslService = createSSLService(
+            Settings.builder().put("xpack.security.transport.ssl.supported_protocols", "TLSv1.2").build()
+        );
         final SSLConfiguration sslConfiguration = sslService.getSSLConfiguration("xpack.security.transport.ssl");
         SocketFactory factory = sslService.sslSocketFactory(sslConfiguration);
         try (SSLSocket socket = (SSLSocket) factory.createSocket()) {
@@ -233,16 +247,19 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
 
             InetSocketAddress serverAddress = (InetSocketAddress) SocketAccess.doPrivileged(sslServerSocket::getLocalSocketAddress);
 
-            Settings settings = Settings.builder()
-                .put("xpack.security.transport.ssl.verification_mode", "none")
-                .build();
+            Settings settings = Settings.builder().put("xpack.security.transport.ssl.verification_mode", "none").build();
             try (MockTransportService serviceC = buildService("TS_C", version0, settings)) {
                 serviceC.acceptIncomingRequests();
 
                 HashMap<String, String> attributes = new HashMap<>();
                 attributes.put("server_name", sniIp);
-                DiscoveryNode node = new DiscoveryNode("server_node_id", new TransportAddress(serverAddress), attributes,
-                    DiscoveryNodeRole.BUILT_IN_ROLES, Version.CURRENT);
+                DiscoveryNode node = new DiscoveryNode(
+                    "server_node_id",
+                    new TransportAddress(serverAddress),
+                    attributes,
+                    DiscoveryNodeRole.BUILT_IN_ROLES,
+                    Version.CURRENT
+                );
 
                 new Thread(() -> {
                     try {
@@ -280,19 +297,24 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
 
             InetSocketAddress serverAddress = (InetSocketAddress) SocketAccess.doPrivileged(sslServerSocket::getLocalSocketAddress);
 
-            Settings settings = Settings.builder()
-                .put("xpack.security.transport.ssl.verification_mode", "none")
-                .build();
+            Settings settings = Settings.builder().put("xpack.security.transport.ssl.verification_mode", "none").build();
             try (MockTransportService serviceC = buildService("TS_C", version0, settings)) {
                 serviceC.acceptIncomingRequests();
 
                 HashMap<String, String> attributes = new HashMap<>();
                 attributes.put("server_name", sniIp);
-                DiscoveryNode node = new DiscoveryNode("server_node_id", new TransportAddress(serverAddress), attributes,
-                    DiscoveryNodeRole.BUILT_IN_ROLES, Version.CURRENT);
+                DiscoveryNode node = new DiscoveryNode(
+                    "server_node_id",
+                    new TransportAddress(serverAddress),
+                    attributes,
+                    DiscoveryNodeRole.BUILT_IN_ROLES,
+                    Version.CURRENT
+                );
 
-                ConnectTransportException connectException = expectThrows(ConnectTransportException.class,
-                    () -> connectToNode(serviceC, node, TestProfiles.LIGHT_PROFILE));
+                ConnectTransportException connectException = expectThrows(
+                    ConnectTransportException.class,
+                    () -> connectToNode(serviceC, node, TestProfiles.LIGHT_PROFILE)
+                );
 
                 assertThat(connectException.getMessage(), containsString("invalid DiscoveryNode server_name [invalid_hostname]"));
             }
@@ -418,8 +440,9 @@ public abstract class AbstractSimpleSecurityTransportTestCase extends AbstractSi
         InetSocketAddress localAddress = getSingleChannel(connection).getLocalAddress();
         AtomicReference<TcpChannel> accepted = new AtomicReference<>();
         assertBusy(() -> {
-            Optional<TcpChannel> maybeAccepted = getAcceptedChannels(transport)
-                .stream().filter(c -> c.getRemoteAddress().equals(localAddress)).findFirst();
+            Optional<TcpChannel> maybeAccepted = getAcceptedChannels(transport).stream()
+                .filter(c -> c.getRemoteAddress().equals(localAddress))
+                .findFirst();
             assertTrue(maybeAccepted.isPresent());
             accepted.set(maybeAccepted.get());
         });

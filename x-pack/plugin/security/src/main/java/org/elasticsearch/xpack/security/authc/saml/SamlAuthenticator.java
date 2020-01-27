@@ -50,10 +50,7 @@ class SamlAuthenticator extends SamlRequestHandler {
 
     private static final String RESPONSE_TAG_NAME = "Response";
 
-    SamlAuthenticator(Clock clock,
-                      IdpConfiguration idp,
-                      SpConfiguration sp,
-                      TimeValue maxSkew) {
+    SamlAuthenticator(Clock clock, IdpConfiguration idp, SpConfiguration sp, TimeValue maxSkew) {
         super(clock, idp, sp, maxSkew);
     }
 
@@ -68,13 +65,20 @@ class SamlAuthenticator extends SamlRequestHandler {
             try {
                 return authenticateResponse(root, token.getAllowedSamlRequestIds());
             } catch (ElasticsearchSecurityException e) {
-                logger.trace("Rejecting SAML response [{}...] because {}", Strings.cleanTruncate(SamlUtils.toString(root), 512),
-                    e.getMessage());
+                logger.trace(
+                    "Rejecting SAML response [{}...] because {}",
+                    Strings.cleanTruncate(SamlUtils.toString(root), 512),
+                    e.getMessage()
+                );
                 throw e;
             }
         } else {
-            throw samlException("SAML content [{}] should have a root element of Namespace=[{}] Tag=[{}]",
-                    root, SAML_NAMESPACE, RESPONSE_TAG_NAME);
+            throw samlException(
+                "SAML content [{}] should have a root element of Namespace=[{}] Tag=[{}]",
+                root,
+                SAML_NAMESPACE,
+                RESPONSE_TAG_NAME
+            );
         }
     }
 
@@ -95,10 +99,16 @@ class SamlAuthenticator extends SamlRequestHandler {
         }
 
         if (Strings.hasText(response.getInResponseTo()) && allowedSamlRequestIds.contains(response.getInResponseTo()) == false) {
-            logger.debug("The SAML Response with ID [{}] is unsolicited. A user might have used a stale URL or the Identity Provider " +
-                    "incorrectly populates the InResponseTo attribute", response.getID());
-            throw samlException("SAML content is in-response-to [{}] but expected one of {} ",
-                    response.getInResponseTo(), allowedSamlRequestIds);
+            logger.debug(
+                "The SAML Response with ID [{}] is unsolicited. A user might have used a stale URL or the Identity Provider "
+                    + "incorrectly populates the InResponseTo attribute",
+                response.getID()
+            );
+            throw samlException(
+                "SAML content is in-response-to [{}] but expected one of {} ",
+                response.getInResponseTo(),
+                allowedSamlRequestIds
+            );
         }
 
         final Status status = response.getStatus();
@@ -115,9 +125,10 @@ class SamlAuthenticator extends SamlRequestHandler {
         final Assertion assertion = details.v1();
         final SamlNameId nameId = SamlNameId.forSubject(assertion.getSubject());
         final String session = getSessionIndex(assertion);
-        final List<SamlAttributes.SamlAttribute> attributes = details.v2().stream()
-                .map(SamlAttributes.SamlAttribute::new)
-                .collect(Collectors.toList());
+        final List<SamlAttributes.SamlAttribute> attributes = details.v2()
+            .stream()
+            .map(SamlAttributes.SamlAttribute::new)
+            .collect(Collectors.toList());
         if (logger.isTraceEnabled()) {
             StringBuilder sb = new StringBuilder();
             sb.append("The SAML Assertion contained the following attributes: \n");
@@ -127,9 +138,12 @@ class SamlAuthenticator extends SamlRequestHandler {
             logger.trace(sb.toString());
         }
         if (attributes.isEmpty() && nameId == null) {
-            logger.debug("The Attribute Statements of SAML Response with ID [{}] contained no attributes and the SAML Assertion Subject " +
-                "did not contain a SAML NameID. Please verify that the Identity Provider configuration with regards to attribute " +
-                    "release is correct. ", response.getID());
+            logger.debug(
+                "The Attribute Statements of SAML Response with ID [{}] contained no attributes and the SAML Assertion Subject "
+                    + "did not contain a SAML NameID. Please verify that the Identity Provider configuration with regards to attribute "
+                    + "release is correct. ",
+                response.getID()
+            );
             throw samlException("Could not process any SAML attributes in {}", response.getElementQName());
         }
 
@@ -184,14 +198,18 @@ class SamlAuthenticator extends SamlRequestHandler {
         final String asc = getSpConfiguration().getAscUrl();
         if (asc.equals(response.getDestination()) == false) {
             if (response.isSigned() || Strings.hasText(response.getDestination())) {
-                throw samlException("SAML response " + response.getID() + " is for destination " + response.getDestination()
-                    + " but this realm uses " + asc);
+                throw samlException(
+                    "SAML response " + response.getID() + " is for destination " + response.getDestination() + " but this realm uses " + asc
+                );
             }
         }
     }
 
-    private Tuple<Assertion, List<Attribute>> extractDetails(Response response, Collection<String> allowedSamlRequestIds,
-                                                             boolean requireSignedAssertions) {
+    private Tuple<Assertion, List<Attribute>> extractDetails(
+        Response response,
+        Collection<String> allowedSamlRequestIds,
+        boolean requireSignedAssertions
+    ) {
         final int assertionCount = response.getAssertions().size() + response.getEncryptedAssertions().size();
         if (assertionCount > 1) {
             throw samlException("Expecting only 1 assertion, but response contains multiple (" + assertionCount + ")");
@@ -222,8 +240,14 @@ class SamlAuthenticator extends SamlRequestHandler {
         try {
             return decrypter.decrypt(encrypted);
         } catch (DecryptionException e) {
-            logger.debug(() -> new ParameterizedMessage("Failed to decrypt SAML assertion [{}] with [{}]",
-                    text(encrypted, 512), describe(getSpConfiguration().getEncryptionCredentials())), e);
+            logger.debug(
+                () -> new ParameterizedMessage(
+                    "Failed to decrypt SAML assertion [{}] with [{}]",
+                    text(encrypted, 512),
+                    describe(getSpConfiguration().getEncryptionCredentials())
+                ),
+                e
+            );
             throw samlException("Failed to decrypt SAML assertion " + text(encrypted, 32), e);
         }
     }
@@ -247,8 +271,11 @@ class SamlAuthenticator extends SamlRequestHandler {
 
         List<Attribute> attributes = new ArrayList<>();
         for (AttributeStatement statement : assertion.getAttributeStatements()) {
-            logger.trace("SAML AttributeStatement has [{}] attributes and [{}] encrypted attributes",
-                    statement.getAttributes().size(), statement.getEncryptedAttributes().size());
+            logger.trace(
+                "SAML AttributeStatement has [{}] attributes and [{}] encrypted attributes",
+                statement.getAttributes().size(),
+                statement.getEncryptedAttributes().size()
+            );
             attributes.addAll(statement.getAttributes());
             for (EncryptedAttribute enc : statement.getEncryptedAttributes()) {
                 final Attribute attribute = decrypt(enc);
@@ -263,17 +290,22 @@ class SamlAuthenticator extends SamlRequestHandler {
 
     private void checkAuthnStatement(List<AuthnStatement> authnStatements) {
         if (authnStatements.size() != 1) {
-            throw samlException("SAML Assertion subject contains [{}] Authn Statements while exactly one was expected.",
-                authnStatements.size());
+            throw samlException(
+                "SAML Assertion subject contains [{}] Authn Statements while exactly one was expected.",
+                authnStatements.size()
+            );
         }
         final AuthnStatement authnStatement = authnStatements.get(0);
         // "past now" that is now - the maximum skew we will tolerate. Essentially "if our clock is 2min fast, what time is it now?"
         final Instant now = now();
         final Instant pastNow = now.minusMillis(maxSkewInMillis());
-        if (authnStatement.getSessionNotOnOrAfter() != null &&
-            pastNow.isBefore(toInstant(authnStatement.getSessionNotOnOrAfter())) == false) {
-            throw samlException("Rejecting SAML assertion's Authentication Statement because [{}] is on/after [{}]", pastNow,
-                authnStatement.getSessionNotOnOrAfter());
+        if (authnStatement.getSessionNotOnOrAfter() != null
+            && pastNow.isBefore(toInstant(authnStatement.getSessionNotOnOrAfter())) == false) {
+            throw samlException(
+                "Rejecting SAML assertion's Authentication Statement because [{}] is on/after [{}]",
+                pastNow,
+                authnStatement.getSessionNotOnOrAfter()
+            );
         }
         List<String> reqAuthnCtxClassRef = this.getSpConfiguration().getReqAuthnCtxClassRef();
         if (reqAuthnCtxClassRef.isEmpty() == false) {
@@ -282,8 +314,12 @@ class SamlAuthenticator extends SamlRequestHandler {
                 authnCtxClassRefValue = authnStatement.getAuthnContext().getAuthnContextClassRef().getAuthnContextClassRef();
             }
             if (Strings.isNullOrEmpty(authnCtxClassRefValue) || reqAuthnCtxClassRef.contains(authnCtxClassRefValue) == false) {
-                throw samlException("Rejecting SAML assertion as the AuthnContextClassRef [{}] is not one of the ({}) that were " +
-                    "requested in the corresponding AuthnRequest", authnCtxClassRefValue, reqAuthnCtxClassRef);
+                throw samlException(
+                    "Rejecting SAML assertion as the AuthnContextClassRef [{}] is not one of the ({}) that were "
+                        + "requested in the corresponding AuthnRequest",
+                    authnCtxClassRefValue,
+                    reqAuthnCtxClassRef
+                );
             }
         }
     }
@@ -304,9 +340,10 @@ class SamlAuthenticator extends SamlRequestHandler {
     private void checkConditions(Conditions conditions) {
         if (conditions != null) {
             if (logger.isTraceEnabled()) {
-                logger.trace("SAML Assertion was intended for the following Service providers: {}",
-                        conditions.getAudienceRestrictions().stream().map(r -> text(r, 32))
-                            .collect(Collectors.joining(" | ")));
+                logger.trace(
+                    "SAML Assertion was intended for the following Service providers: {}",
+                    conditions.getAudienceRestrictions().stream().map(r -> text(r, 32)).collect(Collectors.joining(" | "))
+                );
                 logger.trace("SAML Assertion is only valid between: " + conditions.getNotBefore() + " and " + conditions.getNotOnOrAfter());
             }
             checkAudienceRestrictions(conditions.getAudienceRestrictions());
@@ -319,12 +356,17 @@ class SamlAuthenticator extends SamlRequestHandler {
         if (assertionSubject == null) {
             throw samlException("SAML Assertion ({}) has no Subject", text(parent, 16));
         }
-        final List<SubjectConfirmationData> confirmationData = assertionSubject.getSubjectConfirmations().stream()
-                .filter(data -> data.getMethod().equals(METHOD_BEARER))
-                .map(SubjectConfirmation::getSubjectConfirmationData).filter(Objects::nonNull).collect(Collectors.toList());
+        final List<SubjectConfirmationData> confirmationData = assertionSubject.getSubjectConfirmations()
+            .stream()
+            .filter(data -> data.getMethod().equals(METHOD_BEARER))
+            .map(SubjectConfirmation::getSubjectConfirmationData)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
         if (confirmationData.size() != 1) {
-            throw samlException("SAML Assertion subject contains [{}] bearer SubjectConfirmation, while exactly one was expected.",
-                    confirmationData.size());
+            throw samlException(
+                "SAML Assertion subject contains [{}] bearer SubjectConfirmation, while exactly one was expected.",
+                confirmationData.size()
+            );
         }
         if (logger.isTraceEnabled()) {
             logger.trace("SAML Assertion Subject Confirmation intended recipient is: " + confirmationData.get(0).getRecipient());
@@ -339,24 +381,33 @@ class SamlAuthenticator extends SamlRequestHandler {
     private void checkRecipient(SubjectConfirmationData subjectConfirmationData) {
         final SpConfiguration sp = getSpConfiguration();
         if (sp.getAscUrl().equals(subjectConfirmationData.getRecipient()) == false) {
-            throw samlException("SAML Assertion SubjectConfirmationData Recipient [{}] does not match expected value [{}]",
-                    subjectConfirmationData.getRecipient(), sp.getAscUrl());
+            throw samlException(
+                "SAML Assertion SubjectConfirmationData Recipient [{}] does not match expected value [{}]",
+                subjectConfirmationData.getRecipient(),
+                sp.getAscUrl()
+            );
         }
     }
 
     private void checkInResponseTo(SubjectConfirmationData subjectConfirmationData, Collection<String> allowedSamlRequestIds) {
         // Allow for IdP initiated SSO where InResponseTo MUST be missing
         if (Strings.hasText(subjectConfirmationData.getInResponseTo())
-                && allowedSamlRequestIds.contains(subjectConfirmationData.getInResponseTo()) == false) {
-            throw samlException("SAML Assertion SubjectConfirmationData is in-response-to [{}] but expected one of [{}]",
-                    subjectConfirmationData.getInResponseTo(), allowedSamlRequestIds);
+            && allowedSamlRequestIds.contains(subjectConfirmationData.getInResponseTo()) == false) {
+            throw samlException(
+                "SAML Assertion SubjectConfirmationData is in-response-to [{}] but expected one of [{}]",
+                subjectConfirmationData.getInResponseTo(),
+                allowedSamlRequestIds
+            );
         }
     }
 
     private void checkAudienceRestrictions(List<AudienceRestriction> restrictions) {
         if (restrictions.stream().allMatch(this::checkAudienceRestriction) == false) {
-            throw samlException("Conditions [{}] do not match required audience [{}]",
-                restrictions.stream().map(r -> text(r, 56, 8)).collect(Collectors.joining(" | ")), getSpConfiguration().getEntityId());
+            throw samlException(
+                "Conditions [{}] do not match required audience [{}]",
+                restrictions.stream().map(r -> text(r, 56, 8)).collect(Collectors.joining(" | ")),
+                getSpConfiguration().getEntityId()
+            );
         }
     }
 
@@ -372,9 +423,15 @@ class SamlAuthenticator extends SamlRequestHandler {
                 }
                 // If the difference is less than half the length of the string, show it in detail
                 if (diffChar >= spEntityId.length() / 2) {
-                    logger.info("Audience restriction [{}] does not match required audience [{}] " +
-                            "(difference starts at character [#{}] [{}] vs [{}])",
-                        uri, spEntityId, diffChar, uri.substring(diffChar), spEntityId.substring(diffChar));
+                    logger.info(
+                        "Audience restriction [{}] does not match required audience [{}] "
+                            + "(difference starts at character [#{}] [{}] vs [{}])",
+                        uri,
+                        spEntityId,
+                        diffChar,
+                        uri.substring(diffChar),
+                        spEntityId.substring(diffChar)
+                    );
                 } else {
                     logger.info("Audience restriction [{}] does not match required audience [{}]", uri, spEntityId);
 
@@ -387,8 +444,8 @@ class SamlAuthenticator extends SamlRequestHandler {
 
     private void checkLifetimeRestrictions(Conditions conditions) {
         // In order to compensate for clock skew we construct 2 alternate realities
-        //  - a "future now" that is now + the maximum skew we will tolerate. Essentially "if our clock is 2min slow, what time is it now?"
-        //  - a "past now" that is now - the maximum skew we will tolerate. Essentially "if our clock is 2min fast, what time is it now?"
+        // - a "future now" that is now + the maximum skew we will tolerate. Essentially "if our clock is 2min slow, what time is it now?"
+        // - a "past now" that is now - the maximum skew we will tolerate. Essentially "if our clock is 2min fast, what time is it now?"
         final Instant now = now();
         final Instant futureNow = now.plusMillis(maxSkewInMillis());
         final Instant pastNow = now.minusMillis(maxSkewInMillis());

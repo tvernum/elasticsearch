@@ -108,8 +108,15 @@ public class MockWebServer implements Closeable {
                 requests.add(request);
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("[{}:{}] incoming HTTP request [{} {}], returning status [{}] body [{}]", getHostName(), getPort(),
-                            s.getRequestMethod(), s.getRequestURI(), response.getStatusCode(), getStartOfBody(response));
+                    logger.debug(
+                        "[{}:{}] incoming HTTP request [{} {}], returning status [{}] body [{}]",
+                        getHostName(),
+                        getPort(),
+                        s.getRequestMethod(),
+                        s.getRequestURI(),
+                        response.getStatusCode(),
+                        getStartOfBody(response)
+                    );
                 }
 
                 sleepIfNeeded(response.getBeforeReplyDelay());
@@ -129,8 +136,14 @@ public class MockWebServer implements Closeable {
                     }
                 }
             } catch (Exception e) {
-                logger.error((Supplier<?>) () -> new ParameterizedMessage("failed to respond to request [{} {}]",
-                        s.getRequestMethod(), s.getRequestURI()), e);
+                logger.error(
+                    (Supplier<?>) () -> new ParameterizedMessage(
+                        "failed to respond to request [{} {}]",
+                        s.getRequestMethod(),
+                        s.getRequestURI()
+                    ),
+                    e
+                );
             } finally {
                 s.close();
             }
@@ -223,8 +236,14 @@ public class MockWebServer implements Closeable {
      */
     public void enqueue(MockResponse response) {
         if (logger.isTraceEnabled()) {
-            logger.trace("[{}:{}] Enqueueing response [{}], status [{}] body [{}]", getHostName(), getPort(), responses.size(),
-                    response.getStatusCode(), getStartOfBody(response));
+            logger.trace(
+                "[{}:{}] Enqueueing response [{}], status [{}] body [{}]",
+                getHostName(),
+                getPort(),
+                responses.size(),
+                response.getStatusCode(),
+                getStartOfBody(response)
+            );
         }
         responses.add(response);
     }

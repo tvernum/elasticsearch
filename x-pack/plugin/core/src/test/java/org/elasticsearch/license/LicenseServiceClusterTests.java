@@ -39,10 +39,11 @@ public class LicenseServiceClusterTests extends AbstractLicensesIntegrationTestC
     }
 
     private Settings.Builder nodeSettingsBuilder(int nodeOrdinal) {
-        return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put("node.data", true)
-                .put("resource.reload.interval.high", "500ms"); // for license mode file watcher
+        return Settings.builder().put(super.nodeSettings(nodeOrdinal)).put("node.data", true).put("resource.reload.interval.high", "500ms"); // for
+                                                                                                                                             // license
+                                                                                                                                             // mode
+                                                                                                                                             // file
+                                                                                                                                             // watcher
     }
 
     @Override
@@ -82,7 +83,6 @@ public class LicenseServiceClusterTests extends AbstractLicensesIntegrationTestC
         assertThat(licensingClient.prepareGetLicense().get().license(), nullValue());
         assertOperationMode(License.OperationMode.MISSING);
 
-
         wipeAllLicenses();
     }
 
@@ -96,8 +96,12 @@ public class LicenseServiceClusterTests extends AbstractLicensesIntegrationTestC
 
         logger.info("--> put signed license");
         LicensingClient licensingClient = new LicensingClient(client());
-        License license = TestUtils.generateSignedLicense("cloud_internal", License.VERSION_CURRENT, System.currentTimeMillis(),
-                TimeValue.timeValueMinutes(1));
+        License license = TestUtils.generateSignedLicense(
+            "cloud_internal",
+            License.VERSION_CURRENT,
+            System.currentTimeMillis(),
+            TimeValue.timeValueMinutes(1)
+        );
         putLicense(license);
         assertThat(licensingClient.prepareGetLicense().get().license(), equalTo(license));
         assertOperationMode(License.OperationMode.PLATINUM);
@@ -162,7 +166,7 @@ public class LicenseServiceClusterTests extends AbstractLicensesIntegrationTestC
         logger.info("--> await node for enabled");
         assertLicenseActive(true);
         licensingClient = new LicensingClient(client());
-        assertThat(licensingClient.prepareGetLicense().get().license().version(), equalTo(License.VERSION_CURRENT)); //license updated
+        assertThat(licensingClient.prepareGetLicense().get().license().version(), equalTo(License.VERSION_CURRENT)); // license updated
         internalCluster().fullRestart(); // restart once more and verify updated license is active
         ensureYellow();
         logger.info("--> await node for enabled");

@@ -49,18 +49,29 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 public final class RestGetTokenAction extends TokenBaseRestHandler {
 
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestGetTokenAction.class));
-    static final ConstructingObjectParser<CreateTokenRequest, Void> PARSER = new ConstructingObjectParser<>("token_request",
-            a -> new CreateTokenRequest((String) a[0], (String) a[1], (SecureString) a[2], (SecureString) a[3], (String) a[4],
-                    (String) a[5]));
+    static final ConstructingObjectParser<CreateTokenRequest, Void> PARSER = new ConstructingObjectParser<>(
+        "token_request",
+        a -> new CreateTokenRequest((String) a[0], (String) a[1], (SecureString) a[2], (SecureString) a[3], (String) a[4], (String) a[5])
+    );
     static {
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("grant_type"));
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("username"));
-        PARSER.declareField(ConstructingObjectParser.optionalConstructorArg(), parser -> new SecureString(
-                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())),
-                new ParseField("password"), ValueType.STRING);
-        PARSER.declareField(ConstructingObjectParser.optionalConstructorArg(), parser -> new SecureString(
-                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())),
-                new ParseField("kerberos_ticket"), ValueType.STRING);
+        PARSER.declareField(
+            ConstructingObjectParser.optionalConstructorArg(),
+            parser -> new SecureString(
+                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())
+            ),
+            new ParseField("password"),
+            ValueType.STRING
+        );
+        PARSER.declareField(
+            ConstructingObjectParser.optionalConstructorArg(),
+            parser -> new SecureString(
+                Arrays.copyOfRange(parser.textCharacters(), parser.textOffset(), parser.textOffset() + parser.textLength())
+            ),
+            new ParseField("kerberos_ticket"),
+            ValueType.STRING
+        );
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("scope"));
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("refresh_token"));
     }
@@ -69,8 +80,13 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
         super(settings, xPackLicenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/oauth2/token", this,
-            POST, "/_xpack/security/oauth2/token", deprecationLogger);
+            POST,
+            "/_security/oauth2/token",
+            this,
+            POST,
+            "/_xpack/security/oauth2/token",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -79,15 +95,19 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
     }
 
     @Override
-    protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client)throws IOException {
+    protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final CreateTokenRequest tokenRequest = PARSER.parse(parser, null);
-            final ActionType<CreateTokenResponse> action =
-                    "refresh_token".equals(tokenRequest.getGrantType()) ? RefreshTokenAction.INSTANCE : CreateTokenAction.INSTANCE;
-            return channel -> client.execute(action, tokenRequest,
-                    // this doesn't use the RestBuilderListener since we need to override the
-                    // handling of failures in some cases.
-                    new CreateTokenResponseActionListener(channel, request, logger));
+            final ActionType<CreateTokenResponse> action = "refresh_token".equals(tokenRequest.getGrantType())
+                ? RefreshTokenAction.INSTANCE
+                : CreateTokenAction.INSTANCE;
+            return channel -> client.execute(
+                action,
+                tokenRequest,
+                // this doesn't use the RestBuilderListener since we need to override the
+                // handling of failures in some cases.
+                new CreateTokenResponseActionListener(channel, request, logger)
+            );
         }
     }
 
@@ -97,8 +117,7 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
         private final RestRequest request;
         private final Logger logger;
 
-        CreateTokenResponseActionListener(RestChannel restChannel, RestRequest restRequest,
-                                          Logger logger) {
+        CreateTokenResponseActionListener(RestChannel restChannel, RestRequest restRequest, Logger logger) {
             this.channel = restChannel;
             this.request = restRequest;
             this.logger = logger;
@@ -126,12 +145,16 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
                 }
 
                 sendTokenErrorResponse(error, validationException.getMessage(), e);
-            } else if (e instanceof ElasticsearchSecurityException && "invalid_grant".equals(e.getMessage()) &&
-                    ((ElasticsearchSecurityException) e).getHeader("error_description").size() == 1) {
-                sendTokenErrorResponse(TokenRequestError.INVALID_GRANT,
-                        ((ElasticsearchSecurityException) e).getHeader("error_description").get(0), e);
             } else if (e instanceof ElasticsearchSecurityException
-                    && "failed to authenticate user, gss context negotiation not complete".equals(e.getMessage())) {
+                && "invalid_grant".equals(e.getMessage())
+                && ((ElasticsearchSecurityException) e).getHeader("error_description").size() == 1) {
+                sendTokenErrorResponse(
+                    TokenRequestError.INVALID_GRANT,
+                    ((ElasticsearchSecurityException) e).getHeader("error_description").get(0),
+                    e
+                );
+            } else if (e instanceof ElasticsearchSecurityException
+                && "failed to authenticate user, gss context negotiation not complete".equals(e.getMessage())) {
                 sendTokenErrorResponse(TokenRequestError._UNAUTHORIZED, extractBase64EncodedToken((ElasticsearchSecurityException) e), e);
             } else {
                 sendFailure(e);
@@ -145,8 +168,9 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
                 final String wwwAuthenticateHeaderValue = values.get(0);
                 // it may contain base64 encoded token that needs to be sent to client if Spnego GSS context negotiation failed
                 if (wwwAuthenticateHeaderValue.startsWith(KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX)) {
-                    base64EncodedToken = wwwAuthenticateHeaderValue
-                            .substring(KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX.length()).trim();
+                    base64EncodedToken = wwwAuthenticateHeaderValue.substring(
+                        KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX.length()
+                    ).trim();
                 }
             }
             return base64EncodedToken;
@@ -156,9 +180,9 @@ public final class RestGetTokenAction extends TokenBaseRestHandler {
             try (XContentBuilder builder = channel.newErrorBuilder()) {
                 // defined by https://tools.ietf.org/html/rfc6749#section-5.2
                 builder.startObject()
-                        .field("error", error.toString().toLowerCase(Locale.ROOT))
-                        .field("error_description", description)
-                        .endObject();
+                    .field("error", error.toString().toLowerCase(Locale.ROOT))
+                    .field("error_description", description)
+                    .endObject();
                 channel.sendResponse(new BytesRestResponse(RestStatus.BAD_REQUEST, builder));
             } catch (IOException ioe) {
                 ioe.addSuppressed(e);

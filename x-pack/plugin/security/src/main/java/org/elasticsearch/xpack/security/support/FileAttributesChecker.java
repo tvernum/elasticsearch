@@ -32,9 +32,11 @@ public class FileAttributesChecker {
         this.attributes = new PosixFileAttributes[paths.length];
 
         for (int i = 0; i < paths.length; ++i) {
-            if (Files.exists(paths[i]) == false) continue; // missing file, so changes later don't matter
+            if (Files.exists(paths[i]) == false)
+                continue; // missing file, so changes later don't matter
             PosixFileAttributeView view = Files.getFileAttributeView(paths[i], PosixFileAttributeView.class);
-            if (view == null) continue; // not posix
+            if (view == null)
+                continue; // not posix
             this.attributes[i] = view.readAttributes();
         }
     }
@@ -51,21 +53,50 @@ public class FileAttributesChecker {
             PosixFileAttributes newAttributes = view.readAttributes();
             PosixFileAttributes oldAttributes = attributes[i];
             if (oldAttributes.permissions().equals(newAttributes.permissions()) == false) {
-                terminal.errorPrintln(Terminal.Verbosity.SILENT, "WARNING: The file permissions of [" + paths[i] + "] have changed "
-                    + "from [" + PosixFilePermissions.toString(oldAttributes.permissions()) + "] "
-                    + "to [" + PosixFilePermissions.toString(newAttributes.permissions()) + "]");
-                terminal.errorPrintln(Terminal.Verbosity.SILENT,
-                    "Please ensure that the user account running Elasticsearch has read access to this file!");
+                terminal.errorPrintln(
+                    Terminal.Verbosity.SILENT,
+                    "WARNING: The file permissions of ["
+                        + paths[i]
+                        + "] have changed "
+                        + "from ["
+                        + PosixFilePermissions.toString(oldAttributes.permissions())
+                        + "] "
+                        + "to ["
+                        + PosixFilePermissions.toString(newAttributes.permissions())
+                        + "]"
+                );
+                terminal.errorPrintln(
+                    Terminal.Verbosity.SILENT,
+                    "Please ensure that the user account running Elasticsearch has read access to this file!"
+                );
             }
             if (oldAttributes.owner().getName().equals(newAttributes.owner().getName()) == false) {
-                terminal.errorPrintln(Terminal.Verbosity.SILENT, "WARNING: Owner of file [" + paths[i] + "] "
-                    + "used to be [" + oldAttributes.owner().getName() + "], "
-                    + "but now is [" + newAttributes.owner().getName() + "]");
+                terminal.errorPrintln(
+                    Terminal.Verbosity.SILENT,
+                    "WARNING: Owner of file ["
+                        + paths[i]
+                        + "] "
+                        + "used to be ["
+                        + oldAttributes.owner().getName()
+                        + "], "
+                        + "but now is ["
+                        + newAttributes.owner().getName()
+                        + "]"
+                );
             }
             if (oldAttributes.group().getName().equals(newAttributes.group().getName()) == false) {
-                terminal.errorPrintln(Terminal.Verbosity.SILENT, "WARNING: Group of file [" + paths[i] + "] "
-                    + "used to be [" + oldAttributes.group().getName() + "], "
-                    + "but now is [" + newAttributes.group().getName() + "]");
+                terminal.errorPrintln(
+                    Terminal.Verbosity.SILENT,
+                    "WARNING: Group of file ["
+                        + paths[i]
+                        + "] "
+                        + "used to be ["
+                        + oldAttributes.group().getName()
+                        + "], "
+                        + "but now is ["
+                        + newAttributes.group().getName()
+                        + "]"
+                );
             }
         }
     }

@@ -71,14 +71,15 @@ public class SSLReloadIntegTests extends SecurityIntegTestCase {
         }
 
         Settings settings = super.nodeSettings(nodeOrdinal);
-        Settings.Builder builder = Settings.builder()
-                .put(settings.filter((s) -> s.startsWith("xpack.security.transport.ssl.") == false));
+        Settings.Builder builder = Settings.builder().put(settings.filter((s) -> s.startsWith("xpack.security.transport.ssl.") == false));
         builder.put("path.home", createTempDir())
             .put("xpack.security.transport.ssl.key", nodeKeyPath)
             .put("xpack.security.transport.ssl.key_passphrase", "testnode")
             .put("xpack.security.transport.ssl.certificate", nodeCertPath)
-            .putList("xpack.security.transport.ssl.certificate_authorities",
-                Arrays.asList(nodeCertPath.toString(), clientCertPath.toString(), updateableCertPath.toString()))
+            .putList(
+                "xpack.security.transport.ssl.certificate_authorities",
+                Arrays.asList(nodeCertPath.toString(), clientCertPath.toString(), updateableCertPath.toString())
+            )
             .put("resource.reload.interval.high", "1s");
 
         builder.put("xpack.security.transport.ssl.enabled", true);
@@ -103,16 +104,17 @@ public class SSLReloadIntegTests extends SecurityIntegTestCase {
             .put("xpack.security.transport.ssl.enabled", true)
             .put("xpack.security.transport.ssl.key", keyPath)
             .put("xpack.security.transport.ssl.certificate", certPath)
-            .putList("xpack.security.transport.ssl.certificate_authorities",
-                Arrays.asList(nodeCertPath.toString(), clientCertPath.toString(), updateableCertPath.toString()))
+            .putList(
+                "xpack.security.transport.ssl.certificate_authorities",
+                Arrays.asList(nodeCertPath.toString(), clientCertPath.toString(), updateableCertPath.toString())
+            )
             .setSecureSettings(secureSettings)
             .build();
         String node = randomFrom(internalCluster().getNodeNames());
         SSLService sslService = new SSLService(TestEnvironment.newEnvironment(settings));
         SSLConfiguration sslConfiguration = sslService.getSSLConfiguration("xpack.security.transport.ssl");
         SSLSocketFactory sslSocketFactory = sslService.sslSocketFactory(sslConfiguration);
-        TransportAddress address = internalCluster()
-            .getInstance(Transport.class, node).boundAddress().publishAddress();
+        TransportAddress address = internalCluster().getInstance(Transport.class, node).boundAddress().publishAddress();
         // Fails as our nodes do not trust testnode_updated.crt
         try (SSLSocket socket = (SSLSocket) sslSocketFactory.createSocket(address.getAddress(), address.getPort())) {
             assertThat(socket.isConnected(), is(true));

@@ -37,11 +37,23 @@ public class TransportXPackUsageAction extends TransportMasterNodeAction<XPackUs
     private final List<XPackUsageFeatureAction> usageActions;
 
     @Inject
-    public TransportXPackUsageAction(ThreadPool threadPool, TransportService transportService,
-                                     ClusterService clusterService, ActionFilters actionFilters,
-                                     IndexNameExpressionResolver indexNameExpressionResolver, NodeClient client) {
-        super(XPackUsageAction.NAME, transportService, clusterService, threadPool, actionFilters, XPackUsageRequest::new,
-            indexNameExpressionResolver);
+    public TransportXPackUsageAction(
+        ThreadPool threadPool,
+        TransportService transportService,
+        ClusterService clusterService,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        NodeClient client
+    ) {
+        super(
+            XPackUsageAction.NAME,
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            XPackUsageRequest::new,
+            indexNameExpressionResolver
+        );
         this.client = client;
         this.usageActions = usageActions();
     }
@@ -92,14 +104,13 @@ public class TransportXPackUsageAction extends TransportMasterNodeAction<XPackUs
             });
         };
         IteratingActionListener<List<XPackFeatureSet.Usage>, XPackUsageFeatureAction> iteratingActionListener =
-                new IteratingActionListener<>(usageActionListener, consumer, usageActions,
-                        threadPool.getThreadContext(), (ignore) -> {
-                    final List<Usage> usageList = new ArrayList<>(featureSetUsages.length());
-                    for (int i = 0; i < featureSetUsages.length(); i++) {
-                        usageList.add(featureSetUsages.get(i));
-                    }
-                    return usageList;
-                }, (ignore) -> true);
+            new IteratingActionListener<>(usageActionListener, consumer, usageActions, threadPool.getThreadContext(), (ignore) -> {
+                final List<Usage> usageList = new ArrayList<>(featureSetUsages.length());
+                for (int i = 0; i < featureSetUsages.length(); i++) {
+                    usageList.add(featureSetUsages.get(i));
+                }
+                return usageList;
+            }, (ignore) -> true);
         iteratingActionListener.run();
     }
 

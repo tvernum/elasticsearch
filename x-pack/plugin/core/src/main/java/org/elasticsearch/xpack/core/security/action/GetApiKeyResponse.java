@@ -52,8 +52,7 @@ public final class GetApiKeyResponse extends ActionResponse implements ToXConten
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
-            .array("api_keys", (Object[]) foundApiKeysInfo);
+        builder.startObject().array("api_keys", (Object[]) foundApiKeysInfo);
         return builder.endObject();
     }
 
@@ -63,9 +62,10 @@ public final class GetApiKeyResponse extends ActionResponse implements ToXConten
     }
 
     @SuppressWarnings("unchecked")
-    static final ConstructingObjectParser<GetApiKeyResponse, Void> PARSER = new ConstructingObjectParser<>("get_api_key_response", args -> {
-        return (args[0] == null) ? GetApiKeyResponse.emptyResponse() : new GetApiKeyResponse((List<ApiKey>) args[0]);
-    });
+    static final ConstructingObjectParser<GetApiKeyResponse, Void> PARSER = new ConstructingObjectParser<>(
+        "get_api_key_response",
+        args -> { return (args[0] == null) ? GetApiKeyResponse.emptyResponse() : new GetApiKeyResponse((List<ApiKey>) args[0]); }
+    );
     static {
         PARSER.declareObjectArray(optionalConstructorArg(), (p, c) -> ApiKey.fromXContent(p), new ParseField("api_keys"));
     }

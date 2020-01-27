@@ -21,9 +21,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 public class ValidationTests extends ESTestCase {
 
-    private static final Character[] ALLOWED_CHARS = Validation.VALID_NAME_CHARS.toArray(
-        new Character[Validation.VALID_NAME_CHARS.size()]
-    );
+    private static final Character[] ALLOWED_CHARS = Validation.VALID_NAME_CHARS.toArray(new Character[Validation.VALID_NAME_CHARS.size()]);
 
     public void testUsernameValid() throws Exception {
         int length = randomIntBetween(Validation.MIN_NAME_LENGTH, Validation.MAX_NAME_LENGTH);

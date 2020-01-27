@@ -39,9 +39,12 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
     public static final long BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS = Long.MAX_VALUE - TimeUnit.HOURS.toMillis(24 * 365);
     // TODO move this constant to License.java once we move License.java to the protocol jar
 
-    @Nullable private BuildInfo buildInfo;
-    @Nullable private LicenseInfo licenseInfo;
-    @Nullable private FeatureSetsInfo featureSetsInfo;
+    @Nullable
+    private BuildInfo buildInfo;
+    @Nullable
+    private LicenseInfo licenseInfo;
+    @Nullable
+    private FeatureSetsInfo featureSetsInfo;
 
     public XPackInfoResponse(StreamInput in) throws IOException {
         super(in);
@@ -87,12 +90,14 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
     @Override
     public boolean equals(Object other) {
-        if (other == null || other.getClass() != getClass()) return false;
-        if (this == other) return true;
+        if (other == null || other.getClass() != getClass())
+            return false;
+        if (this == other)
+            return true;
         XPackInfoResponse rhs = (XPackInfoResponse) other;
         return Objects.equals(buildInfo, rhs.buildInfo)
-                && Objects.equals(licenseInfo, rhs.licenseInfo)
-                && Objects.equals(featureSetsInfo, rhs.featureSetsInfo);
+            && Objects.equals(licenseInfo, rhs.licenseInfo)
+            && Objects.equals(featureSetsInfo, rhs.featureSetsInfo);
     }
 
     @Override
@@ -113,8 +118,9 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
             builder.field("build", buildInfo, params);
         }
 
-        EnumSet<XPackInfoRequest.Category> categories = XPackInfoRequest.Category
-                .toSet(Strings.splitStringByCommaToArray(params.param("categories", "_all")));
+        EnumSet<XPackInfoRequest.Category> categories = XPackInfoRequest.Category.toSet(
+            Strings.splitStringByCommaToArray(params.param("categories", "_all"))
+        );
         if (licenseInfo != null) {
             builder.field("license", licenseInfo, params);
         } else if (categories.contains(XPackInfoRequest.Category.LICENSE)) {
@@ -185,14 +191,16 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
         @Override
         public boolean equals(Object other) {
-            if (other == null || other.getClass() != getClass()) return false;
-            if (this == other) return true;
+            if (other == null || other.getClass() != getClass())
+                return false;
+            if (this == other)
+                return true;
             LicenseInfo rhs = (LicenseInfo) other;
             return Objects.equals(uid, rhs.uid)
-                    && Objects.equals(type, rhs.type)
-                    && Objects.equals(mode, rhs.mode)
-                    && Objects.equals(status, rhs.status)
-                    && expiryDate == rhs.expiryDate;
+                && Objects.equals(type, rhs.type)
+                && Objects.equals(mode, rhs.mode)
+                && Objects.equals(status, rhs.status)
+                && expiryDate == rhs.expiryDate;
         }
 
         @Override
@@ -202,11 +210,7 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-            builder.startObject()
-                .field("uid", uid)
-                .field("type", type)
-                .field("mode", mode)
-                .field("status", status.label());
+            builder.startObject().field("uid", uid).field("type", type).field("mode", mode).field("status", status.label());
             if (expiryDate != BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS) {
                 builder.timeField("expiry_date_in_millis", "expiry_date", expiryDate);
             }
@@ -243,11 +247,12 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
         @Override
         public boolean equals(Object other) {
-            if (other == null || other.getClass() != getClass()) return false;
-            if (this == other) return true;
+            if (other == null || other.getClass() != getClass())
+                return false;
+            if (this == other)
+                return true;
             BuildInfo rhs = (BuildInfo) other;
-            return Objects.equals(hash, rhs.hash)
-                    && Objects.equals(timestamp, rhs.timestamp);
+            return Objects.equals(hash, rhs.hash) && Objects.equals(timestamp, rhs.timestamp);
         }
 
         @Override
@@ -256,7 +261,10 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
         }
 
         private static final ConstructingObjectParser<BuildInfo, Void> PARSER = new ConstructingObjectParser<>(
-                "build_info", true, (a, v) -> new BuildInfo((String) a[0], (String) a[1]));
+            "build_info",
+            true,
+            (a, v) -> new BuildInfo((String) a[0], (String) a[1])
+        );
         static {
             PARSER.declareString(constructorArg(), new ParseField("hash"));
             PARSER.declareString(constructorArg(), new ParseField("date"));
@@ -264,10 +272,7 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-            return builder.startObject()
-                    .field("hash", hash)
-                    .field("date", timestamp)
-                    .endObject();
+            return builder.startObject().field("hash", hash).field("date", timestamp).endObject();
         }
     }
 
@@ -306,8 +311,10 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
         @Override
         public boolean equals(Object other) {
-            if (other == null || other.getClass() != getClass()) return false;
-            if (this == other) return true;
+            if (other == null || other.getClass() != getClass())
+                return false;
+            if (this == other)
+                return true;
             FeatureSetsInfo rhs = (FeatureSetsInfo) other;
             return Objects.equals(featureSets, rhs.featureSets);
         }
@@ -381,12 +388,12 @@ public class XPackInfoResponse extends ActionResponse implements ToXContentObjec
 
             @Override
             public boolean equals(Object other) {
-                if (other == null || other.getClass() != getClass()) return false;
-                if (this == other) return true;
+                if (other == null || other.getClass() != getClass())
+                    return false;
+                if (this == other)
+                    return true;
                 FeatureSet rhs = (FeatureSet) other;
-                return Objects.equals(name, rhs.name)
-                        && available == rhs.available
-                        && enabled == rhs.enabled;
+                return Objects.equals(name, rhs.name) && available == rhs.available && enabled == rhs.enabled;
             }
 
             @Override

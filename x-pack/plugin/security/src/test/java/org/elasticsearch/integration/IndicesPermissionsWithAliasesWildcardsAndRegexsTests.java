@@ -27,72 +27,69 @@ public class IndicesPermissionsWithAliasesWildcardsAndRegexsTests extends Securi
     @Override
     protected String configUsers() {
         final String usersPasswdHashed = new String(getFastStoredHashAlgoForTests().hash(USERS_PASSWD));
-        return super.configUsers() +
-            "user1:" + usersPasswdHashed + "\n";
+        return super.configUsers() + "user1:" + usersPasswdHashed + "\n";
     }
 
     @Override
     protected String configUsersRoles() {
-        return super.configUsersRoles() +
-                "role1:user1\n";
+        return super.configUsersRoles() + "role1:user1\n";
     }
 
     @Override
     protected String configRoles() {
-        return super.configRoles() +
-                "\nrole1:\n" +
-                "  cluster: [ all ]\n" +
-                "  indices:\n" +
-                "      - names: 't*'\n" +
-                "        privileges: [ALL]\n" +
-                "        field_security:\n" +
-                "           grant: [ field1 ]\n" +
-                "      - names: 'my_alias'\n" +
-                "        privileges: [ALL]\n" +
-                "        field_security:\n" +
-                "           grant: [ field2 ]\n" +
-                "      - names: '/an_.*/'\n" +
-                "        privileges: [ALL]\n" +
-                "        field_security:\n" +
-                "           grant: [ field3 ]\n";
+        return super.configRoles()
+            + "\nrole1:\n"
+            + "  cluster: [ all ]\n"
+            + "  indices:\n"
+            + "      - names: 't*'\n"
+            + "        privileges: [ALL]\n"
+            + "        field_security:\n"
+            + "           grant: [ field1 ]\n"
+            + "      - names: 'my_alias'\n"
+            + "        privileges: [ALL]\n"
+            + "        field_security:\n"
+            + "           grant: [ field2 ]\n"
+            + "      - names: '/an_.*/'\n"
+            + "        privileges: [ALL]\n"
+            + "        field_security:\n"
+            + "           grant: [ field3 ]\n";
     }
 
     @Override
     public Settings nodeSettings(int nodeOrdinal) {
-        return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put(XPackSettings.DLS_FLS_ENABLED.getKey(), true)
-                .build();
+        return Settings.builder().put(super.nodeSettings(nodeOrdinal)).put(XPackSettings.DLS_FLS_ENABLED.getKey(), true).build();
     }
 
     public void testResolveWildcardsRegexs() throws Exception {
-        assertAcked(client().admin().indices().prepareCreate("test")
-                        .setMapping("field1", "type=text", "field2", "type=text")
-                        .addAlias(new Alias("my_alias"))
-                        .addAlias(new Alias("an_alias"))
+        assertAcked(
+            client().admin()
+                .indices()
+                .prepareCreate("test")
+                .setMapping("field1", "type=text", "field2", "type=text")
+                .addAlias(new Alias("my_alias"))
+                .addAlias(new Alias("an_alias"))
         );
-        client().prepareIndex("test").setId("1").setSource("field1", "value1", "field2", "value2",  "field3", "value3")
-                .setRefreshPolicy(IMMEDIATE)
-                .get();
+        client().prepareIndex("test")
+            .setId("1")
+            .setSource("field1", "value1", "field2", "value2", "field3", "value3")
+            .setRefreshPolicy(IMMEDIATE)
+            .get();
 
-        GetResponse getResponse = client()
-                .filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD)))
-                .prepareGet("test", "1")
-                .get();
+        GetResponse getResponse = client().filterWithHeader(
+            Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD))
+        ).prepareGet("test", "1").get();
         assertThat(getResponse.getSource().size(), equalTo(1));
         assertThat((String) getResponse.getSource().get("field1"), equalTo("value1"));
 
-        getResponse = client()
-                .filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD)))
-                .prepareGet("my_alias", "1")
-                .get();
+        getResponse = client().filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD)))
+            .prepareGet("my_alias", "1")
+            .get();
         assertThat(getResponse.getSource().size(), equalTo(1));
         assertThat((String) getResponse.getSource().get("field2"), equalTo("value2"));
 
-        getResponse = client()
-                .filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD)))
-                .prepareGet("an_alias", "1")
-                .get();
+        getResponse = client().filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, basicAuthHeaderValue("user1", USERS_PASSWD)))
+            .prepareGet("an_alias", "1")
+            .get();
         assertThat(getResponse.getSource().size(), equalTo(1));
         assertThat((String) getResponse.getSource().get("field3"), equalTo("value3"));
     }

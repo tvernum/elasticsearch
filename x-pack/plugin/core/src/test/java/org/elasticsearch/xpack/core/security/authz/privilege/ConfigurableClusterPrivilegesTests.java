@@ -66,8 +66,6 @@ public class ConfigurableClusterPrivilegesTests extends ESTestCase {
     }
 
     private ConfigurableClusterPrivilege[] buildSecurityPrivileges(int applicationNameLength) {
-        return new ConfigurableClusterPrivilege[] {
-            ManageApplicationPrivilegesTests.buildPrivileges(applicationNameLength)
-        };
+        return new ConfigurableClusterPrivilege[] { ManageApplicationPrivilegesTests.buildPrivileges(applicationNameLength) };
     }
 }

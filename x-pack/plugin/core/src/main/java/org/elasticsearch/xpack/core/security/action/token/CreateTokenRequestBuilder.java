@@ -14,8 +14,7 @@ import org.elasticsearch.common.settings.SecureString;
 /**
  * Request builder used to populate a {@link CreateTokenRequest}
  */
-public final class CreateTokenRequestBuilder
-        extends ActionRequestBuilder<CreateTokenRequest, CreateTokenResponse> {
+public final class CreateTokenRequestBuilder extends ActionRequestBuilder<CreateTokenRequest, CreateTokenResponse> {
 
     public CreateTokenRequestBuilder(ElasticsearchClient client, ActionType<CreateTokenResponse> action) {
         super(client, action, new CreateTokenRequest());

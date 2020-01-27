@@ -28,9 +28,9 @@ import java.nio.CharBuffer;
 /**
  * Request to change a user's password.
  */
-public class ChangePasswordRequestBuilder
-        extends ActionRequestBuilder<ChangePasswordRequest, ChangePasswordResponse>
-        implements WriteRequestBuilder<ChangePasswordRequestBuilder> {
+public class ChangePasswordRequestBuilder extends ActionRequestBuilder<ChangePasswordRequest, ChangePasswordResponse>
+    implements
+        WriteRequestBuilder<ChangePasswordRequestBuilder> {
 
     public ChangePasswordRequestBuilder(ElasticsearchClient client) {
         super(client, ChangePasswordAction.INSTANCE, new ChangePasswordRequest());
@@ -65,12 +65,13 @@ public class ChangePasswordRequestBuilder
     /**
      * Populate the change password request from the source in the provided content type
      */
-    public ChangePasswordRequestBuilder source(BytesReference source, XContentType xContentType, Hasher hasher) throws
-        IOException {
+    public ChangePasswordRequestBuilder source(BytesReference source, XContentType xContentType, Hasher hasher) throws IOException {
         // EMPTY is ok here because we never call namedObject
-        try (InputStream stream = source.streamInput();
-             XContentParser parser = xContentType.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, stream)) {
+        try (
+            InputStream stream = source.streamInput();
+            XContentParser parser = xContentType.xContent()
+                .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, stream)
+        ) {
             XContentUtils.verifyObject(parser);
             XContentParser.Token token;
             String currentFieldName = null;
@@ -82,15 +83,20 @@ public class ChangePasswordRequestBuilder
                         String password = parser.text();
                         final char[] passwordChars = password.toCharArray();
                         password(passwordChars, hasher);
-                        assert CharBuffer.wrap(passwordChars).chars().noneMatch((i) -> (char) i != (char) 0) : "expected password to " +
-                                "clear the char[] but it did not!";
+                        assert CharBuffer.wrap(passwordChars).chars().noneMatch((i) -> (char) i != (char) 0) : "expected password to "
+                            + "clear the char[] but it did not!";
                     } else {
                         throw new ElasticsearchParseException(
-                                "expected field [{}] to be of type string, but found [{}] instead", currentFieldName, token);
+                            "expected field [{}] to be of type string, but found [{}] instead",
+                            currentFieldName,
+                            token
+                        );
                     }
                 } else {
-                    throw new ElasticsearchParseException("failed to parse change password request. unexpected field [{}]",
-                            currentFieldName);
+                    throw new ElasticsearchParseException(
+                        "failed to parse change password request. unexpected field [{}]",
+                        currentFieldName
+                    );
                 }
             }
         }

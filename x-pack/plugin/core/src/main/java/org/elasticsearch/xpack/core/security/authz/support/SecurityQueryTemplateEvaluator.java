@@ -26,8 +26,7 @@ import java.util.Map;
  */
 public final class SecurityQueryTemplateEvaluator {
 
-    private SecurityQueryTemplateEvaluator() {
-    }
+    private SecurityQueryTemplateEvaluator() {}
 
     /**
      * If the query source is a template, then parses the script, compiles the
@@ -47,8 +46,10 @@ public final class SecurityQueryTemplateEvaluator {
      */
     public static String evaluateTemplate(final String querySource, final ScriptService scriptService, final User user) {
         // EMPTY is safe here because we never use namedObject
-        try (XContentParser parser = XContentFactory.xContent(querySource).createParser(NamedXContentRegistry.EMPTY,
-                LoggingDeprecationHandler.INSTANCE, querySource)) {
+        try (
+            XContentParser parser = XContentFactory.xContent(querySource)
+                .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, querySource)
+        ) {
             XContentParser.Token token = parser.nextToken();
             if (token != XContentParser.Token.START_OBJECT) {
                 throw new ElasticsearchParseException("Unexpected token [" + token + "]");

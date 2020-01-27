@@ -76,19 +76,24 @@ public final class KerberosRealm extends Realm implements CachingRealm {
     }
 
     // pkg scoped for testing
-    KerberosRealm(final RealmConfig config, final NativeRoleMappingStore nativeRoleMappingStore,
-            final KerberosTicketValidator kerberosTicketValidator, final ThreadPool threadPool,
-            final Cache<String, User> userPrincipalNameToUserCache) {
+    KerberosRealm(
+        final RealmConfig config,
+        final NativeRoleMappingStore nativeRoleMappingStore,
+        final KerberosTicketValidator kerberosTicketValidator,
+        final ThreadPool threadPool,
+        final Cache<String, User> userPrincipalNameToUserCache
+    ) {
         super(config);
         this.userRoleMapper = nativeRoleMappingStore;
         this.userRoleMapper.refreshRealmOnChange(this);
         final TimeValue ttl = config.getSetting(KerberosRealmSettings.CACHE_TTL_SETTING);
         if (ttl.getNanos() > 0) {
             this.userPrincipalNameToUserCache = (userPrincipalNameToUserCache == null)
-                    ? CacheBuilder.<String, User>builder()
-                            .setExpireAfterWrite(config.getSetting(KerberosRealmSettings.CACHE_TTL_SETTING))
-                            .setMaximumWeight(config.getSetting(KerberosRealmSettings.CACHE_MAX_USERS_SETTING)).build()
-                    : userPrincipalNameToUserCache;
+                ? CacheBuilder.<String, User>builder()
+                    .setExpireAfterWrite(config.getSetting(KerberosRealmSettings.CACHE_TTL_SETTING))
+                    .setMaximumWeight(config.getSetting(KerberosRealmSettings.CACHE_MAX_USERS_SETTING))
+                    .build()
+                : userPrincipalNameToUserCache;
         } else {
             this.userPrincipalNameToUserCache = null;
         }
@@ -153,26 +158,30 @@ public final class KerberosRealm extends Realm implements CachingRealm {
         assert delegatedRealms != null : "Realm has not been initialized correctly";
         assert token instanceof KerberosAuthenticationToken;
         final KerberosAuthenticationToken kerbAuthnToken = (KerberosAuthenticationToken) token;
-        kerberosTicketValidator.validateTicket((byte[]) kerbAuthnToken.credentials(), keytabPath, enableKerberosDebug,
-                ActionListener.wrap(userPrincipalNameOutToken -> {
-                    if (userPrincipalNameOutToken.v1() != null) {
-                        resolveUser(userPrincipalNameOutToken.v1(), userPrincipalNameOutToken.v2(), listener);
-                    } else {
-                        /**
-                         * This is when security context could not be established may be due to ongoing
-                         * negotiation and requires token to be sent back to peer for continuing
-                         * further. We are terminating the authentication process as this is spengo
-                         * negotiation and no other realm can handle this. We can have only one Kerberos
-                         * realm in the system so terminating with RestStatus Unauthorized (401) and
-                         * with 'WWW-Authenticate' header populated with value with token in the form
-                         * 'Negotiate oYH1MIHyoAMK...'
-                         */
-                        String errorMessage = "failed to authenticate user, gss context negotiation not complete";
-                        ElasticsearchSecurityException ese = unauthorized(errorMessage, null);
-                        ese = unauthorizedWithOutputToken(ese, userPrincipalNameOutToken.v2());
-                        listener.onResponse(AuthenticationResult.terminate(errorMessage, ese));
-                    }
-                }, e -> handleException(e, listener)));
+        kerberosTicketValidator.validateTicket(
+            (byte[]) kerbAuthnToken.credentials(),
+            keytabPath,
+            enableKerberosDebug,
+            ActionListener.wrap(userPrincipalNameOutToken -> {
+                if (userPrincipalNameOutToken.v1() != null) {
+                    resolveUser(userPrincipalNameOutToken.v1(), userPrincipalNameOutToken.v2(), listener);
+                } else {
+                    /**
+                     * This is when security context could not be established may be due to ongoing
+                     * negotiation and requires token to be sent back to peer for continuing
+                     * further. We are terminating the authentication process as this is spengo
+                     * negotiation and no other realm can handle this. We can have only one Kerberos
+                     * realm in the system so terminating with RestStatus Unauthorized (401) and
+                     * with 'WWW-Authenticate' header populated with value with token in the form
+                     * 'Negotiate oYH1MIHyoAMK...'
+                     */
+                    String errorMessage = "failed to authenticate user, gss context negotiation not complete";
+                    ElasticsearchSecurityException ese = unauthorized(errorMessage, null);
+                    ese = unauthorizedWithOutputToken(ese, userPrincipalNameOutToken.v2());
+                    listener.onResponse(AuthenticationResult.terminate(errorMessage, ese));
+                }
+            }, e -> handleException(e, listener))
+        );
     }
 
     private String[] splitUserPrincipalName(final String userPrincipalName) {
@@ -182,12 +191,20 @@ public final class KerberosRealm extends Realm implements CachingRealm {
     private void handleException(Exception e, final ActionListener<AuthenticationResult> listener) {
         if (e instanceof LoginException) {
             logger.debug("failed to authenticate user, service login failure", e);
-            listener.onResponse(AuthenticationResult.terminate("failed to authenticate user, service login failure",
-                    unauthorized(e.getLocalizedMessage(), e)));
+            listener.onResponse(
+                AuthenticationResult.terminate(
+                    "failed to authenticate user, service login failure",
+                    unauthorized(e.getLocalizedMessage(), e)
+                )
+            );
         } else if (e instanceof GSSException) {
             logger.debug("failed to authenticate user, gss context negotiation failure", e);
-            listener.onResponse(AuthenticationResult.terminate("failed to authenticate user, gss context negotiation failure",
-                    unauthorized(e.getLocalizedMessage(), e)));
+            listener.onResponse(
+                AuthenticationResult.terminate(
+                    "failed to authenticate user, gss context negotiation failure",
+                    unauthorized(e.getLocalizedMessage(), e)
+                )
+            );
         } else {
             logger.debug("failed to authenticate user", e);
             listener.onFailure(e);

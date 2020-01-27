@@ -26,8 +26,12 @@ public class TransportPutRoleAction extends HandledTransportAction<PutRoleReques
     private final NamedXContentRegistry xContentRegistry;
 
     @Inject
-    public TransportPutRoleAction(ActionFilters actionFilters, NativeRolesStore rolesStore, TransportService transportService,
-                                  NamedXContentRegistry xContentRegistry) {
+    public TransportPutRoleAction(
+        ActionFilters actionFilters,
+        NativeRolesStore rolesStore,
+        TransportService transportService,
+        NamedXContentRegistry xContentRegistry
+    ) {
         super(PutRoleAction.NAME, transportService, actionFilters, PutRoleRequest::new);
         this.rolesStore = rolesStore;
         this.xContentRegistry = xContentRegistry;

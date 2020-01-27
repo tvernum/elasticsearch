@@ -39,11 +39,21 @@ public class RestPutRoleMappingAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/role_mapping/{name}", this,
-            POST, "/_xpack/security/role_mapping/{name}", deprecationLogger);
+            POST,
+            "/_security/role_mapping/{name}",
+            this,
+            POST,
+            "/_xpack/security/role_mapping/{name}",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/role_mapping/{name}", this,
-            PUT, "/_xpack/security/role_mapping/{name}", deprecationLogger);
+            PUT,
+            "/_security/role_mapping/{name}",
+            this,
+            PUT,
+            "/_xpack/security/role_mapping/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -54,15 +64,16 @@ public class RestPutRoleMappingAction extends SecurityBaseRestHandler {
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         final String name = request.param("name");
-        PutRoleMappingRequestBuilder requestBuilder = new PutRoleMappingRequestBuilder(client)
-            .source(name, request.requiredContent(), request.getXContentType())
-            .setRefreshPolicy(request.param("refresh"));
-        return channel -> requestBuilder.execute(
-                new RestBuilderListener<>(channel) {
-                    @Override
-                    public RestResponse buildResponse(PutRoleMappingResponse response, XContentBuilder builder) throws Exception {
-                        return new BytesRestResponse(RestStatus.OK, builder.startObject().field("role_mapping", response).endObject());
-                    }
-                });
+        PutRoleMappingRequestBuilder requestBuilder = new PutRoleMappingRequestBuilder(client).source(
+            name,
+            request.requiredContent(),
+            request.getXContentType()
+        ).setRefreshPolicy(request.param("refresh"));
+        return channel -> requestBuilder.execute(new RestBuilderListener<>(channel) {
+            @Override
+            public RestResponse buildResponse(PutRoleMappingResponse response, XContentBuilder builder) throws Exception {
+                return new BytesRestResponse(RestStatus.OK, builder.startObject().field("role_mapping", response).endObject());
+            }
+        });
     }
 }

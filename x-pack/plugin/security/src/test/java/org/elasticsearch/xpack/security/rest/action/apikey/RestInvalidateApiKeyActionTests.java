@@ -50,10 +50,10 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
     public void setUp() throws Exception {
         super.setUp();
         settings = Settings.builder()
-                .put("path.home", createTempDir().toString())
-                .put("node.name", "test-" + getTestName())
-                .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
-                .build();
+            .put("path.home", createTempDir().toString())
+            .put("node.name", "test-" + getTestName())
+            .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
+            .build();
         threadPool = new ThreadPool(settings);
         when(mockLicenseState.isSecurityAvailable()).thenReturn(true);
         when(mockLicenseState.isApiKeyServiceAllowed()).thenReturn(true);
@@ -72,8 +72,10 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
         final String json4 = "{ \"id\" : \"api-key-id-1\" }";
         final String json5 = "{ \"name\" : \"api-key-name-1\" }";
         final String json = randomFrom(json1, json2, json3, json4, json5);
-        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
-                .withContent(new BytesArray(json), XContentType.JSON).build();
+        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY).withContent(
+            new BytesArray(json),
+            XContentType.JSON
+        ).build();
 
         final SetOnce<RestResponse> responseSetOnce = new SetOnce<>();
         final RestChannel restChannel = new AbstractRestChannel(restRequest, randomBoolean()) {
@@ -84,12 +86,18 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
         };
 
         final InvalidateApiKeyResponse invalidateApiKeyResponseExpected = new InvalidateApiKeyResponse(
-                Collections.singletonList("api-key-id-1"), Collections.emptyList(), null);
+            Collections.singletonList("api-key-id-1"),
+            Collections.emptyList(),
+            null
+        );
 
         try (NodeClient client = new NodeClient(Settings.EMPTY, threadPool) {
             @Override
-            public <Request extends ActionRequest, Response extends ActionResponse>
-            void doExecute(ActionType<Response> action, Request request, ActionListener<Response> listener) {
+            public <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                ActionType<Response> action,
+                Request request,
+                ActionListener<Response> listener
+            ) {
                 InvalidateApiKeyRequest invalidateApiKeyRequest = (InvalidateApiKeyRequest) request;
                 ActionRequestValidationException validationException = invalidateApiKeyRequest.validate();
                 if (validationException != null) {
@@ -97,27 +105,33 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
                     return;
                 }
                 if (invalidateApiKeyRequest.getName() != null && invalidateApiKeyRequest.getName().equals("api-key-name-1")
-                        || invalidateApiKeyRequest.getId() != null && invalidateApiKeyRequest.getId().equals("api-key-id-1")
-                        || invalidateApiKeyRequest.getRealmName() != null && invalidateApiKeyRequest.getRealmName().equals("realm-1")
-                        || invalidateApiKeyRequest.getUserName() != null && invalidateApiKeyRequest.getUserName().equals("user-x")) {
+                    || invalidateApiKeyRequest.getId() != null && invalidateApiKeyRequest.getId().equals("api-key-id-1")
+                    || invalidateApiKeyRequest.getRealmName() != null && invalidateApiKeyRequest.getRealmName().equals("realm-1")
+                    || invalidateApiKeyRequest.getUserName() != null && invalidateApiKeyRequest.getUserName().equals("user-x")) {
                     listener.onResponse((Response) invalidateApiKeyResponseExpected);
                 } else {
                     listener.onFailure(new ElasticsearchSecurityException("encountered an error while creating API key"));
                 }
             }
         }) {
-            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockRestController,
-                    mockLicenseState);
+            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(
+                Settings.EMPTY,
+                mockRestController,
+                mockLicenseState
+            );
 
             restInvalidateApiKeyAction.handleRequest(restRequest, restChannel, client);
 
             final RestResponse restResponse = responseSetOnce.get();
             assertNotNull(restResponse);
-            final InvalidateApiKeyResponse actual = InvalidateApiKeyResponse
-                    .fromXContent(createParser(XContentType.JSON.xContent(), restResponse.content()));
+            final InvalidateApiKeyResponse actual = InvalidateApiKeyResponse.fromXContent(
+                createParser(XContentType.JSON.xContent(), restResponse.content())
+            );
             assertThat(actual.getInvalidatedApiKeys(), equalTo(invalidateApiKeyResponseExpected.getInvalidatedApiKeys()));
-            assertThat(actual.getPreviouslyInvalidatedApiKeys(),
-                    equalTo(invalidateApiKeyResponseExpected.getPreviouslyInvalidatedApiKeys()));
+            assertThat(
+                actual.getPreviouslyInvalidatedApiKeys(),
+                equalTo(invalidateApiKeyResponseExpected.getPreviouslyInvalidatedApiKeys())
+            );
             assertThat(actual.getErrors(), equalTo(invalidateApiKeyResponseExpected.getErrors()));
 
         }
@@ -133,8 +147,10 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
             json = "{ \"realm_name\" : \"realm-1\", \"owner\" : \"false\" }";
         }
 
-        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
-            .withContent(new BytesArray(json), XContentType.JSON).build();
+        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY).withContent(
+            new BytesArray(json),
+            XContentType.JSON
+        ).build();
 
         final SetOnce<RestResponse> responseSetOnce = new SetOnce<>();
         final RestChannel restChannel = new AbstractRestChannel(restRequest, randomBoolean()) {
@@ -145,15 +161,24 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
         };
 
         final InvalidateApiKeyResponse invalidateApiKeyResponseExpectedWhenOwnerFlagIsTrue = new InvalidateApiKeyResponse(
-            List.of("api-key-id-1"), Collections.emptyList(), null);
+            List.of("api-key-id-1"),
+            Collections.emptyList(),
+            null
+        );
         final InvalidateApiKeyResponse invalidateApiKeyResponseExpectedWhenOwnerFlagIsFalse = new InvalidateApiKeyResponse(
-            List.of("api-key-id-1", "api-key-id-2"), Collections.emptyList(), null);
+            List.of("api-key-id-1", "api-key-id-2"),
+            Collections.emptyList(),
+            null
+        );
 
         try (NodeClient client = new NodeClient(Settings.EMPTY, threadPool) {
             @SuppressWarnings("unchecked")
             @Override
-            public <Request extends ActionRequest, Response extends ActionResponse>
-            void doExecute(ActionType<Response> action, Request request, ActionListener<Response> listener) {
+            public <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                ActionType<Response> action,
+                Request request,
+                ActionListener<Response> listener
+            ) {
                 InvalidateApiKeyRequest invalidateApiKeyRequest = (InvalidateApiKeyRequest) request;
                 ActionRequestValidationException validationException = invalidateApiKeyRequest.validate();
                 if (validationException != null) {
@@ -168,24 +193,26 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
                 }
             }
         }) {
-            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockRestController,
-                mockLicenseState);
+            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(
+                Settings.EMPTY,
+                mockRestController,
+                mockLicenseState
+            );
 
             restInvalidateApiKeyAction.handleRequest(restRequest, restChannel, client);
 
             final RestResponse restResponse = responseSetOnce.get();
             assertNotNull(restResponse);
             assertThat(restResponse.status(), is(RestStatus.OK));
-            final InvalidateApiKeyResponse actual = InvalidateApiKeyResponse
-                .fromXContent(createParser(XContentType.JSON.xContent(), restResponse.content()));
+            final InvalidateApiKeyResponse actual = InvalidateApiKeyResponse.fromXContent(
+                createParser(XContentType.JSON.xContent(), restResponse.content())
+            );
             if (isInvalidateRequestForOwnedKeysOnly) {
                 assertThat(actual.getInvalidatedApiKeys().size(), is(1));
-                assertThat(actual.getInvalidatedApiKeys(),
-                    containsInAnyOrder("api-key-id-1"));
+                assertThat(actual.getInvalidatedApiKeys(), containsInAnyOrder("api-key-id-1"));
             } else {
                 assertThat(actual.getInvalidatedApiKeys().size(), is(2));
-                assertThat(actual.getInvalidatedApiKeys(),
-                    containsInAnyOrder("api-key-id-1", "api-key-id-2"));
+                assertThat(actual.getInvalidatedApiKeys(), containsInAnyOrder("api-key-id-1", "api-key-id-2"));
             }
         }
 

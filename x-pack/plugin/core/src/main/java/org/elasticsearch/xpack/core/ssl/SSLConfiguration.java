@@ -21,7 +21,6 @@ import java.util.List;
 
 import static org.elasticsearch.xpack.core.ssl.SSLConfigurationSettings.getKeyStoreType;
 
-
 /**
  * Represents the configuration for an SSLContext
  */
@@ -110,20 +109,28 @@ public final class SSLConfiguration {
 
     @Override
     public String toString() {
-        return "SSLConfiguration{" +
-                "keyConfig=[" + keyConfig +
-                "], trustConfig=" + trustConfig +
-                "], cipherSuites=[" + ciphers +
-                "], supportedProtocols=[" + supportedProtocols +
-                "], sslClientAuth=[" + sslClientAuth +
-                "], verificationMode=[" + verificationMode +
-                "]}";
+        return "SSLConfiguration{"
+            + "keyConfig=["
+            + keyConfig
+            + "], trustConfig="
+            + trustConfig
+            + "], cipherSuites=["
+            + ciphers
+            + "], supportedProtocols=["
+            + supportedProtocols
+            + "], sslClientAuth=["
+            + sslClientAuth
+            + "], verificationMode=["
+            + verificationMode
+            + "]}";
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof SSLConfiguration)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof SSLConfiguration))
+            return false;
 
         SSLConfiguration that = (SSLConfiguration) o;
 
@@ -145,8 +152,9 @@ public final class SSLConfiguration {
         if (this.sslClientAuth() != that.sslClientAuth()) {
             return false;
         }
-        return this.supportedProtocols() != null ?
-                this.supportedProtocols().equals(that.supportedProtocols()) : that.supportedProtocols() == null;
+        return this.supportedProtocols() != null
+            ? this.supportedProtocols().equals(that.supportedProtocols())
+            : that.supportedProtocols() == null;
     }
 
     @Override
@@ -169,8 +177,8 @@ public final class SSLConfiguration {
     private static TrustConfig createTrustConfig(Settings settings, KeyConfig keyConfig) {
         final TrustConfig trustConfig = createCertChainTrustConfig(settings, keyConfig);
         return SETTINGS_PARSER.trustRestrictionsPath.get(settings)
-                .map(path -> (TrustConfig) new RestrictedTrustConfig(path, trustConfig))
-                .orElse(trustConfig);
+            .map(path -> (TrustConfig) new RestrictedTrustConfig(path, trustConfig))
+            .orElse(trustConfig);
     }
 
     private static TrustConfig createCertChainTrustConfig(Settings settings, KeyConfig keyConfig) {
@@ -200,8 +208,11 @@ public final class SSLConfiguration {
     private static SecureString getDefaultTrustStorePassword(Settings settings) {
         // We only handle the default store password if it's a PKCS#11 token
         if (System.getProperty("javax.net.ssl.trustStoreType", "").equalsIgnoreCase("PKCS11")) {
-            try (SecureString systemTrustStorePassword =
-                     new SecureString(System.getProperty("javax.net.ssl.trustStorePassword", "").toCharArray())) {
+            try (
+                SecureString systemTrustStorePassword = new SecureString(
+                    System.getProperty("javax.net.ssl.trustStorePassword", "").toCharArray()
+                )
+            ) {
                 if (systemTrustStorePassword.length() == 0) {
                     try (SecureString trustStorePassword = SETTINGS_PARSER.truststorePassword.get(settings)) {
                         return trustStorePassword;

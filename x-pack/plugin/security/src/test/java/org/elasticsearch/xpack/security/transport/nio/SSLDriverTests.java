@@ -46,13 +46,13 @@ public class SSLDriverTests extends ESTestCase {
 
         handshake(clientDriver, serverDriver);
 
-        ByteBuffer[] buffers = {ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers = { ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8)) };
         sendAppData(clientDriver, buffers);
         serverDriver.read(networkReadBuffer, applicationBuffer);
         assertEquals(ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8)), applicationBuffer.sliceBuffersTo(4)[0]);
         applicationBuffer.release(4);
 
-        ByteBuffer[] buffers2 = {ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers2 = { ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)) };
         sendAppData(serverDriver, buffers2);
         clientDriver.read(networkReadBuffer, applicationBuffer);
         assertEquals(ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)), applicationBuffer.sliceBuffersTo(4)[0]);
@@ -69,7 +69,7 @@ public class SSLDriverTests extends ESTestCase {
 
         handshake(clientDriver, serverDriver);
 
-        ByteBuffer[] buffers = {ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers = { ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8)) };
         serverDriver.write(new FlushOperation(buffers, (v, e) -> {}));
 
         expectThrows(SSLException.class, serverDriver::close);
@@ -77,24 +77,23 @@ public class SSLDriverTests extends ESTestCase {
     }
 
     public void testRenegotiate() throws Exception {
-        assumeFalse("BCTLS doesn't support renegotiation: https://github.com/bcgit/bc-java/issues/593#issuecomment-533518845",
-            inFipsJvm());
+        assumeFalse("BCTLS doesn't support renegotiation: https://github.com/bcgit/bc-java/issues/593#issuecomment-533518845", inFipsJvm());
         SSLContext sslContext = getSSLContext();
 
         SSLEngine serverEngine = sslContext.createSSLEngine();
         SSLEngine clientEngine = sslContext.createSSLEngine();
 
         // Lock the protocol to 1.2 as 1.3 does not support renegotiation
-        String[] serverProtocols = {"TLSv1.2"};
+        String[] serverProtocols = { "TLSv1.2" };
         serverEngine.setEnabledProtocols(serverProtocols);
-        String[] clientProtocols = {"TLSv1.2"};
+        String[] clientProtocols = { "TLSv1.2" };
         clientEngine.setEnabledProtocols(clientProtocols);
         SSLDriver clientDriver = getDriver(clientEngine, true);
         SSLDriver serverDriver = getDriver(serverEngine, false);
 
         handshake(clientDriver, serverDriver);
 
-        ByteBuffer[] buffers = {ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers = { ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8)) };
         sendAppData(clientDriver, buffers);
         serverDriver.read(networkReadBuffer, applicationBuffer);
         assertEquals(ByteBuffer.wrap("ping".getBytes(StandardCharsets.UTF_8)), applicationBuffer.sliceBuffersTo(4)[0]);
@@ -104,7 +103,7 @@ public class SSLDriverTests extends ESTestCase {
         assertFalse(clientDriver.readyForApplicationData());
 
         // This tests that the client driver can still receive data based on the prior handshake
-        ByteBuffer[] buffers2 = {ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers2 = { ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)) };
         sendAppData(serverDriver, buffers2);
         clientDriver.read(networkReadBuffer, applicationBuffer);
         assertEquals(ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)), applicationBuffer.sliceBuffersTo(4)[0]);
@@ -137,7 +136,7 @@ public class SSLDriverTests extends ESTestCase {
             buffer.put((byte) (i % 127));
         }
         buffer.flip();
-        ByteBuffer[] buffers = {buffer};
+        ByteBuffer[] buffers = { buffer };
         sendAppData(clientDriver, buffers);
         serverDriver.read(networkReadBuffer, applicationBuffer);
         ByteBuffer[] buffers1 = applicationBuffer.sliceBuffersFrom(0);
@@ -145,7 +144,7 @@ public class SSLDriverTests extends ESTestCase {
         assertEquals((byte) (32767 % 127), buffers1[1].get(16383));
         applicationBuffer.release(1 << 15);
 
-        ByteBuffer[] buffers2 = {ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8))};
+        ByteBuffer[] buffers2 = { ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)) };
         sendAppData(serverDriver, buffers2);
         clientDriver.read(networkReadBuffer, applicationBuffer);
         assertEquals(ByteBuffer.wrap("pong".getBytes(StandardCharsets.UTF_8)), applicationBuffer.sliceBuffersTo(4)[0]);
@@ -159,9 +158,9 @@ public class SSLDriverTests extends ESTestCase {
         SSLEngine clientEngine = sslContext.createSSLEngine();
         SSLEngine serverEngine = sslContext.createSSLEngine();
 
-        String[] serverProtocols = {"TLSv1.2"};
+        String[] serverProtocols = { "TLSv1.2" };
         serverEngine.setEnabledProtocols(serverProtocols);
-        String[] clientProtocols = {"TLSv1.1"};
+        String[] clientProtocols = { "TLSv1.1" };
         clientEngine.setEnabledProtocols(clientProtocols);
         SSLDriver clientDriver = getDriver(clientEngine, true);
         SSLDriver serverDriver = getDriver(serverEngine, false);
@@ -170,14 +169,18 @@ public class SSLDriverTests extends ESTestCase {
         String oldExpected = "Client requested protocol TLSv1.1 not enabled or not supported";
         String jdk11Expected = "The client supported protocol versions [TLSv1.1] are not accepted by server preferences [TLS12]";
         String bctlsExpected = "org.bouncycastle.tls.TlsFatalAlert: protocol_version(70)";
-        boolean expectedMessage = oldExpected.equals(sslException.getMessage()) || jdk11Expected.equals(sslException.getMessage())
+        boolean expectedMessage = oldExpected.equals(sslException.getMessage())
+            || jdk11Expected.equals(sslException.getMessage())
             || bctlsExpected.equals(sslException.getMessage());
         assertTrue("Unexpected exception message: " + sslException.getMessage(), expectedMessage);
 
         // Prior to JDK11 we still need to send a close alert
         if (serverDriver.isClosed() == false) {
-            failedCloseAlert(serverDriver, clientDriver, Arrays.asList("Received fatal alert: protocol_version",
-                "Received fatal alert: handshake_failure"));
+            failedCloseAlert(
+                serverDriver,
+                clientDriver,
+                Arrays.asList("Received fatal alert: protocol_version", "Received fatal alert: handshake_failure")
+            );
         }
     }
 
@@ -198,15 +201,16 @@ public class SSLDriverTests extends ESTestCase {
 
         // Prior to JDK11 we still need to send a close alert
         if (serverDriver.isClosed() == false) {
-            List<String> messages = Arrays.asList("Received fatal alert: handshake_failure",
-                "Received close_notify during handshake");
+            List<String> messages = Arrays.asList("Received fatal alert: handshake_failure", "Received close_notify during handshake");
             failedCloseAlert(serverDriver, clientDriver, messages);
         }
     }
 
     public void testCloseDuringHandshakeJDK11() throws Exception {
-        assumeTrue("this tests ssl engine for JDK11",
-            JavaVersion.current().compareTo(JavaVersion.parse("11")) >= 0 && inFipsJvm() == false);
+        assumeTrue(
+            "this tests ssl engine for JDK11",
+            JavaVersion.current().compareTo(JavaVersion.parse("11")) >= 0 && inFipsJvm() == false
+        );
         SSLContext sslContext = getSSLContext();
         SSLDriver clientDriver = getDriver(sslContext.createSSLEngine(), true);
         SSLDriver serverDriver = getDriver(sslContext.createSSLEngine(), false);
@@ -285,8 +289,10 @@ public class SSLDriverTests extends ESTestCase {
         sendDriver.close();
 
         SSLException sslException = expectThrows(SSLException.class, () -> receiveDriver.read(networkReadBuffer, applicationBuffer));
-        assertTrue("Expected one of the following exception messages: " + messages + ". Found: " + sslException.getMessage(),
-            messages.stream().anyMatch(m -> sslException.getMessage().equals(m)));
+        assertTrue(
+            "Expected one of the following exception messages: " + messages + ". Found: " + sslException.getMessage(),
+            messages.stream().anyMatch(m -> sslException.getMessage().equals(m))
+        );
         assertTrue(receiveDriver.isClosed());
         receiveDriver.close();
     }
@@ -295,10 +301,14 @@ public class SSLDriverTests extends ESTestCase {
         String certPath = "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.crt";
         String keyPath = "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.pem";
         SSLContext sslContext;
-        TrustManager tm = CertParsingUtils.trustManager(CertParsingUtils.readCertificates(Collections.singletonList(getDataPath
-            (certPath))));
-        KeyManager km = CertParsingUtils.keyManager(CertParsingUtils.readCertificates(Collections.singletonList(getDataPath
-            (certPath))), PemUtils.readPrivateKey(getDataPath(keyPath), "testclient"::toCharArray), "testclient".toCharArray());
+        TrustManager tm = CertParsingUtils.trustManager(
+            CertParsingUtils.readCertificates(Collections.singletonList(getDataPath(certPath)))
+        );
+        KeyManager km = CertParsingUtils.keyManager(
+            CertParsingUtils.readCertificates(Collections.singletonList(getDataPath(certPath))),
+            PemUtils.readPrivateKey(getDataPath(keyPath), "testclient"::toCharArray),
+            "testclient".toCharArray()
+        );
         sslContext = SSLContext.getInstance(inFipsJvm() ? "TLSv1.2" : randomFrom("TLSv1.2", "TLSv1.3"));
         sslContext.init(new KeyManager[] { km }, new TrustManager[] { tm }, new SecureRandom());
         return sslContext;
@@ -371,7 +381,6 @@ public class SSLDriverTests extends ESTestCase {
             assertTrue(serverDriver.readyForApplicationData());
         }
 
-
     }
 
     private void sendHandshakeMessages(SSLDriver sendDriver, SSLDriver receiveDriver) throws IOException {
@@ -398,7 +407,7 @@ public class SSLDriverTests extends ESTestCase {
         int bytesToCopy = Arrays.stream(writeBuffers).mapToInt(Buffer::remaining).sum();
         networkReadBuffer.ensureCapacity(bytesToCopy + networkReadBuffer.getIndex());
         ByteBuffer[] byteBuffers = networkReadBuffer.sliceBuffersFrom(0);
-        assert  writeBuffers.length > 0 : "No write buffers";
+        assert writeBuffers.length > 0 : "No write buffers";
 
         int r = 0;
         while (flushOperation.isFullyFlushed() == false) {

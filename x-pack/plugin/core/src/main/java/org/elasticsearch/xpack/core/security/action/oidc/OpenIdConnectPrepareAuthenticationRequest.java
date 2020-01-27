@@ -74,8 +74,7 @@ public class OpenIdConnectPrepareAuthenticationRequest extends ActionRequest {
         this.loginHint = loginHint;
     }
 
-    public OpenIdConnectPrepareAuthenticationRequest() {
-    }
+    public OpenIdConnectPrepareAuthenticationRequest() {}
 
     public OpenIdConnectPrepareAuthenticationRequest(StreamInput in) throws IOException {
         super(in);
@@ -109,8 +108,17 @@ public class OpenIdConnectPrepareAuthenticationRequest extends ActionRequest {
     }
 
     public String toString() {
-        return "{realmName=" + realmName + ", issuer=" + issuer + ", login_hint=" +
-            loginHint + ", state=" + state + ", nonce=" + nonce + "}";
+        return "{realmName="
+            + realmName
+            + ", issuer="
+            + issuer
+            + ", login_hint="
+            + loginHint
+            + ", state="
+            + state
+            + ", nonce="
+            + nonce
+            + "}";
     }
 
 }

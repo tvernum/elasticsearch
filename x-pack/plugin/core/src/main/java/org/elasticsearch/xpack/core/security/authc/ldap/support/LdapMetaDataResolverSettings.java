@@ -14,7 +14,9 @@ import java.util.function.Function;
 
 public final class LdapMetaDataResolverSettings {
     public static final Function<String, Setting.AffixSetting<List<String>>> ADDITIONAL_META_DATA_SETTING = RealmSettings.affixSetting(
-            "metadata", key -> Setting.listSetting(key, Collections.emptyList(), Function.identity(), Setting.Property.NodeScope));
+        "metadata",
+        key -> Setting.listSetting(key, Collections.emptyList(), Function.identity(), Setting.Property.NodeScope)
+    );
 
     private LdapMetaDataResolverSettings() {}
 

@@ -41,8 +41,12 @@ public class RestGetUserPrivilegesActionTests extends ESTestCase {
 
     public void testBasicLicense() throws Exception {
         final XPackLicenseState licenseState = mock(XPackLicenseState.class);
-        final RestGetUserPrivilegesAction action = new RestGetUserPrivilegesAction(Settings.EMPTY, mock(RestController.class),
-            mock(SecurityContext.class), licenseState);
+        final RestGetUserPrivilegesAction action = new RestGetUserPrivilegesAction(
+            Settings.EMPTY,
+            mock(RestController.class),
+            mock(SecurityContext.class),
+            licenseState
+        );
         when(licenseState.isSecurityAvailable()).thenReturn(false);
         final FakeRestRequest request = new FakeRestRequest();
         final FakeRestChannel channel = new FakeRestChannel(request, true, 1);
@@ -56,23 +60,36 @@ public class RestGetUserPrivilegesActionTests extends ESTestCase {
         final RestGetUserPrivilegesAction.RestListener listener = new RestGetUserPrivilegesAction.RestListener(null);
         final Set<String> cluster = new LinkedHashSet<>(Arrays.asList("monitor", "manage_ml", "manage_watcher"));
         final Set<ConfigurableClusterPrivilege> conditionalCluster = Collections.singleton(
-            new ConfigurableClusterPrivileges.ManageApplicationPrivileges(new LinkedHashSet<>(Arrays.asList("app01", "app02"))));
-        final Set<GetUserPrivilegesResponse.Indices> index = new LinkedHashSet<>(Arrays.asList(
-            new GetUserPrivilegesResponse.Indices(Arrays.asList("index-1", "index-2", "index-3-*"), Arrays.asList("read", "write"),
-                new LinkedHashSet<>(Arrays.asList(
-                    new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[]{"public.*"}, new String[0]),
-                    new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[]{"*"}, new String[]{"private.*"})
-                )),
-                new LinkedHashSet<>(Arrays.asList(
-                    new BytesArray("{ \"term\": { \"access\": \"public\" } }"),
-                    new BytesArray("{ \"term\": { \"access\": \"standard\" } }")
-                )),
-                false
-            ),
-            new GetUserPrivilegesResponse.Indices(Arrays.asList("index-4"), Collections.singleton("all"),
-                Collections.emptySet(), Collections.emptySet(), true
+            new ConfigurableClusterPrivileges.ManageApplicationPrivileges(new LinkedHashSet<>(Arrays.asList("app01", "app02")))
+        );
+        final Set<GetUserPrivilegesResponse.Indices> index = new LinkedHashSet<>(
+            Arrays.asList(
+                new GetUserPrivilegesResponse.Indices(
+                    Arrays.asList("index-1", "index-2", "index-3-*"),
+                    Arrays.asList("read", "write"),
+                    new LinkedHashSet<>(
+                        Arrays.asList(
+                            new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[] { "public.*" }, new String[0]),
+                            new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[] { "*" }, new String[] { "private.*" })
+                        )
+                    ),
+                    new LinkedHashSet<>(
+                        Arrays.asList(
+                            new BytesArray("{ \"term\": { \"access\": \"public\" } }"),
+                            new BytesArray("{ \"term\": { \"access\": \"standard\" } }")
+                        )
+                    ),
+                    false
+                ),
+                new GetUserPrivilegesResponse.Indices(
+                    Arrays.asList("index-4"),
+                    Collections.singleton("all"),
+                    Collections.emptySet(),
+                    Collections.emptySet(),
+                    true
+                )
             )
-        ));
+        );
         final Set<ApplicationResourcePrivileges> application = Sets.newHashSet(
             ApplicationResourcePrivileges.builder().application("app01").privileges("read", "write").resources("*").build(),
             ApplicationResourcePrivileges.builder().application("app01").privileges("admin").resources("department/1").build(),
@@ -84,34 +101,38 @@ public class RestGetUserPrivilegesActionTests extends ESTestCase {
         listener.buildResponse(response, builder);
 
         String json = Strings.toString(builder);
-        assertThat(json, equalTo("{" +
-            "\"cluster\":[\"monitor\",\"manage_ml\",\"manage_watcher\"]," +
-            "\"global\":[" +
-            "{\"application\":{\"manage\":{\"applications\":[\"app01\",\"app02\"]}}}" +
-            "]," +
-            "\"indices\":[" +
-            "{\"names\":[\"index-1\",\"index-2\",\"index-3-*\"]," +
-            "\"privileges\":[\"read\",\"write\"]," +
-            "\"field_security\":[" +
-            "{\"grant\":[\"public.*\"]}," +
-            "{\"grant\":[\"*\"],\"except\":[\"private.*\"]}" +
-            "]," +
-            "\"query\":[" +
-            "\"{ \\\"term\\\": { \\\"access\\\": \\\"public\\\" } }\"," +
-            "\"{ \\\"term\\\": { \\\"access\\\": \\\"standard\\\" } }\"" +
-            "]," +
-            "\"allow_restricted_indices\":false" +
-            "}," +
-            "{\"names\":[\"index-4\"],\"privileges\":[\"all\"],\"allow_restricted_indices\":true}" +
-            "]," +
-            "\"applications\":[" +
-            "{\"application\":\"app01\",\"privileges\":[\"read\",\"write\"],\"resources\":[\"*\"]}," +
-            "{\"application\":\"app01\",\"privileges\":[\"admin\"],\"resources\":[\"department/1\"]}," +
-            "{\"application\":\"app02\",\"privileges\":[\"all\"],\"resources\":[\"tenant/42\",\"tenant/99\"]}" +
-            "]," +
-            "\"run_as\":[\"app-user-*\",\"backup-user\"]" +
-            "}"
-        ));
+        assertThat(
+            json,
+            equalTo(
+                "{"
+                    + "\"cluster\":[\"monitor\",\"manage_ml\",\"manage_watcher\"],"
+                    + "\"global\":["
+                    + "{\"application\":{\"manage\":{\"applications\":[\"app01\",\"app02\"]}}}"
+                    + "],"
+                    + "\"indices\":["
+                    + "{\"names\":[\"index-1\",\"index-2\",\"index-3-*\"],"
+                    + "\"privileges\":[\"read\",\"write\"],"
+                    + "\"field_security\":["
+                    + "{\"grant\":[\"public.*\"]},"
+                    + "{\"grant\":[\"*\"],\"except\":[\"private.*\"]}"
+                    + "],"
+                    + "\"query\":["
+                    + "\"{ \\\"term\\\": { \\\"access\\\": \\\"public\\\" } }\","
+                    + "\"{ \\\"term\\\": { \\\"access\\\": \\\"standard\\\" } }\""
+                    + "],"
+                    + "\"allow_restricted_indices\":false"
+                    + "},"
+                    + "{\"names\":[\"index-4\"],\"privileges\":[\"all\"],\"allow_restricted_indices\":true}"
+                    + "],"
+                    + "\"applications\":["
+                    + "{\"application\":\"app01\",\"privileges\":[\"read\",\"write\"],\"resources\":[\"*\"]},"
+                    + "{\"application\":\"app01\",\"privileges\":[\"admin\"],\"resources\":[\"department/1\"]},"
+                    + "{\"application\":\"app02\",\"privileges\":[\"all\"],\"resources\":[\"tenant/42\",\"tenant/99\"]}"
+                    + "],"
+                    + "\"run_as\":[\"app-user-*\",\"backup-user\"]"
+                    + "}"
+            )
+        );
     }
 
 }

@@ -27,8 +27,13 @@ public final class RestClearRolesCacheAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/role/{name}/_clear_cache", this,
-            POST, "/_xpack/security/role/{name}/_clear_cache", deprecationLogger);
+            POST,
+            "/_security/role/{name}/_clear_cache",
+            this,
+            POST,
+            "/_xpack/security/role/{name}/_clear_cache",
+            deprecationLogger
+        );
     }
 
     @Override

@@ -30,11 +30,23 @@ public class TransportDeleteLicenseAction extends TransportMasterNodeAction<Dele
     private final LicenseService licenseService;
 
     @Inject
-    public TransportDeleteLicenseAction(TransportService transportService, ClusterService clusterService,
-                                        LicenseService licenseService, ThreadPool threadPool, ActionFilters actionFilters,
-                                        IndexNameExpressionResolver indexNameExpressionResolver) {
-        super(DeleteLicenseAction.NAME, transportService, clusterService, threadPool, actionFilters,
-                DeleteLicenseRequest::new, indexNameExpressionResolver);
+    public TransportDeleteLicenseAction(
+        TransportService transportService,
+        ClusterService clusterService,
+        LicenseService licenseService,
+        ThreadPool threadPool,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver
+    ) {
+        super(
+            DeleteLicenseAction.NAME,
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            DeleteLicenseRequest::new,
+            indexNameExpressionResolver
+        );
         this.licenseService = licenseService;
     }
 
@@ -54,8 +66,12 @@ public class TransportDeleteLicenseAction extends TransportMasterNodeAction<Dele
     }
 
     @Override
-    protected void masterOperation(Task task, final DeleteLicenseRequest request, ClusterState state,
-                                   final ActionListener<AcknowledgedResponse> listener) throws ElasticsearchException {
+    protected void masterOperation(
+        Task task,
+        final DeleteLicenseRequest request,
+        ClusterState state,
+        final ActionListener<AcknowledgedResponse> listener
+    ) throws ElasticsearchException {
         licenseService.removeLicense(request, new ActionListener<ClusterStateUpdateResponse>() {
             @Override
             public void onResponse(ClusterStateUpdateResponse clusterStateUpdateResponse) {

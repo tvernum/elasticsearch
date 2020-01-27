@@ -58,15 +58,13 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
         Settings baseSettings = super.nodeSettings(nodeOrdinal);
 
         Settings.Builder builder = Settings.builder().put(baseSettings);
-        baseSettings.getByPrefix("xpack.security.transport.ssl.")
-                .keySet()
-                .forEach(k -> {
-                    String httpKey = "xpack.security.http.ssl." + k;
-                    String value = baseSettings.get("xpack.security.transport.ssl." + k);
-                    if (value != null) {
-                        builder.put(httpKey, baseSettings.get("xpack.security.transport.ssl." + k));
-                    }
-                });
+        baseSettings.getByPrefix("xpack.security.transport.ssl.").keySet().forEach(k -> {
+            String httpKey = "xpack.security.http.ssl." + k;
+            String value = baseSettings.get("xpack.security.transport.ssl." + k);
+            if (value != null) {
+                builder.put(httpKey, baseSettings.get("xpack.security.transport.ssl." + k));
+            }
+        });
 
         MockSecureSettings secureSettings = (MockSecureSettings) builder.getSecureSettings();
         for (String key : new HashSet<>(secureSettings.getSettingNames())) {
@@ -86,15 +84,15 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
         }
 
         return builder
-                // invert the require auth settings
-                .put("xpack.security.transport.ssl.client_authentication", SSLClientAuth.NONE)
-                // Due to the TLSv1.3 bug with session resumption when client authentication is not
-                // used, we need to set the protocols since we disabled client auth for transport
-                // to avoid failures on pre 11.0.3 JDKs. See #getProtocols
-                .putList("xpack.security.transport.ssl.supported_protocols", getProtocols())
-                .put("xpack.security.http.ssl.enabled", true)
-                .put("xpack.security.http.ssl.client_authentication", SSLClientAuth.REQUIRED)
-                .build();
+            // invert the require auth settings
+            .put("xpack.security.transport.ssl.client_authentication", SSLClientAuth.NONE)
+            // Due to the TLSv1.3 bug with session resumption when client authentication is not
+            // used, we need to set the protocols since we disabled client auth for transport
+            // to avoid failures on pre 11.0.3 JDKs. See #getProtocols
+            .putList("xpack.security.transport.ssl.supported_protocols", getProtocols())
+            .put("xpack.security.http.ssl.enabled", true)
+            .put("xpack.security.http.ssl.client_authentication", SSLClientAuth.REQUIRED)
+            .build();
     }
 
     @Override
@@ -137,10 +135,16 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
             String nodeCertPath = "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt";
             String nodeEcCertPath = "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode_ec.crt";
             String keyPath = "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.pem";
-            TrustManager tm = CertParsingUtils.trustManager(CertParsingUtils.readCertificates(Arrays.asList(getDataPath
-                (certPath), getDataPath(nodeCertPath), getDataPath(nodeEcCertPath))));
-            KeyManager km = CertParsingUtils.keyManager(CertParsingUtils.readCertificates(Collections.singletonList(getDataPath
-                (certPath))), PemUtils.readPrivateKey(getDataPath(keyPath), "testclient"::toCharArray), "testclient".toCharArray());
+            TrustManager tm = CertParsingUtils.trustManager(
+                CertParsingUtils.readCertificates(
+                    Arrays.asList(getDataPath(certPath), getDataPath(nodeCertPath), getDataPath(nodeEcCertPath))
+                )
+            );
+            KeyManager km = CertParsingUtils.keyManager(
+                CertParsingUtils.readCertificates(Collections.singletonList(getDataPath(certPath))),
+                PemUtils.readPrivateKey(getDataPath(keyPath), "testclient"::toCharArray),
+                "testclient".toCharArray()
+            );
             SSLContext context = SSLContext.getInstance(inFipsJvm() ? "TLSv1.2" : randomFrom("TLSv1.3", "TLSv1.2"));
             context.init(new KeyManager[] { km }, new TrustManager[] { tm }, new SecureRandom());
             return context;
@@ -166,9 +170,9 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
      * However if client authentication is turned off and TLSv1.3 is used on the affected JVMs then we will hit this issue.
      */
     private static List<String> getProtocols() {
-        JavaVersion full =
-            AccessController.doPrivileged(
-                (PrivilegedAction<JavaVersion>) () -> JavaVersion.parse(System.getProperty("java.version")));
+        JavaVersion full = AccessController.doPrivileged(
+            (PrivilegedAction<JavaVersion>) () -> JavaVersion.parse(System.getProperty("java.version"))
+        );
         if (full.compareTo(JavaVersion.parse("11.0.3")) < 0) {
             return List.of("TLSv1.2");
         }

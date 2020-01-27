@@ -66,10 +66,21 @@ public class OpenIdConnectToken implements AuthenticationToken {
         return redirectUrl;
     }
 
-    public String getAuthenticatingRealm() { return authenticatingRealm; }
+    public String getAuthenticatingRealm() {
+        return authenticatingRealm;
+    }
 
     public String toString() {
-        return getClass().getSimpleName() + "{ redirectUrl=" + redirectUrl + ", state=" + state + ", nonce=" + nonce + ", " +
-            "authenticatingRealm="+ authenticatingRealm +"}";
+        return getClass().getSimpleName()
+            + "{ redirectUrl="
+            + redirectUrl
+            + ", state="
+            + state
+            + ", nonce="
+            + nonce
+            + ", "
+            + "authenticatingRealm="
+            + authenticatingRealm
+            + "}";
     }
 }

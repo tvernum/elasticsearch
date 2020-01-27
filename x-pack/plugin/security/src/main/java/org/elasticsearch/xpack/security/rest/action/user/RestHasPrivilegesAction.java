@@ -43,23 +43,47 @@ public class RestHasPrivilegesAction extends SecurityBaseRestHandler {
     private final SecurityContext securityContext;
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestHasPrivilegesAction.class));
 
-    public RestHasPrivilegesAction(Settings settings, RestController controller, SecurityContext securityContext,
-                                   XPackLicenseState licenseState) {
+    public RestHasPrivilegesAction(
+        Settings settings,
+        RestController controller,
+        SecurityContext securityContext,
+        XPackLicenseState licenseState
+    ) {
         super(settings, licenseState);
         this.securityContext = securityContext;
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/user/{username}/_has_privileges", this,
-            GET, "/_xpack/security/user/{username}/_has_privileges", deprecationLogger);
+            GET,
+            "/_security/user/{username}/_has_privileges",
+            this,
+            GET,
+            "/_xpack/security/user/{username}/_has_privileges",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/{username}/_has_privileges", this,
-            POST, "/_xpack/security/user/{username}/_has_privileges", deprecationLogger);
+            POST,
+            "/_security/user/{username}/_has_privileges",
+            this,
+            POST,
+            "/_xpack/security/user/{username}/_has_privileges",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/user/_has_privileges", this,
-            GET, "/_xpack/security/user/_has_privileges", deprecationLogger);
+            GET,
+            "/_security/user/_has_privileges",
+            this,
+            GET,
+            "/_xpack/security/user/_has_privileges",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/_has_privileges", this,
-            POST, "/_xpack/security/user/_has_privileges", deprecationLogger);
+            POST,
+            "/_security/user/_has_privileges",
+            this,
+            POST,
+            "/_xpack/security/user/_has_privileges",
+            deprecationLogger
+        );
     }
 
     @Override

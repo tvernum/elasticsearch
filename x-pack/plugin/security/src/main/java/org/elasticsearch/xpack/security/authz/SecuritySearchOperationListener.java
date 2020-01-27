@@ -48,8 +48,8 @@ public final class SecuritySearchOperationListener implements SearchOperationLis
     @Override
     public void onNewScrollContext(SearchContext searchContext) {
         if (licenseState.isAuthAllowed()) {
-            searchContext.scrollContext().putInContext(AuthenticationField.AUTHENTICATION_KEY,
-                    Authentication.getAuthentication(threadContext));
+            searchContext.scrollContext()
+                .putInContext(AuthenticationField.AUTHENTICATION_KEY, Authentication.getAuthentication(threadContext));
         }
     }
 
@@ -64,8 +64,16 @@ public final class SecuritySearchOperationListener implements SearchOperationLis
                 final Authentication originalAuth = searchContext.scrollContext().getFromContext(AuthenticationField.AUTHENTICATION_KEY);
                 final Authentication current = Authentication.getAuthentication(threadContext);
                 final String action = threadContext.getTransient(ORIGINATING_ACTION_KEY);
-                ensureAuthenticatedUserIsSame(originalAuth, current, auditTrailService, searchContext.id(), action, request,
-                        AuditUtil.extractRequestId(threadContext), threadContext.getTransient(AUTHORIZATION_INFO_KEY));
+                ensureAuthenticatedUserIsSame(
+                    originalAuth,
+                    current,
+                    auditTrailService,
+                    searchContext.id(),
+                    action,
+                    request,
+                    AuditUtil.extractRequestId(threadContext),
+                    threadContext.getTransient(AUTHORIZATION_INFO_KEY)
+                );
             }
         }
     }
@@ -76,9 +84,16 @@ public final class SecuritySearchOperationListener implements SearchOperationLis
      * be the same. Some things that could differ include the roles, the name of the authenticating
      * (or lookup) realm. To work around this we compare the username and the originating realm type.
      */
-    static void ensureAuthenticatedUserIsSame(Authentication original, Authentication current, AuditTrailService auditTrailService,
-                                              long id, String action, TransportRequest request, String requestId,
-                                              AuthorizationInfo authorizationInfo) {
+    static void ensureAuthenticatedUserIsSame(
+        Authentication original,
+        Authentication current,
+        AuditTrailService auditTrailService,
+        long id,
+        String action,
+        TransportRequest request,
+        String requestId,
+        AuthorizationInfo authorizationInfo
+    ) {
         // this is really a best effort attempt since we cannot guarantee principal uniqueness
         // and realm names can change between nodes.
         final boolean samePrincipal = original.getUser().principal().equals(current.getUser().principal());
@@ -86,7 +101,7 @@ public final class SecuritySearchOperationListener implements SearchOperationLis
         if (original.getUser().isRunAs()) {
             if (current.getUser().isRunAs()) {
                 sameRealmType = original.getLookedUpBy().getType().equals(current.getLookedUpBy().getType());
-            }  else {
+            } else {
                 sameRealmType = original.getLookedUpBy().getType().equals(current.getAuthenticatedBy().getType());
             }
         } else if (current.getUser().isRunAs()) {

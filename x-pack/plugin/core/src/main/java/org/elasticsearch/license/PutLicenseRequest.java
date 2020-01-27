@@ -15,7 +15,6 @@ import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.IOException;
 
-
 public class PutLicenseRequest extends AcknowledgedRequest<PutLicenseRequest> {
 
     private License license;
@@ -27,8 +26,7 @@ public class PutLicenseRequest extends AcknowledgedRequest<PutLicenseRequest> {
         acknowledge = in.readBoolean();
     }
 
-    public PutLicenseRequest() {
-    }
+    public PutLicenseRequest() {}
 
     @Override
     public ActionRequestValidationException validate() {

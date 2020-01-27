@@ -75,9 +75,9 @@ public class ExpressionModel {
         }
         if (object instanceof Collection) {
             return ((Collection<?>) object).stream()
-                    .map(element -> buildPredicate(element))
-                    .reduce((a, b) -> a.or(b))
-                    .orElse(fieldValue -> false);
+                .map(element -> buildPredicate(element))
+                .reduce((a, b) -> a.or(b))
+                .orElse(fieldValue -> false);
         }
         throw new IllegalArgumentException("Unsupported value type " + object.getClass());
     }
@@ -94,8 +94,7 @@ public class ExpressionModel {
             return false;
         }
         Number right = (Number) other;
-        if (left instanceof Double || left instanceof Float
-                || right instanceof Double || right instanceof Float) {
+        if (left instanceof Double || left instanceof Float || right instanceof Double || right instanceof Float) {
             return Double.compare(left.doubleValue(), right.doubleValue()) == 0;
         }
         return Numbers.toLongExact(left) == Numbers.toLongExact(right);

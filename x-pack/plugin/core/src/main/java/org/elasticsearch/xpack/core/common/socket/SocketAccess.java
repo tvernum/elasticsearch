@@ -23,8 +23,7 @@ import java.security.PrivilegedExceptionAction;
  */
 public final class SocketAccess {
 
-    private SocketAccess() {
-    }
+    private SocketAccess() {}
 
     public static <R> R doPrivileged(CheckedSupplier<R, IOException> supplier) throws IOException {
         SpecialPermission.check();

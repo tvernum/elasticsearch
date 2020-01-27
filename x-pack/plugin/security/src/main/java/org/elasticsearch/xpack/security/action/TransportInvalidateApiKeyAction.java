@@ -26,10 +26,18 @@ public final class TransportInvalidateApiKeyAction extends HandledTransportActio
     private final SecurityContext securityContext;
 
     @Inject
-    public TransportInvalidateApiKeyAction(TransportService transportService, ActionFilters actionFilters, ApiKeyService apiKeyService,
-                                           SecurityContext context) {
-        super(InvalidateApiKeyAction.NAME, transportService, actionFilters,
-            (Writeable.Reader<InvalidateApiKeyRequest>) InvalidateApiKeyRequest::new);
+    public TransportInvalidateApiKeyAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        ApiKeyService apiKeyService,
+        SecurityContext context
+    ) {
+        super(
+            InvalidateApiKeyAction.NAME,
+            transportService,
+            actionFilters,
+            (Writeable.Reader<InvalidateApiKeyRequest>) InvalidateApiKeyRequest::new
+        );
         this.apiKeyService = apiKeyService;
         this.securityContext = context;
     }

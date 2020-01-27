@@ -128,8 +128,9 @@ public class SamlUtils {
         if (type.isInstance(obj)) {
             return type.cast(obj);
         } else {
-            throw new IllegalArgumentException("Object for element " + elementName.getLocalPart() + " is of type " + obj.getClass()
-                    + " not " + type);
+            throw new IllegalArgumentException(
+                "Object for element " + elementName.getLocalPart() + " is of type " + obj.getClass() + " not " + type
+            );
         }
     }
 
@@ -219,8 +220,7 @@ public class SamlUtils {
 
     static void validate(InputStream xml, String xsdName) throws Exception {
         SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        try (InputStream xsdStream = loadSchema(xsdName);
-             ResourceResolver resolver = new ResourceResolver()) {
+        try (InputStream xsdStream = loadSchema(xsdName); ResourceResolver resolver = new ResourceResolver()) {
             schemaFactory.setResourceResolver(resolver);
             Schema schema = schemaFactory.newSchema(new StreamSource(xsdStream));
             Validator validator = schema.newValidator();
@@ -300,8 +300,7 @@ public class SamlUtils {
         dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
         dbf.setAttribute("http://apache.org/xml/features/validation/schema", true);
         dbf.setAttribute("http://apache.org/xml/features/validation/schema-full-checking", true);
-        dbf.setAttribute("http://java.sun.com/xml/jaxp/properties/schemaLanguage",
-                XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        dbf.setAttribute("http://java.sun.com/xml/jaxp/properties/schemaLanguage", XMLConstants.W3C_XML_SCHEMA_NS_URI);
         // We ship our own xsd files for schema validation since we do not trust anyone else.
         dbf.setAttribute("http://java.sun.com/xml/jaxp/properties/schemaSource", resolveSchemaFilePaths(schemaFiles));
         DocumentBuilder documentBuilder = dbf.newDocumentBuilder();
@@ -311,15 +310,14 @@ public class SamlUtils {
 
     private static String[] resolveSchemaFilePaths(String[] relativePaths) {
 
-        return Arrays.stream(relativePaths).
-                map(file -> {
-                    try {
-                        return SamlUtils.class.getResource(file).toURI().toString();
-                    } catch (URISyntaxException e) {
-                        LOGGER.warn("Error resolving schema file path", e);
-                        return null;
-                    }
-                }).filter(Objects::nonNull).toArray(String[]::new);
+        return Arrays.stream(relativePaths).map(file -> {
+            try {
+                return SamlUtils.class.getResource(file).toURI().toString();
+            } catch (URISyntaxException e) {
+                LOGGER.warn("Error resolving schema file path", e);
+                return null;
+            }
+        }).filter(Objects::nonNull).toArray(String[]::new);
     }
 
     private static class ErrorListener implements javax.xml.transform.ErrorListener {

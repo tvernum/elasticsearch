@@ -50,30 +50,36 @@ public class SecurityStatusChangeListenerTests extends ESTestCase {
         when(licenseState.isSecurityDisabledByLicenseDefaults()).thenReturn(false);
 
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.GOLD);
-        logAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-            "initial change",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [GOLD]; Security is enabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.SeenEventExpectation(
+                "initial change",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [GOLD]; Security is enabled"
+            )
+        );
         listener.licenseStateChanged();
 
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.PLATINUM);
-        logAppender.addExpectation(new MockLogAppender.UnseenEventExpectation(
-            "no-op change",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [PLATINUM]; Security is enabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.UnseenEventExpectation(
+                "no-op change",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [PLATINUM]; Security is enabled"
+            )
+        );
 
         when(licenseState.isSecurityDisabledByLicenseDefaults()).thenReturn(true);
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.BASIC);
-        logAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-            "change to basic",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [BASIC]; Security is disabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.SeenEventExpectation(
+                "change to basic",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [BASIC]; Security is disabled"
+            )
+        );
         listener.licenseStateChanged();
 
         logAppender.assertAllExpectationsMatched();
@@ -83,30 +89,36 @@ public class SecurityStatusChangeListenerTests extends ESTestCase {
         when(licenseState.isSecurityDisabledByLicenseDefaults()).thenReturn(true);
 
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.TRIAL);
-        logAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-            "initial change",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [TRIAL]; Security is disabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.SeenEventExpectation(
+                "initial change",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [TRIAL]; Security is disabled"
+            )
+        );
         listener.licenseStateChanged();
 
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.BASIC);
-        logAppender.addExpectation(new MockLogAppender.UnseenEventExpectation(
-            "no-op change",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [BASIC]; Security is disabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.UnseenEventExpectation(
+                "no-op change",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [BASIC]; Security is disabled"
+            )
+        );
 
         when(licenseState.isSecurityDisabledByLicenseDefaults()).thenReturn(false);
         when(licenseState.getOperationMode()).thenReturn(License.OperationMode.PLATINUM);
-        logAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-            "change to platinum",
-            listener.getClass().getName(),
-            Level.INFO,
-            "Active license is now [PLATINUM]; Security is enabled"
-        ));
+        logAppender.addExpectation(
+            new MockLogAppender.SeenEventExpectation(
+                "change to platinum",
+                listener.getClass().getName(),
+                Level.INFO,
+                "Active license is now [PLATINUM]; Security is enabled"
+            )
+        );
         listener.licenseStateChanged();
 
         logAppender.assertAllExpectationsMatched();

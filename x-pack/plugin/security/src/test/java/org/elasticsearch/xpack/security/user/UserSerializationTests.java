@@ -24,8 +24,7 @@ import static org.hamcrest.Matchers.sameInstance;
 public class UserSerializationTests extends ESTestCase {
 
     public void testWriteToAndReadFrom() throws Exception {
-        User user = new User(randomAlphaOfLengthBetween(4, 30),
-                generateRandomStringArray(20, 30, false));
+        User user = new User(randomAlphaOfLengthBetween(4, 30), generateRandomStringArray(20, 30, false));
         BytesStreamOutput output = new BytesStreamOutput();
 
         User.writeTo(user, output);
@@ -39,9 +38,11 @@ public class UserSerializationTests extends ESTestCase {
 
     public void testWriteToAndReadFromWithRunAs() throws Exception {
         User authUser = new User(randomAlphaOfLengthBetween(4, 30), generateRandomStringArray(20, 30, false));
-        User user = new User(randomAlphaOfLengthBetween(4, 30),
+        User user = new User(
+            randomAlphaOfLengthBetween(4, 30),
             randomBoolean() ? generateRandomStringArray(20, 30, false) : null,
-            authUser);
+            authUser
+        );
 
         BytesStreamOutput output = new BytesStreamOutput();
 

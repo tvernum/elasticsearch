@@ -42,8 +42,14 @@ public class InternalRealmsTests extends ESTestCase {
 
     public void testNativeRealmRegistersIndexHealthChangeListener() throws Exception {
         SecurityIndexManager securityIndex = mock(SecurityIndexManager.class);
-        Map<String, Realm.Factory> factories = InternalRealms.getFactories(mock(ThreadPool.class), mock(ResourceWatcherService.class),
-                mock(SSLService.class), mock(NativeUsersStore.class), mock(NativeRoleMappingStore.class), securityIndex);
+        Map<String, Realm.Factory> factories = InternalRealms.getFactories(
+            mock(ThreadPool.class),
+            mock(ResourceWatcherService.class),
+            mock(SSLService.class),
+            mock(NativeUsersStore.class),
+            mock(NativeRoleMappingStore.class),
+            securityIndex
+        );
         assertThat(factories, hasEntry(is(NativeRealmSettings.TYPE), any(Realm.Factory.class)));
         verifyZeroInteractions(securityIndex);
 
@@ -59,8 +65,13 @@ public class InternalRealmsTests extends ESTestCase {
     }
 
     public void testIsStandardType() {
-        String type = randomFrom(NativeRealmSettings.TYPE, FileRealmSettings.TYPE, LdapRealmSettings.AD_TYPE, LdapRealmSettings.LDAP_TYPE,
-                PkiRealmSettings.TYPE);
+        String type = randomFrom(
+            NativeRealmSettings.TYPE,
+            FileRealmSettings.TYPE,
+            LdapRealmSettings.AD_TYPE,
+            LdapRealmSettings.LDAP_TYPE,
+            PkiRealmSettings.TYPE
+        );
         assertThat(InternalRealms.isStandardRealm(type), is(true));
         type = randomFrom(SamlRealmSettings.TYPE, KerberosRealmSettings.TYPE, OpenIdConnectRealmSettings.TYPE);
         assertThat(InternalRealms.isStandardRealm(type), is(false));

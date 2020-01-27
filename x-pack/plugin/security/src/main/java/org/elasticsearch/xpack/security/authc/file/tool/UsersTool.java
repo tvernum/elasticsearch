@@ -83,12 +83,10 @@ public class UsersTool extends LoggingAwareMultiCommand {
         AddUserCommand() {
             super("Adds a file user");
 
-            this.passwordOption = parser.acceptsAll(Arrays.asList("p", "password"),
-                "The user password")
-                .withRequiredArg();
-            this.rolesOption = parser.acceptsAll(Arrays.asList("r", "roles"),
-                "Comma-separated list of the roles of the user")
-                .withRequiredArg().defaultsTo("");
+            this.passwordOption = parser.acceptsAll(Arrays.asList("p", "password"), "The user password").withRequiredArg();
+            this.rolesOption = parser.acceptsAll(Arrays.asList("r", "roles"), "Comma-separated list of the roles of the user")
+                .withRequiredArg()
+                .defaultsTo("");
             this.arguments = parser.nonOptions("username");
         }
 
@@ -197,9 +195,7 @@ public class UsersTool extends LoggingAwareMultiCommand {
 
         PasswordCommand() {
             super("Changes the password of an existing file based user");
-            this.passwordOption = parser.acceptsAll(Arrays.asList("p", "password"),
-                "The user password")
-                .withRequiredArg();
+            this.passwordOption = parser.acceptsAll(Arrays.asList("p", "password"), "The user password").withRequiredArg();
             this.arguments = parser.nonOptions("username");
         }
 
@@ -243,12 +239,12 @@ public class UsersTool extends LoggingAwareMultiCommand {
 
         RolesCommand() {
             super("Edit roles of an existing user");
-            this.addOption = parser.acceptsAll(Arrays.asList("a", "add"),
-                "Adds supplied roles to the specified user")
-                .withRequiredArg().defaultsTo("");
-            this.removeOption = parser.acceptsAll(Arrays.asList("r", "remove"),
-                "Remove supplied roles from the specified user")
-                .withRequiredArg().defaultsTo("");
+            this.addOption = parser.acceptsAll(Arrays.asList("a", "add"), "Adds supplied roles to the specified user")
+                .withRequiredArg()
+                .defaultsTo("");
+            this.removeOption = parser.acceptsAll(Arrays.asList("r", "remove"), "Remove supplied roles from the specified user")
+                .withRequiredArg()
+                .defaultsTo("");
             this.arguments = parser.nonOptions("username");
         }
 
@@ -297,7 +293,7 @@ public class UsersTool extends LoggingAwareMultiCommand {
             if (roles.isEmpty()) {
                 userRolesToWrite.remove(username);
             } else {
-                userRolesToWrite.put(username, new LinkedHashSet<>(roles).toArray(new String[]{}));
+                userRolesToWrite.put(username, new LinkedHashSet<>(roles).toArray(new String[] {}));
             }
             FileUserRolesStore.writeFile(userRolesToWrite, rolesFile);
 
@@ -360,14 +356,24 @@ public class UsersTool extends LoggingAwareMultiCommand {
                 String[] roles = userRoles.get(username);
                 Set<String> unknownRoles = Sets.difference(Sets.newHashSet(roles), knownRoles);
                 String[] markedRoles = markUnknownRoles(roles, unknownRoles);
-                terminal.println(String.format(Locale.ROOT, "%-15s: %s", username, Arrays.stream(markedRoles).map(s -> s == null ?
-                    "-" : s).collect(Collectors.joining(","))));
+                terminal.println(
+                    String.format(
+                        Locale.ROOT,
+                        "%-15s: %s",
+                        username,
+                        Arrays.stream(markedRoles).map(s -> s == null ? "-" : s).collect(Collectors.joining(","))
+                    )
+                );
                 if (!unknownRoles.isEmpty()) {
                     // at least one role is marked... so printing the legend
                     Path rolesFile = FileRolesStore.resolveFile(env).toAbsolutePath();
                     terminal.println("");
-                    terminal.println(" [*]   Role is not in the [" + rolesFile.toAbsolutePath() + "] file. If the role has been created "
-                        + "using the API, please disregard this message.");
+                    terminal.println(
+                        " [*]   Role is not in the ["
+                            + rolesFile.toAbsolutePath()
+                            + "] file. If the role has been created "
+                            + "using the API, please disregard this message."
+                    );
                 }
             } else {
                 terminal.println(String.format(Locale.ROOT, "%-15s: -", username));
@@ -400,8 +406,12 @@ public class UsersTool extends LoggingAwareMultiCommand {
                 // at least one role is marked... so printing the legend
                 Path rolesFile = FileRolesStore.resolveFile(env).toAbsolutePath();
                 terminal.println("");
-                terminal.println(" [*]   Role is not in the [" + rolesFile.toAbsolutePath() + "] file. If the role has been created "
-                    + "using the API, please disregard this message.");
+                terminal.println(
+                    " [*]   Role is not in the ["
+                        + rolesFile.toAbsolutePath()
+                        + "] file. If the role has been created "
+                        + "using the API, please disregard this message."
+                );
             }
         }
     }
@@ -475,10 +485,16 @@ public class UsersTool extends LoggingAwareMultiCommand {
         Set<String> knownRoles = Sets.union(FileRolesStore.parseFileForRoleNames(rolesFile, null), ReservedRolesStore.names());
         Set<String> unknownRoles = Sets.difference(Sets.newHashSet(roles), knownRoles);
         if (!unknownRoles.isEmpty()) {
-            terminal.errorPrintln(String.format(Locale.ROOT, "Warning: The following roles [%s] are not in the [%s] file. " +
-                    "Make sure the names are correct. If the names are correct and the roles were created using the API please " +
-                    "disregard this message. Nonetheless the user will still be associated with all specified roles",
-                Strings.collectionToCommaDelimitedString(unknownRoles), rolesFile.toAbsolutePath()));
+            terminal.errorPrintln(
+                String.format(
+                    Locale.ROOT,
+                    "Warning: The following roles [%s] are not in the [%s] file. "
+                        + "Make sure the names are correct. If the names are correct and the roles were created using the API please "
+                        + "disregard this message. Nonetheless the user will still be associated with all specified roles",
+                    Strings.collectionToCommaDelimitedString(unknownRoles),
+                    rolesFile.toAbsolutePath()
+                )
+            );
             terminal.errorPrintln("Known roles: " + knownRoles.toString());
         }
     }

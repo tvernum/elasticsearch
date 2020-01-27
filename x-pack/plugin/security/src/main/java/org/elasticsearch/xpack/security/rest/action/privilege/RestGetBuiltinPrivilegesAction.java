@@ -31,8 +31,7 @@ public class RestGetBuiltinPrivilegesAction extends SecurityBaseRestHandler {
 
     public RestGetBuiltinPrivilegesAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
-        controller.registerHandler(
-            GET, "/_security/privilege/_builtin", this);
+        controller.registerHandler(GET, "/_security/privilege/_builtin", this);
     }
 
     @Override
@@ -42,7 +41,9 @@ public class RestGetBuiltinPrivilegesAction extends SecurityBaseRestHandler {
 
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
-        return channel -> client.execute(GetBuiltinPrivilegesAction.INSTANCE, new GetBuiltinPrivilegesRequest(),
+        return channel -> client.execute(
+            GetBuiltinPrivilegesAction.INSTANCE,
+            new GetBuiltinPrivilegesRequest(),
             new RestBuilderListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(GetBuiltinPrivilegesResponse response, XContentBuilder builder) throws Exception {
@@ -52,7 +53,8 @@ public class RestGetBuiltinPrivilegesAction extends SecurityBaseRestHandler {
                     builder.endObject();
                     return new BytesRestResponse(RestStatus.OK, builder);
                 }
-            });
+            }
+        );
     }
 
 }

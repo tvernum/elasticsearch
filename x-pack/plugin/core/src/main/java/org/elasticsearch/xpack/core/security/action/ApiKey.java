@@ -43,7 +43,7 @@ public final class ApiKey implements ToXContentObject, Writeable {
         // here creating the 'Instant' of milliseconds precision.
         // This Instant can then be used for date comparison.
         this.creation = Instant.ofEpochMilli(creation.toEpochMilli());
-        this.expiration = (expiration != null) ? Instant.ofEpochMilli(expiration.toEpochMilli()): null;
+        this.expiration = (expiration != null) ? Instant.ofEpochMilli(expiration.toEpochMilli()) : null;
         this.invalidated = invalidated;
         this.username = username;
         this.realm = realm;
@@ -93,16 +93,11 @@ public final class ApiKey implements ToXContentObject, Writeable {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
-        .field("id", id)
-        .field("name", name)
-        .field("creation", creation.toEpochMilli());
+        builder.startObject().field("id", id).field("name", name).field("creation", creation.toEpochMilli());
         if (expiration != null) {
             builder.field("expiration", expiration.toEpochMilli());
         }
-        builder.field("invalidated", invalidated)
-        .field("username", username)
-        .field("realm", realm);
+        builder.field("invalidated", invalidated).field("username", username).field("realm", realm);
         return builder.endObject();
     }
 
@@ -139,17 +134,24 @@ public final class ApiKey implements ToXContentObject, Writeable {
         }
         ApiKey other = (ApiKey) obj;
         return Objects.equals(name, other.name)
-                && Objects.equals(id, other.id)
-                && Objects.equals(creation, other.creation)
-                && Objects.equals(expiration, other.expiration)
-                && Objects.equals(invalidated, other.invalidated)
-                && Objects.equals(username, other.username)
-                && Objects.equals(realm, other.realm);
+            && Objects.equals(id, other.id)
+            && Objects.equals(creation, other.creation)
+            && Objects.equals(expiration, other.expiration)
+            && Objects.equals(invalidated, other.invalidated)
+            && Objects.equals(username, other.username)
+            && Objects.equals(realm, other.realm);
     }
 
     static final ConstructingObjectParser<ApiKey, Void> PARSER = new ConstructingObjectParser<>("api_key", args -> {
-        return new ApiKey((String) args[0], (String) args[1], Instant.ofEpochMilli((Long) args[2]),
-                (args[3] == null) ? null : Instant.ofEpochMilli((Long) args[3]), (Boolean) args[4], (String) args[5], (String) args[6]);
+        return new ApiKey(
+            (String) args[0],
+            (String) args[1],
+            Instant.ofEpochMilli((Long) args[2]),
+            (args[3] == null) ? null : Instant.ofEpochMilli((Long) args[3]),
+            (Boolean) args[4],
+            (String) args[5],
+            (String) args[6]
+        );
     });
     static {
         PARSER.declareString(constructorArg(), new ParseField("name"));
@@ -167,8 +169,21 @@ public final class ApiKey implements ToXContentObject, Writeable {
 
     @Override
     public String toString() {
-        return "ApiKey [name=" + name + ", id=" + id + ", creation=" + creation + ", expiration=" + expiration + ", invalidated="
-                + invalidated + ", username=" + username + ", realm=" + realm + "]";
+        return "ApiKey [name="
+            + name
+            + ", id="
+            + id
+            + ", creation="
+            + creation
+            + ", expiration="
+            + expiration
+            + ", invalidated="
+            + invalidated
+            + ", username="
+            + username
+            + ", realm="
+            + realm
+            + "]";
     }
 
 }

@@ -148,10 +148,15 @@ public class AuditTrailServiceTests extends ESTestCase {
     }
 
     public void testAccessGranted() throws Exception {
-        Authentication authentication =new Authentication(new User("_username", "r1"), new RealmRef(null, null, null),
-                new RealmRef(null, null, null));
-        AuthorizationInfo authzInfo =
-            () -> Collections.singletonMap(PRINCIPAL_ROLES_FIELD_NAME, new String[] { randomAlphaOfLengthBetween(1, 6) });
+        Authentication authentication = new Authentication(
+            new User("_username", "r1"),
+            new RealmRef(null, null, null),
+            new RealmRef(null, null, null)
+        );
+        AuthorizationInfo authzInfo = () -> Collections.singletonMap(
+            PRINCIPAL_ROLES_FIELD_NAME,
+            new String[] { randomAlphaOfLengthBetween(1, 6) }
+        );
         final String requestId = randomAlphaOfLengthBetween(6, 12);
         service.accessGranted(requestId, authentication, "_action", message, authzInfo);
         verify(licenseState).isAuditingAllowed();
@@ -165,10 +170,15 @@ public class AuditTrailServiceTests extends ESTestCase {
     }
 
     public void testAccessDenied() throws Exception {
-        Authentication authentication = new Authentication(new User("_username", "r1"), new RealmRef(null, null, null),
-                new RealmRef(null, null, null));
-        AuthorizationInfo authzInfo =
-            () -> Collections.singletonMap(PRINCIPAL_ROLES_FIELD_NAME, new String[] { randomAlphaOfLengthBetween(1, 6) });
+        Authentication authentication = new Authentication(
+            new User("_username", "r1"),
+            new RealmRef(null, null, null),
+            new RealmRef(null, null, null)
+        );
+        AuthorizationInfo authzInfo = () -> Collections.singletonMap(
+            PRINCIPAL_ROLES_FIELD_NAME,
+            new String[] { randomAlphaOfLengthBetween(1, 6) }
+        );
         final String requestId = randomAlphaOfLengthBetween(6, 12);
         service.accessDenied(requestId, authentication, "_action", message, authzInfo);
         verify(licenseState).isAuditingAllowed();

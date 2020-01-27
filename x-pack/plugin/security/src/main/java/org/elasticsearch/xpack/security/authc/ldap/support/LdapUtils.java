@@ -56,8 +56,7 @@ public final class LdapUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(LdapUtils.class);
 
-    private LdapUtils() {
-    }
+    private LdapUtils() {}
 
     public static DN dn(String dn) {
         try {
@@ -67,8 +66,7 @@ public final class LdapUtils {
         }
     }
 
-    public static <T> T privilegedConnect(CheckedSupplier<T, LDAPException> supplier)
-            throws LDAPException {
+    public static <T> T privilegedConnect(CheckedSupplier<T, LDAPException> supplier) throws LDAPException {
         SpecialPermission.check();
         try {
             return AccessController.doPrivileged((PrivilegedExceptionAction<T>) supplier::get);
@@ -126,8 +124,12 @@ public final class LdapUtils {
      *            The runnable that continues the program flow after the bind
      *            operation. It is executed on the same thread as the prior bind.
      */
-    public static void maybeForkThenBindAndRevert(LDAPConnectionPool ldapPool, BindRequest bind, ThreadPool threadPool,
-                                                  AbstractRunnable runnable) {
+    public static void maybeForkThenBindAndRevert(
+        LDAPConnectionPool ldapPool,
+        BindRequest bind,
+        ThreadPool threadPool,
+        AbstractRunnable runnable
+    ) {
         final Runnable bindRunnable = new AbstractRunnable() {
             @Override
             @SuppressForbidden(reason = "Bind allowed if forking of the LDAP Connection Reader Thread.")
@@ -201,17 +203,20 @@ public final class LdapUtils {
     /**
      * This method performs an asynchronous ldap search operation that could have multiple results
      */
-    public static void searchForEntry(LDAPInterface ldap, String baseDN, SearchScope scope,
-                                      Filter filter, int timeLimitSeconds,
-                                      boolean ignoreReferralErrors,
-                                      ActionListener<SearchResultEntry> listener,
-                                      String... attributes) {
+    public static void searchForEntry(
+        LDAPInterface ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<SearchResultEntry> listener,
+        String... attributes
+    ) {
         if (ldap instanceof LDAPConnection) {
-            searchForEntry((LDAPConnection) ldap, baseDN, scope, filter, timeLimitSeconds,
-                    ignoreReferralErrors, listener, attributes);
+            searchForEntry((LDAPConnection) ldap, baseDN, scope, filter, timeLimitSeconds, ignoreReferralErrors, listener, attributes);
         } else if (ldap instanceof LDAPConnectionPool) {
-            searchForEntry((LDAPConnectionPool) ldap, baseDN, scope, filter, timeLimitSeconds,
-                    ignoreReferralErrors, listener, attributes);
+            searchForEntry((LDAPConnectionPool) ldap, baseDN, scope, filter, timeLimitSeconds, ignoreReferralErrors, listener, attributes);
         } else {
             throw new IllegalArgumentException("unsupported LDAPInterface implementation: " + ldap);
         }
@@ -225,16 +230,29 @@ public final class LdapUtils {
      * If the LDAP server returns an error {@link ResultCode} then this is handled as a
      * {@link ActionListener#onFailure(Exception) failure}
      */
-    public static void searchForEntry(LDAPConnection ldap, String baseDN, SearchScope scope,
-                                      Filter filter, int timeLimitSeconds,
-                                      boolean ignoreReferralErrors,
-                                      ActionListener<SearchResultEntry> listener,
-                                      String... attributes) {
-        LdapSearchResultListener searchResultListener = new SingleEntryListener(ldap, listener,
-                filter, ignoreReferralErrors);
+    public static void searchForEntry(
+        LDAPConnection ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<SearchResultEntry> listener,
+        String... attributes
+    ) {
+        LdapSearchResultListener searchResultListener = new SingleEntryListener(ldap, listener, filter, ignoreReferralErrors);
         try {
-            SearchRequest request = new SearchRequest(searchResultListener, baseDN, scope,
-                    DereferencePolicy.NEVER, 0, timeLimitSeconds, false, filter, attributes);
+            SearchRequest request = new SearchRequest(
+                searchResultListener,
+                baseDN,
+                scope,
+                DereferencePolicy.NEVER,
+                0,
+                timeLimitSeconds,
+                false,
+                filter,
+                attributes
+            );
             searchResultListener.setSearchRequest(request);
             ldap.asyncSearch(request);
         } catch (LDAPException e) {
@@ -250,30 +268,31 @@ public final class LdapUtils {
      * If the LDAP server returns an error {@link ResultCode} then this is handled as a
      * {@link ActionListener#onFailure(Exception) failure}
      */
-    public static void searchForEntry(LDAPConnectionPool ldap, String baseDN, SearchScope scope,
-                                      Filter filter, int timeLimitSeconds,
-                                      boolean ignoreReferralErrors,
-                                      ActionListener<SearchResultEntry> listener,
-                                      String... attributes) {
+    public static void searchForEntry(
+        LDAPConnectionPool ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<SearchResultEntry> listener,
+        String... attributes
+    ) {
         boolean searching = false;
         LDAPConnection ldapConnection = null;
         try {
             ldapConnection = privilegedConnect(ldap::getConnection);
             final LDAPConnection finalConnection = ldapConnection;
-            searchForEntry(finalConnection, baseDN, scope, filter, timeLimitSeconds,
-                    ignoreReferralErrors, ActionListener.wrap(
-                            entry -> {
-                                assert isLdapConnectionThread(Thread.currentThread()) : "Expected current thread [" + Thread.currentThread()
-                                        + "] to be an LDAPConnectionReader Thread. Probably the new library has changed the thread's name.";
-                                IOUtils.close(() -> ldap.releaseConnection(finalConnection));
-                                listener.onResponse(entry);
-                            },
-                            e -> {
-                                IOUtils.closeWhileHandlingException(
-                                        () -> ldap.releaseConnection(finalConnection)
-                                );
-                                listener.onFailure(e);
-                            }), attributes);
+            searchForEntry(finalConnection, baseDN, scope, filter, timeLimitSeconds, ignoreReferralErrors, ActionListener.wrap(entry -> {
+                assert isLdapConnectionThread(Thread.currentThread()) : "Expected current thread ["
+                    + Thread.currentThread()
+                    + "] to be an LDAPConnectionReader Thread. Probably the new library has changed the thread's name.";
+                IOUtils.close(() -> ldap.releaseConnection(finalConnection));
+                listener.onResponse(entry);
+            }, e -> {
+                IOUtils.closeWhileHandlingException(() -> ldap.releaseConnection(finalConnection));
+                listener.onFailure(e);
+            }), attributes);
             searching = true;
         } catch (LDAPException e) {
             listener.onFailure(e);
@@ -288,17 +307,20 @@ public final class LdapUtils {
     /**
      * This method performs an asynchronous ldap search operation that could have multiple results
      */
-    public static void search(LDAPInterface ldap, String baseDN, SearchScope scope,
-                              Filter filter, int timeLimitSeconds,
-                              boolean ignoreReferralErrors,
-                              ActionListener<List<SearchResultEntry>> listener,
-                              String... attributes) {
+    public static void search(
+        LDAPInterface ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<List<SearchResultEntry>> listener,
+        String... attributes
+    ) {
         if (ldap instanceof LDAPConnection) {
-            search((LDAPConnection) ldap, baseDN, scope, filter, timeLimitSeconds,
-                    ignoreReferralErrors, listener, attributes);
+            search((LDAPConnection) ldap, baseDN, scope, filter, timeLimitSeconds, ignoreReferralErrors, listener, attributes);
         } else if (ldap instanceof LDAPConnectionPool) {
-            search((LDAPConnectionPool) ldap, baseDN, scope, filter, timeLimitSeconds,
-                    ignoreReferralErrors, listener, attributes);
+            search((LDAPConnectionPool) ldap, baseDN, scope, filter, timeLimitSeconds, ignoreReferralErrors, listener, attributes);
         } else {
             throw new IllegalArgumentException("unsupported LDAPInterface implementation: " + ldap);
         }
@@ -307,25 +329,39 @@ public final class LdapUtils {
     /**
      * This method performs an asynchronous ldap search operation that could have multiple results
      */
-    public static void search(LDAPConnection ldap, String baseDN, SearchScope scope,
-                              Filter filter, int timeLimitSeconds,
-                              boolean ignoreReferralErrors,
-                              ActionListener<List<SearchResultEntry>> listener,
-                              String... attributes) {
+    public static void search(
+        LDAPConnection ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<List<SearchResultEntry>> listener,
+        String... attributes
+    ) {
         LdapSearchResultListener searchResultListener = new LdapSearchResultListener(
-                ldap,
-                ignoreReferralErrors,
-                ActionListener.wrap(
-                        searchResult -> {
-                            assert isLdapConnectionThread(Thread.currentThread()) : "Expected current thread [" + Thread.currentThread()
-                                    + "] to be an LDAPConnectionReader Thread. Probably the new library has changed the thread's name.";
-                            listener.onResponse(Collections.unmodifiableList(searchResult.getSearchEntries()));
-                        },
-                        listener::onFailure),
-                1);
+            ldap,
+            ignoreReferralErrors,
+            ActionListener.wrap(searchResult -> {
+                assert isLdapConnectionThread(Thread.currentThread()) : "Expected current thread ["
+                    + Thread.currentThread()
+                    + "] to be an LDAPConnectionReader Thread. Probably the new library has changed the thread's name.";
+                listener.onResponse(Collections.unmodifiableList(searchResult.getSearchEntries()));
+            }, listener::onFailure),
+            1
+        );
         try {
-            SearchRequest request = new SearchRequest(searchResultListener, baseDN, scope,
-                    DereferencePolicy.NEVER, 0, timeLimitSeconds, false, filter, attributes);
+            SearchRequest request = new SearchRequest(
+                searchResultListener,
+                baseDN,
+                scope,
+                DereferencePolicy.NEVER,
+                0,
+                timeLimitSeconds,
+                false,
+                filter,
+                attributes
+            );
             searchResultListener.setSearchRequest(request);
             ldap.asyncSearch(request);
         } catch (LDAPException e) {
@@ -336,11 +372,16 @@ public final class LdapUtils {
     /**
      * This method performs an asynchronous ldap search operation that could have multiple results
      */
-    public static void search(LDAPConnectionPool ldap, String baseDN, SearchScope scope,
-                              Filter filter, int timeLimitSeconds,
-                              boolean ignoreReferralErrors,
-                              ActionListener<List<SearchResultEntry>> listener,
-                              String... attributes) {
+    public static void search(
+        LDAPConnectionPool ldap,
+        String baseDN,
+        SearchScope scope,
+        Filter filter,
+        int timeLimitSeconds,
+        boolean ignoreReferralErrors,
+        ActionListener<List<SearchResultEntry>> listener,
+        String... attributes
+    ) {
         boolean searching = false;
         LDAPConnection ldapConnection = null;
         try {
@@ -387,31 +428,31 @@ public final class LdapUtils {
 
     private static SearchResult emptyResult(SearchResult parentResult) {
         return new SearchResult(
-                parentResult.getMessageID(),
-                ResultCode.SUCCESS,
-                "Empty result",
-                parentResult.getMatchedDN(),
-                null,
-                0,
-                0,
-                null
+            parentResult.getMessageID(),
+            ResultCode.SUCCESS,
+            "Empty result",
+            parentResult.getMatchedDN(),
+            null,
+            0,
+            0,
+            null
         );
     }
 
     private static LDAPException toException(SearchResult searchResult) {
         return new LDAPException(
-                searchResult.getResultCode(),
-                searchResult.getDiagnosticMessage(),
-                searchResult.getMatchedDN(),
-                searchResult.getReferralURLs(),
-                searchResult.getResponseControls()
+            searchResult.getResultCode(),
+            searchResult.getDiagnosticMessage(),
+            searchResult.getMatchedDN(),
+            searchResult.getReferralURLs(),
+            searchResult.getResponseControls()
         );
     }
 
     public static Filter createFilter(String filterTemplate, String... arguments) throws LDAPException {
-        return Filter.create(new MessageFormat(filterTemplate, Locale.ROOT)
-                .format(encodeFilterValues(arguments), new StringBuffer(), null)
-                .toString());
+        return Filter.create(
+            new MessageFormat(filterTemplate, Locale.ROOT).format(encodeFilterValues(arguments), new StringBuffer(), null).toString()
+        );
     }
 
     public static String[] attributesToSearchFor(String[] attributes) {
@@ -425,8 +466,7 @@ public final class LdapUtils {
                 attributes.addAll(Arrays.asList(array));
             }
         }
-        return attributes.isEmpty() ? attributesToSearchFor((String[]) null)
-                : attributes.toArray(new String[attributes.size()]);
+        return attributes.isEmpty() ? attributesToSearchFor((String[]) null) : attributes.toArray(new String[attributes.size()]);
     }
 
     private static String[] encodeFilterValues(String... arguments) {
@@ -438,21 +478,22 @@ public final class LdapUtils {
 
     private static class SingleEntryListener extends LdapSearchResultListener {
 
-        SingleEntryListener(LDAPConnection ldapConnection,
-                            ActionListener<SearchResultEntry> listener, Filter filter,
-                            boolean ignoreReferralErrors) {
+        SingleEntryListener(
+            LDAPConnection ldapConnection,
+            ActionListener<SearchResultEntry> listener,
+            Filter filter,
+            boolean ignoreReferralErrors
+        ) {
             super(ldapConnection, ignoreReferralErrors, ActionListener.wrap(searchResult -> {
-                        final List<SearchResultEntry> entryList = searchResult.getSearchEntries();
-                        if (entryList.size() > 1) {
-                            listener.onFailure(Exceptions.authenticationError(
-                                    "multiple search results found for [{}]", filter));
-                        } else if (entryList.size() == 1) {
-                            listener.onResponse(entryList.get(0));
-                        } else {
-                            listener.onResponse(null);
-                        }
-                    }, listener::onFailure)
-                    , 1);
+                final List<SearchResultEntry> entryList = searchResult.getSearchEntries();
+                if (entryList.size() > 1) {
+                    listener.onFailure(Exceptions.authenticationError("multiple search results found for [{}]", filter));
+                } else if (entryList.size() == 1) {
+                    listener.onResponse(entryList.get(0));
+                } else {
+                    listener.onResponse(null);
+                }
+            }, listener::onFailure), 1);
         }
     }
 
@@ -467,8 +508,12 @@ public final class LdapUtils {
         private final ActionListener<SearchResult> listener;
         private final int depth;
 
-        LdapSearchResultListener(LDAPConnection ldapConnection, boolean ignoreReferralErrors,
-                                 ActionListener<SearchResult> listener, int depth) {
+        LdapSearchResultListener(
+            LDAPConnection ldapConnection,
+            boolean ignoreReferralErrors,
+            ActionListener<SearchResult> listener,
+            int depth
+        ) {
             this.ldapConnection = ldapConnection;
             this.listener = listener;
             this.depth = depth;
@@ -492,9 +537,9 @@ public final class LdapUtils {
             // different LDAP server/partition. There are cases where we need to follow a referral
             // in order to get the actual object we are searching for
             final String[] referralUrls = referenceList.stream()
-                    .flatMap((ref) -> Arrays.stream(ref.getReferralURLs()))
-                    .collect(Collectors.toList())
-                    .toArray(Strings.EMPTY_ARRAY);
+                .flatMap((ref) -> Arrays.stream(ref.getReferralURLs()))
+                .collect(Collectors.toList())
+                .toArray(Strings.EMPTY_ARRAY);
             final SearchRequest request = searchRequestRef.get();
             if (referralUrls.length == 0 || request.followReferrals(ldapConnection) == false) {
                 // either no referrals to follow or we have explicitly disabled referral following
@@ -504,11 +549,18 @@ public final class LdapUtils {
                 // LDAP library
                 LOGGER.trace("LDAP Search {} => {} ({})", request, searchResult, entryList);
                 if (isSuccess(searchResult)) {
-                    SearchResult resultWithValues = new SearchResult(searchResult.getMessageID(),
-                            searchResult.getResultCode(), searchResult.getDiagnosticMessage(),
-                            searchResult.getMatchedDN(), referralUrls, entryList, referenceList,
-                            entryList.size(), referenceList.size(),
-                            searchResult.getResponseControls());
+                    SearchResult resultWithValues = new SearchResult(
+                        searchResult.getMessageID(),
+                        searchResult.getResultCode(),
+                        searchResult.getDiagnosticMessage(),
+                        searchResult.getMatchedDN(),
+                        referralUrls,
+                        entryList,
+                        referenceList,
+                        entryList.size(),
+                        referenceList.size(),
+                        searchResult.getResponseControls()
+                    );
                     listener.onResponse(resultWithValues);
                 } else {
                     listener.onFailure(toException(searchResult));
@@ -517,48 +569,58 @@ public final class LdapUtils {
                 // we've gone through too many levels of referrals so we terminate with the values
                 // collected so far and the proper result code to indicate the search was
                 // terminated early
-                LOGGER.trace("Referral limit exceeded {} => {} ({})",
-                        request, searchResult, entryList);
-                listener.onFailure(new LDAPException(ResultCode.REFERRAL_LIMIT_EXCEEDED,
+                LOGGER.trace("Referral limit exceeded {} => {} ({})", request, searchResult, entryList);
+                listener.onFailure(
+                    new LDAPException(
+                        ResultCode.REFERRAL_LIMIT_EXCEEDED,
                         "Referral limit exceeded (" + depth + ")",
-                        searchResult.getMatchedDN(), referralUrls,
-                        searchResult.getResponseControls()));
+                        searchResult.getMatchedDN(),
+                        referralUrls,
+                        searchResult.getResponseControls()
+                    )
+                );
             } else {
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("LDAP referred elsewhere {} => {}",
-                            request, Arrays.toString(referralUrls));
+                    LOGGER.trace("LDAP referred elsewhere {} => {}", request, Arrays.toString(referralUrls));
                 }
                 // there are referrals to follow, so we start the process to follow the referrals
                 final CountDown countDown = new CountDown(referralUrls.length);
                 final List<String> referralUrlsList = new ArrayList<>(Arrays.asList(referralUrls));
 
                 ActionListener<SearchResult> referralListener = ActionListener.wrap(
-                        innerResult -> {
-                            // synchronize here since we are possibly sending out a lot of requests
-                            // and the result lists are not thread safe and this also provides us
-                            // with a consistent view
-                            synchronized (this) {
-                                if (innerResult.getSearchEntries() != null) {
-                                    entryList.addAll(innerResult.getSearchEntries());
-                                }
-                                if (innerResult.getSearchReferences() != null) {
-                                    referenceList.addAll(innerResult.getSearchReferences());
-                                }
+                    innerResult -> {
+                        // synchronize here since we are possibly sending out a lot of requests
+                        // and the result lists are not thread safe and this also provides us
+                        // with a consistent view
+                        synchronized (this) {
+                            if (innerResult.getSearchEntries() != null) {
+                                entryList.addAll(innerResult.getSearchEntries());
                             }
+                            if (innerResult.getSearchReferences() != null) {
+                                referenceList.addAll(innerResult.getSearchReferences());
+                            }
+                        }
 
-                            // count down and once all referrals have been traversed then we can
-                            // create the results
-                            if (countDown.countDown()) {
-                                SearchResult resultWithValues = new SearchResult(
-                                        searchResult.getMessageID(), searchResult.getResultCode(),
-                                        searchResult.getDiagnosticMessage(),
-                                        searchResult.getMatchedDN(),
-                                        referralUrlsList.toArray(Strings.EMPTY_ARRAY), entryList,
-                                        referenceList, entryList.size(), referenceList.size(),
-                                        searchResult.getResponseControls());
-                                listener.onResponse(resultWithValues);
-                            }
-                        }, listener::onFailure);
+                        // count down and once all referrals have been traversed then we can
+                        // create the results
+                        if (countDown.countDown()) {
+                            SearchResult resultWithValues = new SearchResult(
+                                searchResult.getMessageID(),
+                                searchResult.getResultCode(),
+                                searchResult.getDiagnosticMessage(),
+                                searchResult.getMatchedDN(),
+                                referralUrlsList.toArray(Strings.EMPTY_ARRAY),
+                                entryList,
+                                referenceList,
+                                entryList.size(),
+                                referenceList.size(),
+                                searchResult.getResponseControls()
+                            );
+                            listener.onResponse(resultWithValues);
+                        }
+                    },
+                    listener::onFailure
+                );
 
                 for (String referralUrl : referralUrls) {
                     try {
@@ -566,12 +628,23 @@ public final class LdapUtils {
                         // get to a depth that is greater than or equal to the referral hop limit
                         // or all referrals have been followed. Each time referrals are followed
                         // from a search result, the depth increases by 1
-                        followReferral(ldapConnection, referralUrl, request, referralListener,
-                                depth + 1, ignoreReferralErrors, searchResult);
+                        followReferral(
+                            ldapConnection,
+                            referralUrl,
+                            request,
+                            referralListener,
+                            depth + 1,
+                            ignoreReferralErrors,
+                            searchResult
+                        );
                     } catch (LDAPException e) {
-                        LOGGER.warn((Supplier<?>) () -> new ParameterizedMessage(
+                        LOGGER.warn(
+                            (Supplier<?>) () -> new ParameterizedMessage(
                                 "caught exception while trying to follow referral [{}]",
-                                referralUrl), e);
+                                referralUrl
+                            ),
+                            e
+                        );
                         if (ignoreReferralErrors) {
                             // Needed in order for the countDown to be correct
                             referralListener.onResponse(emptyResult(searchResult));
@@ -592,11 +665,15 @@ public final class LdapUtils {
      * Performs the actual connection and following of a referral given a URL string.
      * This referral is being followed as it may contain a result that is relevant to our search
      */
-    private static void followReferral(LDAPConnection ldapConnection, String urlString,
-                                       SearchRequest searchRequest,
-                                       ActionListener<SearchResult> listener, int depth,
-                                       boolean ignoreErrors, SearchResult originatingResult)
-            throws LDAPException {
+    private static void followReferral(
+        LDAPConnection ldapConnection,
+        String urlString,
+        SearchRequest searchRequest,
+        ActionListener<SearchResult> listener,
+        int depth,
+        boolean ignoreErrors,
+        SearchResult originatingResult
+    ) throws LDAPException {
 
         final LDAPURL referralURL = new LDAPURL(urlString);
         final String host = referralURL.getHost();
@@ -633,38 +710,48 @@ public final class LdapUtils {
 
         // in order to follow the referral we need to open a new connection and we do so using the
         // referral connector on the ldap connection
-        final LDAPConnection referralConn =
-                privilegedConnect(() -> ldapConnection.getReferralConnector().getReferralConnection(referralURL, ldapConnection));
+        final LDAPConnection referralConn = privilegedConnect(
+            () -> ldapConnection.getReferralConnector().getReferralConnection(referralURL, ldapConnection)
+        );
         final LdapSearchResultListener ldapListener = new LdapSearchResultListener(
-                referralConn, ignoreErrors,
-                ActionListener.wrap(
-                        searchResult -> {
-                            IOUtils.close(referralConn);
-                            listener.onResponse(searchResult);
-                        },
-                        e -> {
-                            IOUtils.closeWhileHandlingException(referralConn);
-                            if (ignoreErrors) {
-                                if (LOGGER.isDebugEnabled()) {
-                                    LOGGER.debug(new ParameterizedMessage(
-                                            "Failed to retrieve results from referral URL [{}]." +
-                                                    " Treating as 'no results'",
-                                            referralURL), e);
-                                }
-                                listener.onResponse(emptyResult(originatingResult));
-                            } else {
-                                listener.onFailure(e);
-                            }
-                        }),
-                depth);
+            referralConn,
+            ignoreErrors,
+            ActionListener.wrap(searchResult -> {
+                IOUtils.close(referralConn);
+                listener.onResponse(searchResult);
+            }, e -> {
+                IOUtils.closeWhileHandlingException(referralConn);
+                if (ignoreErrors) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug(
+                            new ParameterizedMessage(
+                                "Failed to retrieve results from referral URL [{}]." + " Treating as 'no results'",
+                                referralURL
+                            ),
+                            e
+                        );
+                    }
+                    listener.onResponse(emptyResult(originatingResult));
+                } else {
+                    listener.onFailure(e);
+                }
+            }),
+            depth
+        );
         boolean success = false;
         try {
-            final SearchRequest referralSearchRequest =
-                    new SearchRequest(ldapListener, searchRequest.getControls(),
-                            requestBaseDN, requestScope, searchRequest.getDereferencePolicy(),
-                            searchRequest.getSizeLimit(), searchRequest.getTimeLimitSeconds(),
-                            searchRequest.typesOnly(), requestFilter,
-                            searchRequest.getAttributes());
+            final SearchRequest referralSearchRequest = new SearchRequest(
+                ldapListener,
+                searchRequest.getControls(),
+                requestBaseDN,
+                requestScope,
+                searchRequest.getDereferencePolicy(),
+                searchRequest.getSizeLimit(),
+                searchRequest.getTimeLimitSeconds(),
+                searchRequest.typesOnly(),
+                requestFilter,
+                searchRequest.getAttributes()
+            );
             ldapListener.setSearchRequest(searchRequest);
             referralConn.asyncSearch(referralSearchRequest);
             success = true;

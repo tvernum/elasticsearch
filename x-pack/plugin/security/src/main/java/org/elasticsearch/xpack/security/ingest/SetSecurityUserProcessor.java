@@ -111,8 +111,8 @@ public final class SetSecurityUserProcessor extends AbstractProcessor {
         }
 
         @Override
-        public SetSecurityUserProcessor create(Map<String, Processor.Factory> processorFactories, String tag,
-                                               Map<String, Object> config) throws Exception {
+        public SetSecurityUserProcessor create(Map<String, Processor.Factory> processorFactories, String tag, Map<String, Object> config)
+            throws Exception {
             String field = readStringProperty(TYPE, tag, config, "field");
             List<String> propertyNames = readOptionalList(TYPE, tag, config, "properties");
             Set<Property> properties;

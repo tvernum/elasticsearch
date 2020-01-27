@@ -36,8 +36,13 @@ public class RestDeleteRoleAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            DELETE, "/_security/role/{name}", this,
-            DELETE, "/_xpack/security/role/{name}", deprecationLogger);
+            DELETE,
+            "/_security/role/{name}",
+            this,
+            DELETE,
+            "/_xpack/security/role/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -50,15 +55,15 @@ public class RestDeleteRoleAction extends SecurityBaseRestHandler {
         final String name = request.param("name");
         final String refresh = request.param("refresh");
 
-        return channel -> new DeleteRoleRequestBuilder(client)
-            .name(name)
+        return channel -> new DeleteRoleRequestBuilder(client).name(name)
             .setRefreshPolicy(refresh)
             .execute(new RestBuilderListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(DeleteRoleResponse response, XContentBuilder builder) throws Exception {
                     return new BytesRestResponse(
-                            response.found() ? RestStatus.OK : RestStatus.NOT_FOUND,
-                            builder.startObject().field("found", response.found()).endObject());
+                        response.found() ? RestStatus.OK : RestStatus.NOT_FOUND,
+                        builder.startObject().field("found", response.found()).endObject()
+                    );
                 }
             });
     }

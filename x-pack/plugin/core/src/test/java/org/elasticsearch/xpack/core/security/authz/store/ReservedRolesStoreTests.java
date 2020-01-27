@@ -248,16 +248,19 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetAction.NAME).test(randomAlphaOfLengthBetween(8, 24)), is(false));
         assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetAction.NAME).test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
-        assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetIndexAction.NAME)
-                .test(randomAlphaOfLengthBetween(8, 24)), is(true));
+        assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetIndexAction.NAME).test(randomAlphaOfLengthBetween(8, 24)), is(true));
 
         for (String index : RestrictedIndicesNames.RESTRICTED_NAMES) {
             // This test might cease to be true if we ever have non-security restricted names
             // but that depends on how users are supposed to perform snapshots of those new indices.
             assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetIndexAction.NAME).test(index), is(true));
         }
-        assertThat(snapshotUserRole.indices().allowedIndicesMatcher(GetIndexAction.NAME).test(
-                RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
+        assertThat(
+            snapshotUserRole.indices()
+                .allowedIndicesMatcher(GetIndexAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
 
         assertNoAccessAllowed(snapshotUserRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(snapshotUserRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -284,10 +287,8 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(ingestAdminRole.cluster().check(DelegatePkiAuthenticationAction.NAME, request, authentication), is(false));
 
         assertThat(ingestAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
-        assertThat(ingestAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
-        assertThat(ingestAdminRole.indices().allowedIndicesMatcher(GetAction.NAME).test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(ingestAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
+        assertThat(ingestAdminRole.indices().allowedIndicesMatcher(GetAction.NAME).test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         assertNoAccessAllowed(ingestAdminRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(ingestAdminRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -325,8 +326,8 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(kibanaRole.cluster().check(CreateTokenAction.NAME, request, authentication), is(true));
 
         // Application Privileges
-        DeletePrivilegesRequest deleteKibanaPrivileges = new DeletePrivilegesRequest("kibana-.kibana", new String[]{ "all", "read" });
-        DeletePrivilegesRequest deleteLogstashPrivileges = new DeletePrivilegesRequest("logstash", new String[]{ "all", "read" });
+        DeletePrivilegesRequest deleteKibanaPrivileges = new DeletePrivilegesRequest("kibana-.kibana", new String[] { "all", "read" });
+        DeletePrivilegesRequest deleteLogstashPrivileges = new DeletePrivilegesRequest("logstash", new String[] { "all", "read" });
         assertThat(kibanaRole.cluster().check(DeletePrivilegesAction.NAME, deleteKibanaPrivileges, authentication), is(true));
         assertThat(kibanaRole.cluster().check(DeletePrivilegesAction.NAME, deleteLogstashPrivileges, authentication), is(false));
 
@@ -338,11 +339,22 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(kibanaRole.cluster().check(GetPrivilegesAction.NAME, getApmPrivileges, authentication), is(false));
 
         PutPrivilegesRequest putKibanaPrivileges = new PutPrivilegesRequest();
-        putKibanaPrivileges.setPrivileges(Collections.singletonList(new ApplicationPrivilegeDescriptor(
-            "kibana-.kibana-" + randomAlphaOfLengthBetween(2,6), "all", Collections.emptySet(), Collections.emptyMap())));
+        putKibanaPrivileges.setPrivileges(
+            Collections.singletonList(
+                new ApplicationPrivilegeDescriptor(
+                    "kibana-.kibana-" + randomAlphaOfLengthBetween(2, 6),
+                    "all",
+                    Collections.emptySet(),
+                    Collections.emptyMap()
+                )
+            )
+        );
         PutPrivilegesRequest putSwiftypePrivileges = new PutPrivilegesRequest();
-        putSwiftypePrivileges.setPrivileges(Collections.singletonList(new ApplicationPrivilegeDescriptor(
-            "swiftype-kibana" , "all", Collections.emptySet(), Collections.emptyMap())));
+        putSwiftypePrivileges.setPrivileges(
+            Collections.singletonList(
+                new ApplicationPrivilegeDescriptor("swiftype-kibana", "all", Collections.emptySet(), Collections.emptyMap())
+            )
+        );
         assertThat(kibanaRole.cluster().check(PutPrivilegesAction.NAME, putKibanaPrivileges, authentication), is(true));
         assertThat(kibanaRole.cluster().check(PutPrivilegesAction.NAME, putSwiftypePrivileges, authentication), is(false));
 
@@ -426,35 +438,28 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(kibanaAdminRole.cluster().check(ClusterStatsAction.NAME, request, authentication), is(false));
         assertThat(kibanaAdminRole.cluster().check(PutIndexTemplateAction.NAME, request, authentication), is(false));
         assertThat(kibanaAdminRole.cluster().check(ClusterRerouteAction.NAME, request, authentication), is(false));
-        assertThat(kibanaAdminRole.cluster().check(ClusterUpdateSettingsAction.NAME, request, authentication),
-                is(false));
+        assertThat(kibanaAdminRole.cluster().check(ClusterUpdateSettingsAction.NAME, request, authentication), is(false));
         assertThat(kibanaAdminRole.cluster().check(MonitoringBulkAction.NAME, request, authentication), is(false));
-        assertThat(kibanaAdminRole.cluster().check(DelegatePkiAuthenticationAction.NAME, request, authentication),
-                is(false));
+        assertThat(kibanaAdminRole.cluster().check(DelegatePkiAuthenticationAction.NAME, request, authentication), is(false));
 
         assertThat(kibanaAdminRole.runAs().check(randomAlphaOfLengthBetween(1, 12)), is(false));
 
         assertThat(kibanaAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(kibanaAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
-        assertThat(
-                kibanaAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(kibanaAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String randomApplication = "kibana-" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(randomApplication, "app-random", "all"),
-                "*"), is(false));
+        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(randomApplication, "app-random", "all"), "*"), is(false));
 
         final String application = "kibana-.kibana";
-        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(application, "app-foo", "foo"), "*"),
-                is(false));
-        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(application, "app-all", "all"), "*"),
-                is(true));
+        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(application, "app-foo", "foo"), "*"), is(false));
+        assertThat(kibanaAdminRole.application().grants(new ApplicationPrivilege(application, "app-all", "all"), "*"), is(true));
 
         final String applicationWithRandomIndex = "kibana-.kibana_" + randomAlphaOfLengthBetween(8, 24);
         assertThat(
-                kibanaAdminRole.application()
-                        .grants(new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"), "*"),
-                is(false));
+            kibanaAdminRole.application().grants(new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"), "*"),
+            is(false)
+        );
 
         assertNoAccessAllowed(kibanaAdminRole, RestrictedIndicesNames.RESTRICTED_NAMES);
     }
@@ -482,8 +487,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(kibanaUserRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(kibanaUserRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
-        assertThat(kibanaUserRole.indices().allowedIndicesMatcher("indices:foo")
-                .test(randomAlphaOfLengthBetween(8, 24)), is(false));
+        assertThat(kibanaUserRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String randomApplication = "kibana-" + randomAlphaOfLengthBetween(8, 24);
         assertThat(kibanaUserRole.application().grants(new ApplicationPrivilege(randomApplication, "app-random", "all"), "*"), is(false));
@@ -493,8 +497,10 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(kibanaUserRole.application().grants(new ApplicationPrivilege(application, "app-all", "all"), "*"), is(true));
 
         final String applicationWithRandomIndex = "kibana-.kibana_" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(kibanaUserRole.application().grants(new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"),
-            "*"), is(false));
+        assertThat(
+            kibanaUserRole.application().grants(new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"), "*"),
+            is(false)
+        );
 
         assertNoAccessAllowed(kibanaUserRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(kibanaUserRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -526,8 +532,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test("foo"), is(false));
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".reporting"), is(false));
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".kibana"), is(false));
-        assertThat(monitoringUserRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                   is(false));
+        assertThat(monitoringUserRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(READ_CROSS_CLUSTER_NAME).test("foo"), is(false));
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(READ_CROSS_CLUSTER_NAME).test(".reporting"), is(false));
         assertThat(monitoringUserRole.indices().allowedIndicesMatcher(READ_CROSS_CLUSTER_NAME).test(".kibana"), is(false));
@@ -548,16 +553,23 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertNoAccessAllowed(monitoringUserRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
 
         final String kibanaApplicationWithRandomIndex = "kibana-" + randomFrom(randomAlphaOfLengthBetween(8, 24), ".kibana");
-        assertThat(monitoringUserRole.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
-        assertThat(monitoringUserRole.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_monitoring", "reserved_monitoring"), "*"), is(true));
+        assertThat(
+            monitoringUserRole.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"),
+            is(false)
+        );
+        assertThat(
+            monitoringUserRole.application()
+                .grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_monitoring", "reserved_monitoring"), "*"),
+            is(true)
+        );
 
         final String otherApplication = "logstash-" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(monitoringUserRole.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
-        assertThat(monitoringUserRole.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-reserved_monitoring", "reserved_monitoring"), "*"), is(false));
+        assertThat(monitoringUserRole.application().grants(new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
+        assertThat(
+            monitoringUserRole.application()
+                .grants(new ApplicationPrivilege(otherApplication, "app-reserved_monitoring", "reserved_monitoring"), "*"),
+            is(false)
+        );
     }
 
     public void testRemoteMonitoringAgentRole() {
@@ -593,8 +605,10 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME).test("foo"), is(false));
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".reporting"), is(false));
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".kibana"), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher("indices:foo")
-                .test(randomAlphaOfLengthBetween(8, 24)), is(false));
+        assertThat(
+            remoteMonitoringAgentRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
+            is(false)
+        );
 
         final String monitoringIndex = ".monitoring-" + randomAlphaOfLength(randomIntBetween(0, 13));
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher("indices:foo").test(monitoringIndex), is(true));
@@ -650,8 +664,10 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".reporting"), is(false));
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".kibana"), is(true));
         assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(GetAction.NAME).test(".kibana"), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher("indices:foo")
-            .test(randomAlphaOfLengthBetween(8, 24)), is(false));
+        assertThat(
+            remoteMonitoringAgentRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
+            is(false)
+        );
 
         Arrays.asList(
             ".monitoring-" + randomAlphaOfLength(randomIntBetween(0, 13)),
@@ -672,47 +688,127 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         // These tests might need to change if we add new non-security restricted indices that the monitoring user isn't supposed to see
         // (but ideally, the monitoring user should see all indices).
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(GetSettingsAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(GetSettingsAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesShardStoresAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesShardStoresAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(UpgradeStatusAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(UpgradeStatusAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(RecoveryAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(RecoveryAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesStatsAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesStatsAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesSegmentsAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(true));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndicesSegmentsAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(true));
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(GetSettingsAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(GetSettingsAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesShardStoresAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesShardStoresAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(UpgradeStatusAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(UpgradeStatusAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(RecoveryAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(RecoveryAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesStatsAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesStatsAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesSegmentsAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(true)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndicesSegmentsAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(true)
+        );
 
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(SearchAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(GetAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(GetAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(DeleteAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(DeleteAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndexAction.NAME)
-                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)), is(false));
-        assertThat(remoteMonitoringAgentRole.indices().allowedIndicesMatcher(IndexAction.NAME)
-                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)), is(false));
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(SearchAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(SearchAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(GetAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(GetAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(DeleteAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(DeleteAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndexAction.NAME)
+                .test(randomFrom(RestrictedIndicesNames.RESTRICTED_NAMES)),
+            is(false)
+        );
+        assertThat(
+            remoteMonitoringAgentRole.indices()
+                .allowedIndicesMatcher(IndexAction.NAME)
+                .test(RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2)),
+            is(false)
+        );
 
         assertMonitoringOnRestrictedIndices(remoteMonitoringAgentRole);
 
@@ -722,24 +818,36 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
     private void assertMonitoringOnRestrictedIndices(Role role) {
         final Settings indexSettings = Settings.builder().put("index.version.created", Version.CURRENT).build();
-        final String internalSecurityIndex = randomFrom(RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
-            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7);
-        final MetaData metaData = new MetaData.Builder()
-                .put(new IndexMetaData.Builder(internalSecurityIndex)
-                        .settings(indexSettings)
-                        .numberOfShards(1)
-                        .numberOfReplicas(0)
-                        .putAlias(new AliasMetaData.Builder(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).build())
-                        .build(), true)
-                .build();
+        final String internalSecurityIndex = randomFrom(
+            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
+            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7
+        );
+        final MetaData metaData = new MetaData.Builder().put(
+            new IndexMetaData.Builder(internalSecurityIndex).settings(indexSettings)
+                .numberOfShards(1)
+                .numberOfReplicas(0)
+                .putAlias(new AliasMetaData.Builder(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).build())
+                .build(),
+            true
+        ).build();
         final FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
-        final List<String> indexMonitoringActionNamesList = Arrays.asList(IndicesStatsAction.NAME, IndicesSegmentsAction.NAME,
-                GetSettingsAction.NAME, IndicesShardStoresAction.NAME, UpgradeStatusAction.NAME, RecoveryAction.NAME);
+        final List<String> indexMonitoringActionNamesList = Arrays.asList(
+            IndicesStatsAction.NAME,
+            IndicesSegmentsAction.NAME,
+            GetSettingsAction.NAME,
+            IndicesShardStoresAction.NAME,
+            UpgradeStatusAction.NAME,
+            RecoveryAction.NAME
+        );
         for (final String indexMonitoringActionName : indexMonitoringActionNamesList) {
             String asyncSearchIndex = RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2);
-            final Map<String, IndexAccessControl> authzMap = role.indices().authorize(indexMonitoringActionName,
-                Sets.newHashSet(internalSecurityIndex, RestrictedIndicesNames.SECURITY_MAIN_ALIAS, asyncSearchIndex),
-                metaData.getAliasAndIndexLookup(), fieldPermissionsCache);
+            final Map<String, IndexAccessControl> authzMap = role.indices()
+                .authorize(
+                    indexMonitoringActionName,
+                    Sets.newHashSet(internalSecurityIndex, RestrictedIndicesNames.SECURITY_MAIN_ALIAS, asyncSearchIndex),
+                    metaData.getAliasAndIndexLookup(),
+                    fieldPermissionsCache
+                );
             assertThat(authzMap.get(internalSecurityIndex).isGranted(), is(true));
             assertThat(authzMap.get(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).isGranted(), is(true));
             assertThat(authzMap.get(asyncSearchIndex).isGranted(), is(true));
@@ -769,8 +877,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(reportingUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test("foo"), is(false));
         assertThat(reportingUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".reporting"), is(false));
         assertThat(reportingUserRole.indices().allowedIndicesMatcher(SearchAction.NAME).test(".kibana"), is(false));
-        assertThat(reportingUserRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(reportingUserRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String index = ".reporting-" + randomAlphaOfLength(randomIntBetween(0, 13));
         assertThat(reportingUserRole.indices().allowedIndicesMatcher("indices:foo").test(index), is(false));
@@ -811,8 +918,10 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(dashboardsOnlyUserRole.runAs().check(randomAlphaOfLengthBetween(1, 12)), is(false));
 
         final String randomApplication = "kibana-" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(dashboardsOnlyUserRole.application().grants(new ApplicationPrivilege(randomApplication, "app-random", "all"), "*"),
-            is(false));
+        assertThat(
+            dashboardsOnlyUserRole.application().grants(new ApplicationPrivilege(randomApplication, "app-random", "all"), "*"),
+            is(false)
+        );
 
         final String application = "kibana-.kibana";
         assertThat(dashboardsOnlyUserRole.application().grants(new ApplicationPrivilege(application, "app-foo", "foo"), "*"), is(false));
@@ -820,8 +929,11 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(dashboardsOnlyUserRole.application().grants(new ApplicationPrivilege(application, "app-read", "read"), "*"), is(true));
 
         final String applicationWithRandomIndex = "kibana-.kibana_" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(dashboardsOnlyUserRole.application().grants(
-            new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"), "*"), is(false));
+        assertThat(
+            dashboardsOnlyUserRole.application()
+                .grants(new ApplicationPrivilege(applicationWithRandomIndex, "app-random-index", "all"), "*"),
+            is(false)
+        );
 
         assertNoAccessAllowed(dashboardsOnlyUserRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(dashboardsOnlyUserRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -845,47 +957,59 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(superuserRole.cluster().check("internal:admin/foo", request, authentication), is(false));
 
         final Settings indexSettings = Settings.builder().put("index.version.created", Version.CURRENT).build();
-        final String internalSecurityIndex = randomFrom(RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
-            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7);
-        final MetaData metaData = new MetaData.Builder()
-                .put(new IndexMetaData.Builder("a1").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
-                .put(new IndexMetaData.Builder("a2").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
-                .put(new IndexMetaData.Builder("aaaaaa").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
-                .put(new IndexMetaData.Builder("bbbbb").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
-                .put(new IndexMetaData.Builder("b")
-                        .settings(indexSettings)
-                        .numberOfShards(1)
-                        .numberOfReplicas(0)
-                        .putAlias(new AliasMetaData.Builder("ab").build())
-                        .putAlias(new AliasMetaData.Builder("ba").build())
-                        .build(), true)
-                .put(new IndexMetaData.Builder(internalSecurityIndex)
-                        .settings(indexSettings)
-                        .numberOfShards(1)
-                        .numberOfReplicas(0)
-                        .putAlias(new AliasMetaData.Builder(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).build())
-                        .build(), true)
-                .build();
+        final String internalSecurityIndex = randomFrom(
+            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
+            RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7
+        );
+        final MetaData metaData = new MetaData.Builder().put(
+            new IndexMetaData.Builder("a1").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(),
+            true
+        )
+            .put(new IndexMetaData.Builder("a2").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
+            .put(new IndexMetaData.Builder("aaaaaa").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
+            .put(new IndexMetaData.Builder("bbbbb").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
+            .put(
+                new IndexMetaData.Builder("b").settings(indexSettings)
+                    .numberOfShards(1)
+                    .numberOfReplicas(0)
+                    .putAlias(new AliasMetaData.Builder("ab").build())
+                    .putAlias(new AliasMetaData.Builder("ba").build())
+                    .build(),
+                true
+            )
+            .put(
+                new IndexMetaData.Builder(internalSecurityIndex).settings(indexSettings)
+                    .numberOfShards(1)
+                    .numberOfReplicas(0)
+                    .putAlias(new AliasMetaData.Builder(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).build())
+                    .build(),
+                true
+            )
+            .build();
 
         FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
         SortedMap<String, AliasOrIndex> lookup = metaData.getAliasAndIndexLookup();
-        Map<String, IndexAccessControl> authzMap =
-                superuserRole.indices().authorize(SearchAction.NAME, Sets.newHashSet("a1", "ba"), lookup, fieldPermissionsCache);
+        Map<String, IndexAccessControl> authzMap = superuserRole.indices()
+            .authorize(SearchAction.NAME, Sets.newHashSet("a1", "ba"), lookup, fieldPermissionsCache);
         assertThat(authzMap.get("a1").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
-        authzMap =
-            superuserRole.indices().authorize(DeleteIndexAction.NAME, Sets.newHashSet("a1", "ba"), lookup, fieldPermissionsCache);
+        authzMap = superuserRole.indices().authorize(DeleteIndexAction.NAME, Sets.newHashSet("a1", "ba"), lookup, fieldPermissionsCache);
         assertThat(authzMap.get("a1").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
         authzMap = superuserRole.indices().authorize(IndexAction.NAME, Sets.newHashSet("a2", "ba"), lookup, fieldPermissionsCache);
         assertThat(authzMap.get("a2").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
         authzMap = superuserRole.indices()
-                .authorize(UpdateSettingsAction.NAME, Sets.newHashSet("aaaaaa", "ba"), lookup, fieldPermissionsCache);
+            .authorize(UpdateSettingsAction.NAME, Sets.newHashSet("aaaaaa", "ba"), lookup, fieldPermissionsCache);
         assertThat(authzMap.get("aaaaaa").isGranted(), is(true));
         assertThat(authzMap.get("b").isGranted(), is(true));
-        authzMap = superuserRole.indices().authorize(randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME),
-                Sets.newHashSet(RestrictedIndicesNames.SECURITY_MAIN_ALIAS), lookup, fieldPermissionsCache);
+        authzMap = superuserRole.indices()
+            .authorize(
+                randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME),
+                Sets.newHashSet(RestrictedIndicesNames.SECURITY_MAIN_ALIAS),
+                lookup,
+                fieldPermissionsCache
+            );
         assertThat(authzMap.get(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).isGranted(), is(true));
         assertThat(authzMap.get(internalSecurityIndex).isGranted(), is(true));
         assertTrue(superuserRole.indices().check(SearchAction.NAME));
@@ -893,10 +1017,18 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(superuserRole.runAs().check(randomAlphaOfLengthBetween(1, 30)), is(true));
 
-        assertThat(superuserRole.indices().allowedIndicesMatcher(randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME))
-                .test(RestrictedIndicesNames.SECURITY_MAIN_ALIAS), is(true));
-        assertThat(superuserRole.indices().allowedIndicesMatcher(randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME))
-                .test(internalSecurityIndex), is(true));
+        assertThat(
+            superuserRole.indices()
+                .allowedIndicesMatcher(randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME))
+                .test(RestrictedIndicesNames.SECURITY_MAIN_ALIAS),
+            is(true)
+        );
+        assertThat(
+            superuserRole.indices()
+                .allowedIndicesMatcher(randomFrom(IndexAction.NAME, DeleteIndexAction.NAME, SearchAction.NAME))
+                .test(internalSecurityIndex),
+            is(true)
+        );
     }
 
     public void testLogstashSystemRole() {
@@ -921,8 +1053,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(logstashSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(logstashSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
-        assertThat(logstashSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(logstashSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         assertNoAccessAllowed(logstashSystemRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(logstashSystemRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -936,7 +1067,6 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertNotNull(roleDescriptor);
         assertThat(roleDescriptor.getMetadata(), hasEntry("_reserved", true));
 
-
         final Role beatsAdminRole = Role.builder(roleDescriptor, null).build();
         assertThat(beatsAdminRole.cluster().check(ClusterHealthAction.NAME, request, authentication), is(false));
         assertThat(beatsAdminRole.cluster().check(ClusterStateAction.NAME, request, authentication), is(false));
@@ -949,8 +1079,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(beatsAdminRole.runAs().check(randomAlphaOfLengthBetween(1, 30)), is(false));
 
-        assertThat(beatsAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-            is(false));
+        assertThat(beatsAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String index = ".management-beats";
         logger.info("index name [{}]", index);
@@ -989,13 +1118,12 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(beatsSystemRole.runAs().check(randomAlphaOfLengthBetween(1, 30)), is(false));
 
-
-        final String index = ".monitoring-beats-" + randomIntBetween(0, 5);;
+        final String index = ".monitoring-beats-" + randomIntBetween(0, 5);
+        ;
         logger.info("beats monitoring index name [{}]", index);
         assertThat(beatsSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(beatsSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
-        assertThat(beatsSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(beatsSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
         assertThat(beatsSystemRole.indices().allowedIndicesMatcher(CreateIndexAction.NAME).test(index), is(true));
         assertThat(beatsSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(index), is(true));
         assertThat(beatsSystemRole.indices().allowedIndicesMatcher(DeleteAction.NAME).test(index), is(false));
@@ -1027,8 +1155,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         assertThat(APMSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(APMSystemRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
-        assertThat(APMSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                is(false));
+        assertThat(APMSystemRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String index = ".monitoring-beats-" + randomIntBetween(10, 15);
         logger.info("APM beats monitoring index name [{}]", index);
@@ -1039,8 +1166,12 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(APMSystemRole.indices().allowedIndicesMatcher(BulkAction.NAME).test(index), is(true));
 
         assertThat(APMSystemRole.indices().allowedIndicesMatcher("indices:data/write/index:op_type/index").test(index), is(false));
-        assertThat(APMSystemRole.indices().allowedIndicesMatcher(
-            "indices:data/write/index:op_type/" + randomAlphaOfLengthBetween(3,5)).test(index), is(false));
+        assertThat(
+            APMSystemRole.indices()
+                .allowedIndicesMatcher("indices:data/write/index:op_type/" + randomAlphaOfLengthBetween(3, 5))
+                .test(index),
+            is(false)
+        );
 
         assertNoAccessAllowed(APMSystemRole, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(APMSystemRole, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
@@ -1140,16 +1271,15 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertNoAccessAllowed(role, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
 
         final String kibanaApplicationWithRandomIndex = "kibana-" + randomFrom(randomAlphaOfLengthBetween(8, 24), ".kibana");
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"), is(true));
+        assertThat(role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
+        assertThat(
+            role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"),
+            is(true)
+        );
 
         final String otherApplication = "logstash-" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
+        assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
+        assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
     }
 
     public void testMachineLearningUserRole() {
@@ -1226,18 +1356,16 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertNoAccessAllowed(role, RestrictedIndicesNames.RESTRICTED_NAMES);
         assertNoAccessAllowed(role, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
 
-
         final String kibanaApplicationWithRandomIndex = "kibana-" + randomFrom(randomAlphaOfLengthBetween(8, 24), ".kibana");
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"), is(true));
+        assertThat(role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
+        assertThat(
+            role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"),
+            is(true)
+        );
 
         final String otherApplication = "logstash-" + randomAlphaOfLengthBetween(8, 24);
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
-        assertThat(role.application().grants(
-            new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
+        assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
+        assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
     }
 
     public void testTransformAdminRole() {
@@ -1246,8 +1374,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         RoleDescriptor[] roleDescriptors = {
             new ReservedRolesStore().roleDescriptor("data_frame_transforms_admin"),
-            new ReservedRolesStore().roleDescriptor("transform_admin")
-        };
+            new ReservedRolesStore().roleDescriptor("transform_admin") };
 
         for (RoleDescriptor roleDescriptor : roleDescriptors) {
             assertNotNull(roleDescriptor);
@@ -1275,20 +1402,26 @@ public class ReservedRolesStoreTests extends ESTestCase {
             assertNoAccessAllowed(role, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
 
             final String kibanaApplicationWithRandomIndex = "kibana-" + randomFrom(randomAlphaOfLengthBetween(8, 24), ".kibana");
-            assertThat(role.application().grants(
-                new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
+            assertThat(
+                role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"),
+                is(false)
+            );
 
             if (roleDescriptor.getName().equals("data_frame_transforms_admin")) {
-                assertThat(role.application()
-                    .grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"), is(true));
+                assertThat(
+                    role.application()
+                        .grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"),
+                    is(true)
+                );
             }
 
             final String otherApplication = "logstash-" + randomAlphaOfLengthBetween(8, 24);
-            assertThat(role.application().grants(
-                new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
+            assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
             if (roleDescriptor.getName().equals("data_frame_transforms_admin")) {
-                assertThat(role.application().grants(
-                        new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
+                assertThat(
+                    role.application().grants(new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"),
+                    is(false)
+                );
             }
         }
     }
@@ -1299,8 +1432,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         RoleDescriptor[] roleDescriptors = {
             new ReservedRolesStore().roleDescriptor("data_frame_transforms_user"),
-            new ReservedRolesStore().roleDescriptor("transform_user")
-        };
+            new ReservedRolesStore().roleDescriptor("transform_user") };
 
         for (RoleDescriptor roleDescriptor : roleDescriptors) {
             assertNotNull(roleDescriptor);
@@ -1328,20 +1460,26 @@ public class ReservedRolesStoreTests extends ESTestCase {
             assertNoAccessAllowed(role, RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2));
 
             final String kibanaApplicationWithRandomIndex = "kibana-" + randomFrom(randomAlphaOfLengthBetween(8, 24), ".kibana");
-            assertThat(role.application().grants(
-                new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"), is(false));
+            assertThat(
+                role.application().grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-foo", "foo"), "*"),
+                is(false)
+            );
 
             if (roleDescriptor.getName().equals("data_frame_transforms_user")) {
-                assertThat(role.application().grants(
-                    new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"), is(true));
+                assertThat(
+                    role.application()
+                        .grants(new ApplicationPrivilege(kibanaApplicationWithRandomIndex, "app-reserved_ml", "reserved_ml"), "*"),
+                    is(true)
+                );
             }
 
             final String otherApplication = "logstash-" + randomAlphaOfLengthBetween(8, 24);
-            assertThat(role.application().grants(
-                new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
+            assertThat(role.application().grants(new ApplicationPrivilege(otherApplication, "app-foo", "foo"), "*"), is(false));
             if (roleDescriptor.getName().equals("data_frame_transforms_user")) {
-                assertThat(role.application().grants(
-                    new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"), is(false));
+                assertThat(
+                    role.application().grants(new ApplicationPrivilege(otherApplication, "app-reserved_ml", "reserved_ml"), "*"),
+                    is(false)
+                );
             }
         }
     }
@@ -1371,7 +1509,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         String historyIndex = HistoryStoreField.getHistoryIndexNameForTime(now);
-        for (String index : new String[]{ Watch.INDEX, historyIndex, TriggeredWatchStoreField.INDEX_NAME }) {
+        for (String index : new String[] { Watch.INDEX, historyIndex, TriggeredWatchStoreField.INDEX_NAME }) {
             assertOnlyReadAllowed(role, index);
         }
 
@@ -1405,7 +1543,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
 
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         String historyIndex = HistoryStoreField.getHistoryIndexNameForTime(now);
-        for (String index : new String[]{ Watch.INDEX, historyIndex }) {
+        for (String index : new String[] { Watch.INDEX, historyIndex }) {
             assertOnlyReadAllowed(role, index);
         }
 
@@ -1476,8 +1614,7 @@ public class ReservedRolesStoreTests extends ESTestCase {
         assertThat(logstashAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test("foo"), is(false));
         assertThat(logstashAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".reporting"), is(false));
         assertThat(logstashAdminRole.indices().allowedIndicesMatcher(IndexAction.NAME).test(".logstash"), is(true));
-        assertThat(logstashAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)),
-                   is(false));
+        assertThat(logstashAdminRole.indices().allowedIndicesMatcher("indices:foo").test(randomAlphaOfLengthBetween(8, 24)), is(false));
 
         final String index = ".logstash-" + randomIntBetween(0, 5);
 

@@ -75,8 +75,11 @@ public class NativeUsersStoreTests extends ESTestCase {
         client = new FilterClient(mockClient) {
 
             @Override
-            protected <Request extends ActionRequest, Response extends ActionResponse>
-            void doExecute(ActionType<Response> action, Request request, ActionListener<Response> listener) {
+            protected <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                ActionType<Response> action,
+                Request request,
+                ActionListener<Response> listener
+            ) {
                 requests.add(new Tuple<>(request, listener));
             }
         };
@@ -85,8 +88,14 @@ public class NativeUsersStoreTests extends ESTestCase {
     public void testPasswordUpsertWhenSetEnabledOnReservedUser() throws Exception {
         final NativeUsersStore nativeUsersStore = startNativeUsersStore();
 
-        final String user = randomFrom(ElasticUser.NAME, KibanaUser.NAME, LogstashSystemUser.NAME,
-            BeatsSystemUser.NAME, APMSystemUser.NAME, RemoteMonitoringUser.NAME);
+        final String user = randomFrom(
+            ElasticUser.NAME,
+            KibanaUser.NAME,
+            LogstashSystemUser.NAME,
+            BeatsSystemUser.NAME,
+            APMSystemUser.NAME,
+            RemoteMonitoringUser.NAME
+        );
 
         final PlainActionFuture<Void> future = new PlainActionFuture<>();
         nativeUsersStore.setEnabled(user, true, WriteRequest.RefreshPolicy.IMMEDIATE, future);
@@ -104,20 +113,29 @@ public class NativeUsersStoreTests extends ESTestCase {
     public void testBlankPasswordInIndexImpliesDefaultPassword() throws Exception {
         final NativeUsersStore nativeUsersStore = startNativeUsersStore();
 
-        final String user = randomFrom(ElasticUser.NAME, KibanaUser.NAME, LogstashSystemUser.NAME,
-            BeatsSystemUser.NAME, APMSystemUser.NAME, RemoteMonitoringUser.NAME);
+        final String user = randomFrom(
+            ElasticUser.NAME,
+            KibanaUser.NAME,
+            LogstashSystemUser.NAME,
+            BeatsSystemUser.NAME,
+            APMSystemUser.NAME,
+            RemoteMonitoringUser.NAME
+        );
         final Map<String, Object> values = new HashMap<>();
         values.put(ENABLED_FIELD, Boolean.TRUE);
         values.put(PASSWORD_FIELD, BLANK_PASSWORD);
 
         final GetResult result = new GetResult(
-                RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
-                NativeUsersStore.getIdForUser(NativeUsersStore.RESERVED_USER_TYPE, randomAlphaOfLength(12)),
-            0, 1, 1L,
-                true,
-                BytesReference.bytes(jsonBuilder().map(values)),
-                Collections.emptyMap(),
-                Collections.emptyMap());
+            RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
+            NativeUsersStore.getIdForUser(NativeUsersStore.RESERVED_USER_TYPE, randomAlphaOfLength(12)),
+            0,
+            1,
+            1L,
+            true,
+            BytesReference.bytes(jsonBuilder().map(values)),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         final PlainActionFuture<NativeUsersStore.ReservedUserInfo> future = new PlainActionFuture<>();
         nativeUsersStore.getReservedUserInfo(user, future);
@@ -180,13 +198,16 @@ public class NativeUsersStoreTests extends ESTestCase {
         nativeUsersStore.verifyPassword(username, password, future);
 
         final GetResult getResult = new GetResult(
-                RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
-                NativeUsersStore.getIdForUser(NativeUsersStore.USER_DOC_TYPE, username),
-                UNASSIGNED_SEQ_NO, 0, 1L,
-                false,
-                null,
-                Collections.emptyMap(),
-                Collections.emptyMap());
+            RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
+            NativeUsersStore.getIdForUser(NativeUsersStore.USER_DOC_TYPE, username),
+            UNASSIGNED_SEQ_NO,
+            0,
+            1L,
+            false,
+            null,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         actionRespond(GetRequest.class, new GetResponse(getResult));
 
@@ -197,19 +218,21 @@ public class NativeUsersStoreTests extends ESTestCase {
         assertThat(result.getMessage(), nullValue());
     }
 
-    private <ARequest extends ActionRequest, AResponse extends ActionResponse> ARequest actionRespond(Class<ARequest> requestClass,
-                                                                                                      AResponse response) {
+    private <ARequest extends ActionRequest, AResponse extends ActionResponse> ARequest actionRespond(
+        Class<ARequest> requestClass,
+        AResponse response
+    ) {
         Tuple<ARequest, ActionListener<?>> tuple = findRequest(requestClass);
         ((ActionListener<AResponse>) tuple.v2()).onResponse(response);
         return tuple.v1();
     }
 
-    private <ARequest extends ActionRequest> Tuple<ARequest, ActionListener<?>> findRequest(
-            Class<ARequest> requestClass) {
+    private <ARequest extends ActionRequest> Tuple<ARequest, ActionListener<?>> findRequest(Class<ARequest> requestClass) {
         return this.requests.stream()
-                .filter(t -> requestClass.isInstance(t.v1()))
-                .map(t -> new Tuple<ARequest, ActionListener<?>>(requestClass.cast(t.v1()), t.v2()))
-                .findFirst().orElseThrow(() -> new RuntimeException("Cannot find request of type " + requestClass));
+            .filter(t -> requestClass.isInstance(t.v1()))
+            .map(t -> new Tuple<ARequest, ActionListener<?>>(requestClass.cast(t.v1()), t.v2()))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Cannot find request of type " + requestClass));
     }
 
     private void respondToGetUserRequest(String username, SecureString password, String[] roles) throws IOException {
@@ -222,13 +245,16 @@ public class NativeUsersStoreTests extends ESTestCase {
         values.put(User.Fields.TYPE.getPreferredName(), NativeUsersStore.USER_DOC_TYPE);
         final BytesReference source = BytesReference.bytes(jsonBuilder().map(values));
         final GetResult getResult = new GetResult(
-                RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
-                NativeUsersStore.getIdForUser(NativeUsersStore.USER_DOC_TYPE, username),
-                0, 1, 1L,
-                true,
-                source,
-                Collections.emptyMap(),
-                Collections.emptyMap());
+            RestrictedIndicesNames.SECURITY_MAIN_ALIAS,
+            NativeUsersStore.getIdForUser(NativeUsersStore.USER_DOC_TYPE, username),
+            0,
+            1,
+            1L,
+            true,
+            source,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         actionRespond(GetRequest.class, new GetResponse(getResult));
     }

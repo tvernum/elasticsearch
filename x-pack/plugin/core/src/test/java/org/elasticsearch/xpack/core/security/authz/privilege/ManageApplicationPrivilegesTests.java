@@ -86,8 +86,9 @@ public class ManageApplicationPrivilegesTests extends ESTestCase {
     public void testEqualsAndHashCode() {
         final int applicationNameLength = randomIntBetween(4, 7);
         final ManageApplicationPrivileges privileges = buildPrivileges(applicationNameLength);
-        final EqualsHashCodeTestUtils.MutateFunction<ManageApplicationPrivileges> mutate
-            = orig -> buildPrivileges(applicationNameLength + randomIntBetween(1, 3));
+        final EqualsHashCodeTestUtils.MutateFunction<ManageApplicationPrivileges> mutate = orig -> buildPrivileges(
+            applicationNameLength + randomIntBetween(1, 3)
+        );
         EqualsHashCodeTestUtils.checkEqualsAndHashCode(privileges, this::clone, mutate);
     }
 
@@ -105,7 +106,7 @@ public class ManageApplicationPrivilegesTests extends ESTestCase {
         assertTrue(kibanaAndLogstashPermission.check("cluster:admin/xpack/security/privilege/get", getKibana1, authentication));
         assertFalse(cloudAndSwiftypePermission.check("cluster:admin/xpack/security/privilege/get", getKibana1, authentication));
 
-        final DeletePrivilegesRequest deleteLogstash = new DeletePrivilegesRequest("logstash", new String[]{"all"});
+        final DeletePrivilegesRequest deleteLogstash = new DeletePrivilegesRequest("logstash", new String[] { "all" });
         assertTrue(kibanaAndLogstashPermission.check("cluster:admin/xpack/security/privilege/get", deleteLogstash, authentication));
         assertFalse(cloudAndSwiftypePermission.check("cluster:admin/xpack/security/privilege/get", deleteLogstash, authentication));
 
@@ -113,8 +114,14 @@ public class ManageApplicationPrivilegesTests extends ESTestCase {
 
         final List<ApplicationPrivilegeDescriptor> kibanaPrivileges = new ArrayList<>();
         for (int i = randomIntBetween(2, 6); i > 0; i--) {
-            kibanaPrivileges.add(new ApplicationPrivilegeDescriptor("kibana-" + i,
-                randomAlphaOfLengthBetween(3, 6).toLowerCase(Locale.ROOT), Collections.emptySet(), Collections.emptyMap()));
+            kibanaPrivileges.add(
+                new ApplicationPrivilegeDescriptor(
+                    "kibana-" + i,
+                    randomAlphaOfLengthBetween(3, 6).toLowerCase(Locale.ROOT),
+                    Collections.emptySet(),
+                    Collections.emptyMap()
+                )
+            );
         }
         putKibana.setPrivileges(kibanaPrivileges);
         assertTrue(kibanaAndLogstashPermission.check("cluster:admin/xpack/security/privilege/get", putKibana, authentication));

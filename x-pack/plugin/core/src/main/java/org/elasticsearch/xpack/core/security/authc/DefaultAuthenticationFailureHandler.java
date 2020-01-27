@@ -39,19 +39,22 @@ public class DefaultAuthenticationFailureHandler implements AuthenticationFailur
      */
     public DefaultAuthenticationFailureHandler(final Map<String, List<String>> failureResponseHeaders) {
         if (failureResponseHeaders == null || failureResponseHeaders.isEmpty()) {
-            this.defaultFailureResponseHeaders = Collections.singletonMap("WWW-Authenticate",
-                    Collections.singletonList("Basic realm=\"" + XPackField.SECURITY + "\" charset=\"UTF-8\""));
+            this.defaultFailureResponseHeaders = Collections.singletonMap(
+                "WWW-Authenticate",
+                Collections.singletonList("Basic realm=\"" + XPackField.SECURITY + "\" charset=\"UTF-8\"")
+            );
         } else {
-            this.defaultFailureResponseHeaders = Collections.unmodifiableMap(failureResponseHeaders.entrySet().stream().collect(Collectors
-                    .toMap(entry -> entry.getKey(), entry -> {
-                        if (entry.getKey().equalsIgnoreCase("WWW-Authenticate")) {
-                            List<String> values = new ArrayList<>(entry.getValue());
-                            values.sort(Comparator.comparing(DefaultAuthenticationFailureHandler::authSchemePriority));
-                            return Collections.unmodifiableList(values);
-                        } else {
-                            return Collections.unmodifiableList(entry.getValue());
-                        }
-                    })));
+            this.defaultFailureResponseHeaders = Collections.unmodifiableMap(
+                failureResponseHeaders.entrySet().stream().collect(Collectors.toMap(entry -> entry.getKey(), entry -> {
+                    if (entry.getKey().equalsIgnoreCase("WWW-Authenticate")) {
+                        List<String> values = new ArrayList<>(entry.getValue());
+                        values.sort(Comparator.comparing(DefaultAuthenticationFailureHandler::authSchemePriority));
+                        return Collections.unmodifiableList(values);
+                    } else {
+                        return Collections.unmodifiableList(entry.getValue());
+                    }
+                }))
+            );
         }
     }
 
@@ -83,8 +86,12 @@ public class DefaultAuthenticationFailureHandler implements AuthenticationFailur
     }
 
     @Override
-    public ElasticsearchSecurityException failedAuthentication(TransportMessage message, AuthenticationToken token, String action,
-            ThreadContext context) {
+    public ElasticsearchSecurityException failedAuthentication(
+        TransportMessage message,
+        AuthenticationToken token,
+        String action,
+        ThreadContext context
+    ) {
         return createAuthenticationError("unable to authenticate user [{}] for action [{}]", null, token.principal(), action);
     }
 
@@ -94,8 +101,12 @@ public class DefaultAuthenticationFailureHandler implements AuthenticationFailur
     }
 
     @Override
-    public ElasticsearchSecurityException exceptionProcessingRequest(TransportMessage message, String action, Exception e,
-            ThreadContext context) {
+    public ElasticsearchSecurityException exceptionProcessingRequest(
+        TransportMessage message,
+        String action,
+        Exception e,
+        ThreadContext context
+    ) {
         return createAuthenticationError("error attempting to authenticate request", e, (Object[]) null);
     }
 
@@ -144,9 +155,9 @@ public class DefaultAuthenticationFailureHandler implements AuthenticationFailur
                  * replace. In case of kerberos spnego mechanism, we use
                  * 'WWW-Authenticate' header value to communicate outToken to peer.
                  */
-                containsNegotiateWithToken =
-                        ese.getHeader("WWW-Authenticate").stream()
-                                .anyMatch(s -> s != null && s.regionMatches(true, 0, "Negotiate ", 0, "Negotiate ".length()));
+                containsNegotiateWithToken = ese.getHeader("WWW-Authenticate")
+                    .stream()
+                    .anyMatch(s -> s != null && s.regionMatches(true, 0, "Negotiate ", 0, "Negotiate ".length()));
             } else {
                 containsNegotiateWithToken = false;
             }

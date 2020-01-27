@@ -74,9 +74,14 @@ public class CommandLineHttpClient {
      * @return HTTP protocol response code.
      */
     @SuppressForbidden(reason = "We call connect in doPrivileged and provide SocketPermission")
-    public HttpResponse execute(String method, URL url, String user, SecureString password,
-            CheckedSupplier<String, Exception> requestBodySupplier,
-            CheckedFunction<InputStream, HttpResponseBuilder, Exception> responseHandler) throws Exception {
+    public HttpResponse execute(
+        String method,
+        URL url,
+        String user,
+        SecureString password,
+        CheckedSupplier<String, Exception> requestBodySupplier,
+        CheckedFunction<InputStream, HttpResponseBuilder, Exception> responseHandler
+    ) throws Exception {
         final HttpURLConnection conn;
         // If using SSL, need a custom service because it's likely a self-signed certificate
         if ("https".equalsIgnoreCase(url.getProtocol())) {
@@ -157,8 +162,10 @@ public class CommandLineHttpClient {
             }
             return scheme + "://" + InetAddresses.toUriString(publishAddress) + ":" + port;
         } catch (Exception e) {
-            throw new IllegalStateException("unable to determine default URL from settings, please use the -u option to explicitly " +
-                "provide the url", e);
+            throw new IllegalStateException(
+                "unable to determine default URL from settings, please use the -u option to explicitly " + "provide the url",
+                e
+            );
         }
     }
 }

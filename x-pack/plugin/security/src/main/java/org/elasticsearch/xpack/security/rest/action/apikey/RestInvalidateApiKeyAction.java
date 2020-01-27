@@ -29,11 +29,18 @@ import java.io.IOException;
  * Rest action to invalidate one or more API keys
  */
 public final class RestInvalidateApiKeyAction extends ApiKeyBaseRestHandler {
-    static final ConstructingObjectParser<InvalidateApiKeyRequest, Void> PARSER = new ConstructingObjectParser<>("invalidate_api_key",
-            a -> {
-                return new InvalidateApiKeyRequest((String) a[0], (String) a[1], (String) a[2], (String) a[3], (a[4] == null) ? false :
-                    (Boolean) a[4]);
-            });
+    static final ConstructingObjectParser<InvalidateApiKeyRequest, Void> PARSER = new ConstructingObjectParser<>(
+        "invalidate_api_key",
+        a -> {
+            return new InvalidateApiKeyRequest(
+                (String) a[0],
+                (String) a[1],
+                (String) a[2],
+                (String) a[3],
+                (a[4] == null) ? false : (Boolean) a[4]
+            );
+        }
+    );
 
     static {
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), new ParseField("realm_name"));
@@ -52,15 +59,17 @@ public final class RestInvalidateApiKeyAction extends ApiKeyBaseRestHandler {
     protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final InvalidateApiKeyRequest invalidateApiKeyRequest = PARSER.parse(parser, null);
-            return channel -> client.execute(InvalidateApiKeyAction.INSTANCE, invalidateApiKeyRequest,
+            return channel -> client.execute(
+                InvalidateApiKeyAction.INSTANCE,
+                invalidateApiKeyRequest,
                 new RestBuilderListener<InvalidateApiKeyResponse>(channel) {
                     @Override
-                    public RestResponse buildResponse(InvalidateApiKeyResponse invalidateResp,
-                                                      XContentBuilder builder) throws Exception {
+                    public RestResponse buildResponse(InvalidateApiKeyResponse invalidateResp, XContentBuilder builder) throws Exception {
                         invalidateResp.toXContent(builder, channel.request());
                         return new BytesRestResponse(RestStatus.OK, builder);
                     }
-                });
+                }
+            );
         }
     }
 

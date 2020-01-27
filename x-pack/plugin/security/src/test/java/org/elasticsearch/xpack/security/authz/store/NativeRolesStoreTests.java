@@ -83,8 +83,12 @@ public class NativeRolesStoreTests extends ESTestCase {
         Path path = getDataPath("roles2xformat.json");
         byte[] bytes = Files.readAllBytes(path);
         String roleString = new String(bytes, Charset.defaultCharset());
-        RoleDescriptor role = NativeRolesStore.transformRole(RoleDescriptor.ROLE_TYPE + "role1",
-            new BytesArray(roleString), logger, new XPackLicenseState(Settings.EMPTY));
+        RoleDescriptor role = NativeRolesStore.transformRole(
+            RoleDescriptor.ROLE_TYPE + "role1",
+            new BytesArray(roleString),
+            logger,
+            new XPackLicenseState(Settings.EMPTY)
+        );
         assertNotNull(role);
         assertNotNull(role.getIndicesPrivileges());
         RoleDescriptor.IndicesPrivileges indicesPrivileges = role.getIndicesPrivileges()[0];
@@ -95,35 +99,46 @@ public class NativeRolesStoreTests extends ESTestCase {
     public void testRoleDescriptorWithFlsDlsLicensing() throws IOException {
         XPackLicenseState licenseState = mock(XPackLicenseState.class);
         when(licenseState.isDocumentAndFieldLevelSecurityAllowed()).thenReturn(false);
-        RoleDescriptor flsRole = new RoleDescriptor("fls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().privileges("READ").indices("*")
-                        .grantedFields("*")
-                        .deniedFields("foo")
-                        .build() },
-                null);
+        RoleDescriptor flsRole = new RoleDescriptor(
+            "fls",
+            null,
+            new IndicesPrivileges[] {
+                IndicesPrivileges.builder().privileges("READ").indices("*").grantedFields("*").deniedFields("foo").build() },
+            null
+        );
         assertFalse(flsRole.getTransientMetadata().containsKey("unlicensed_features"));
 
         BytesReference matchAllBytes = XContentHelper.toXContent(QueryBuilders.matchAllQuery(), XContentType.JSON, false);
 
-        RoleDescriptor dlsRole = new RoleDescriptor("dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ")
-                        .query(matchAllBytes)
-                        .build() },
-                null);
+        RoleDescriptor dlsRole = new RoleDescriptor(
+            "dls",
+            null,
+            new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").query(matchAllBytes).build() },
+            null
+        );
         assertFalse(dlsRole.getTransientMetadata().containsKey("unlicensed_features"));
 
-        RoleDescriptor flsDlsRole = new RoleDescriptor("fls_ dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ")
-                        .grantedFields("*")
-                        .deniedFields("foo")
-                        .query(matchAllBytes)
-                        .build() },
-                null);
+        RoleDescriptor flsDlsRole = new RoleDescriptor(
+            "fls_ dls",
+            null,
+            new IndicesPrivileges[] {
+                IndicesPrivileges.builder()
+                    .indices("*")
+                    .privileges("READ")
+                    .grantedFields("*")
+                    .deniedFields("foo")
+                    .query(matchAllBytes)
+                    .build() },
+            null
+        );
         assertFalse(flsDlsRole.getTransientMetadata().containsKey("unlicensed_features"));
 
-        RoleDescriptor noFlsDlsRole = new RoleDescriptor("no_fls_dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").build() },
-                null);
+        RoleDescriptor noFlsDlsRole = new RoleDescriptor(
+            "no_fls_dls",
+            null,
+            new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").build() },
+            null
+        );
         assertFalse(noFlsDlsRole.getTransientMetadata().containsKey("unlicensed_features"));
 
         XContentBuilder builder = flsRole.toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), ToXContent.EMPTY_PARAMS);
@@ -199,47 +214,59 @@ public class NativeRolesStoreTests extends ESTestCase {
             }
         };
         // setup the roles store so the security index exists
-        securityIndex.clusterChanged(new ClusterChangedEvent(
-            "fls_dls_license", getClusterStateWithSecurityIndex(), getEmptyClusterState()));
+        securityIndex.clusterChanged(
+            new ClusterChangedEvent("fls_dls_license", getClusterStateWithSecurityIndex(), getEmptyClusterState())
+        );
 
         PutRoleRequest putRoleRequest = new PutRoleRequest();
-        RoleDescriptor flsRole = new RoleDescriptor("fls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().privileges("READ").indices("*")
-                        .grantedFields("*")
-                        .deniedFields("foo")
-                        .build() },
-                null);
+        RoleDescriptor flsRole = new RoleDescriptor(
+            "fls",
+            null,
+            new IndicesPrivileges[] {
+                IndicesPrivileges.builder().privileges("READ").indices("*").grantedFields("*").deniedFields("foo").build() },
+            null
+        );
         PlainActionFuture<Boolean> future = new PlainActionFuture<>();
         rolesStore.putRole(putRoleRequest, flsRole, future);
         ElasticsearchSecurityException e = expectThrows(ElasticsearchSecurityException.class, future::actionGet);
         assertThat(e.getMessage(), containsString("field and document level security"));
         BytesReference matchAllBytes = XContentHelper.toXContent(QueryBuilders.matchAllQuery(), XContentType.JSON, false);
 
-        RoleDescriptor dlsRole = new RoleDescriptor("dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ")
-                        .query(matchAllBytes)
-                        .build() },
-                null);
+        RoleDescriptor dlsRole = new RoleDescriptor(
+            "dls",
+            null,
+            new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").query(matchAllBytes).build() },
+            null
+        );
         future = new PlainActionFuture<>();
         rolesStore.putRole(putRoleRequest, dlsRole, future);
         e = expectThrows(ElasticsearchSecurityException.class, future::actionGet);
         assertThat(e.getMessage(), containsString("field and document level security"));
 
-        RoleDescriptor flsDlsRole = new RoleDescriptor("fls_ dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ")
-                        .grantedFields("*")
-                        .deniedFields("foo")
-                        .query(matchAllBytes)
-                        .build() },
-                null);
+        RoleDescriptor flsDlsRole = new RoleDescriptor(
+            "fls_ dls",
+            null,
+            new IndicesPrivileges[] {
+                IndicesPrivileges.builder()
+                    .indices("*")
+                    .privileges("READ")
+                    .grantedFields("*")
+                    .deniedFields("foo")
+                    .query(matchAllBytes)
+                    .build() },
+            null
+        );
         future = new PlainActionFuture<>();
         rolesStore.putRole(putRoleRequest, flsDlsRole, future);
         e = expectThrows(ElasticsearchSecurityException.class, future::actionGet);
         assertThat(e.getMessage(), containsString("field and document level security"));
 
-        RoleDescriptor noFlsDlsRole = new RoleDescriptor("no_fls_dls", null,
-                new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").build() },
-                null);
+        RoleDescriptor noFlsDlsRole = new RoleDescriptor(
+            "no_fls_dls",
+            null,
+            new IndicesPrivileges[] { IndicesPrivileges.builder().indices("*").privileges("READ").build() },
+            null
+        );
         future = new PlainActionFuture<>();
         rolesStore.putRole(putRoleRequest, noFlsDlsRole, future);
         assertTrue(future.actionGet());
@@ -250,38 +277,45 @@ public class NativeRolesStoreTests extends ESTestCase {
         final String securityIndexName = SECURITY_MAIN_ALIAS + (withAlias ? "-" + randomAlphaOfLength(5) : "");
 
         Settings settings = Settings.builder()
-                .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
-                .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 0)
-                .build();
+            .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
+            .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
+            .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 0)
+            .build();
         MetaData metaData = MetaData.builder()
-                .put(IndexMetaData.builder(securityIndexName).settings(settings))
-                .put(new IndexTemplateMetaData(SecurityIndexManager.SECURITY_MAIN_TEMPLATE_7, 0, 0,
-                        Collections.singletonList(securityIndexName), Settings.EMPTY, ImmutableOpenMap.of(),
-                        ImmutableOpenMap.of()))
-                .build();
+            .put(IndexMetaData.builder(securityIndexName).settings(settings))
+            .put(
+                new IndexTemplateMetaData(
+                    SecurityIndexManager.SECURITY_MAIN_TEMPLATE_7,
+                    0,
+                    0,
+                    Collections.singletonList(securityIndexName),
+                    Settings.EMPTY,
+                    ImmutableOpenMap.of(),
+                    ImmutableOpenMap.of()
+                )
+            )
+            .build();
 
         if (withAlias) {
             metaData = SecurityTestUtils.addAliasToMetaData(metaData, securityIndexName);
         }
 
         Index index = new Index(securityIndexName, UUID.randomUUID().toString());
-        ShardRouting shardRouting = ShardRouting.newUnassigned(new ShardId(index, 0), true,
-            RecoverySource.ExistingStoreRecoverySource.INSTANCE, new UnassignedInfo(Reason.INDEX_CREATED, ""));
-        IndexShardRoutingTable table = new IndexShardRoutingTable.Builder(new ShardId(index, 0))
-                .addShard(shardRouting.initialize(randomAlphaOfLength(8), null, shardRouting.getExpectedShardSize()).moveToStarted())
-                .build();
-        RoutingTable routingTable = RoutingTable.builder()
-                .add(IndexRoutingTable
-                        .builder(index)
-                        .addIndexShard(table)
-                        .build())
-                .build();
+        ShardRouting shardRouting = ShardRouting.newUnassigned(
+            new ShardId(index, 0),
+            true,
+            RecoverySource.ExistingStoreRecoverySource.INSTANCE,
+            new UnassignedInfo(Reason.INDEX_CREATED, "")
+        );
+        IndexShardRoutingTable table = new IndexShardRoutingTable.Builder(new ShardId(index, 0)).addShard(
+            shardRouting.initialize(randomAlphaOfLength(8), null, shardRouting.getExpectedShardSize()).moveToStarted()
+        ).build();
+        RoutingTable routingTable = RoutingTable.builder().add(IndexRoutingTable.builder(index).addIndexShard(table).build()).build();
 
         ClusterState clusterState = ClusterState.builder(new ClusterName(NativeRolesStoreTests.class.getName()))
-                .metaData(metaData)
-                .routingTable(routingTable)
-                .build();
+            .metaData(metaData)
+            .routingTable(routingTable)
+            .build();
 
         return clusterState;
     }

@@ -36,27 +36,25 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
 
     @Override
     public String configRoles() {
-        return super.configRoles() + "\n" +
-                "my_kibana_user:\n" +
-                "  indices:\n" +
-                "    - names: 'logstash-*'\n" +
-                "      privileges:\n" +
-                "        - view_index_metadata\n" +
-                "        - read\n";
+        return super.configRoles()
+            + "\n"
+            + "my_kibana_user:\n"
+            + "  indices:\n"
+            + "    - names: 'logstash-*'\n"
+            + "      privileges:\n"
+            + "        - view_index_metadata\n"
+            + "        - read\n";
     }
 
     @Override
     public String configUsers() {
         final String usersPasswdHashed = new String(getFastStoredHashAlgoForTests().hash(USERS_PASSWD));
-        return super.configUsers() +
-            "kibana_user:" + usersPasswdHashed;
+        return super.configUsers() + "kibana_user:" + usersPasswdHashed;
     }
 
     @Override
     public String configUsersRoles() {
-        return super.configUsersRoles() +
-                "my_kibana_user:kibana_user\n" +
-                "kibana_user:kibana_user";
+        return super.configUsersRoles() + "my_kibana_user:kibana_user\n" + "kibana_user:kibana_user";
     }
 
     public void testFieldMappings() throws Exception {
@@ -64,16 +62,19 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
         final String field = "foo";
         indexRandom(true, client().prepareIndex().setIndex(index).setSource(field, "bar"));
 
-        GetFieldMappingsResponse response = client().admin().indices().prepareGetFieldMappings().addIndices("logstash-*").setFields("*")
-                .includeDefaults(true).get();
+        GetFieldMappingsResponse response = client().admin()
+            .indices()
+            .prepareGetFieldMappings()
+            .addIndices("logstash-*")
+            .setFields("*")
+            .includeDefaults(true)
+            .get();
         FieldMappingMetaData fieldMappingMetaData = response.fieldMappings(index, field);
         assertThat(fieldMappingMetaData, notNullValue());
 
-        response = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .admin().indices().prepareGetFieldMappings().addIndices("logstash-*")
-                .setFields("*")
-                .includeDefaults(true).get();
+        response = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).admin().indices().prepareGetFieldMappings().addIndices("logstash-*").setFields("*").includeDefaults(true).get();
         FieldMappingMetaData fieldMappingMetaData1 = response.fieldMappings(index, field);
         assertThat(fieldMappingMetaData1, notNullValue());
         assertThat(fieldMappingMetaData1.fullName(), equalTo(fieldMappingMetaData.fullName()));
@@ -85,15 +86,16 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
         final String field = "foo";
         indexRandom(true, client().prepareIndex().setIndex(index).setSource(field, "bar"));
 
-        ValidateQueryResponse response = client().admin().indices()
-                .prepareValidateQuery(index).setQuery(QueryBuilders.termQuery(field, "bar")).get();
+        ValidateQueryResponse response = client().admin()
+            .indices()
+            .prepareValidateQuery(index)
+            .setQuery(QueryBuilders.termQuery(field, "bar"))
+            .get();
         assertThat(response.isValid(), is(true));
 
-        response = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .admin().indices()
-                .prepareValidateQuery(index)
-                .setQuery(QueryBuilders.termQuery(field, "bar")).get();
+        response = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).admin().indices().prepareValidateQuery(index).setQuery(QueryBuilders.termQuery(field, "bar")).get();
         assertThat(response.isValid(), is(true));
     }
 
@@ -106,21 +108,19 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
         SearchResponse response = client().prepareSearch(index).setQuery(QueryBuilders.matchAllQuery()).get();
         final long hits = response.getHits().getTotalHits().value;
         assertThat(hits, greaterThan(0L));
-        response = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .prepareSearch(index)
-                .setQuery(QueryBuilders.matchAllQuery()).get();
+        response = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).prepareSearch(index).setQuery(QueryBuilders.matchAllQuery()).get();
         assertEquals(response.getHits().getTotalHits().value, hits);
 
-
         MultiSearchResponse multiSearchResponse = client().prepareMultiSearch()
-                .add(client().prepareSearch(index).setQuery(QueryBuilders.matchAllQuery())).get();
+            .add(client().prepareSearch(index).setQuery(QueryBuilders.matchAllQuery()))
+            .get();
         final long multiHits = multiSearchResponse.getResponses()[0].getResponse().getHits().getTotalHits().value;
         assertThat(hits, greaterThan(0L));
-        multiSearchResponse = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .prepareMultiSearch()
-                .add(client().prepareSearch(index).setQuery(QueryBuilders.matchAllQuery())).get();
+        multiSearchResponse = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).prepareMultiSearch().add(client().prepareSearch(index).setQuery(QueryBuilders.matchAllQuery())).get();
         assertEquals(multiSearchResponse.getResponses()[0].getResponse().getHits().getTotalHits().value, multiHits);
     }
 
@@ -133,10 +133,9 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
         GetIndexResponse response = client().admin().indices().prepareGetIndex().setIndices(index).get();
         assertThat(response.getIndices(), arrayContaining(index));
 
-        response = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .admin().indices().prepareGetIndex()
-                .setIndices(index).get();
+        response = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).admin().indices().prepareGetIndex().setIndices(index).get();
         assertThat(response.getIndices(), arrayContaining(index));
     }
 
@@ -146,12 +145,9 @@ public class KibanaUserRoleIntegTests extends NativeRealmIntegTestCase {
         final String field = "foo";
         indexRandom(true, client().prepareIndex().setIndex(index).setSource(field, "bar"));
 
-        GetMappingsResponse response = client()
-                .filterWithHeader(singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD)))
-                .admin()
-                .indices()
-                .prepareGetMappings("logstash-*")
-                .get();
+        GetMappingsResponse response = client().filterWithHeader(
+            singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue("kibana_user", USERS_PASSWD))
+        ).admin().indices().prepareGetMappings("logstash-*").get();
         ImmutableOpenMap<String, MappingMetaData> mappingsMap = response.getMappings();
         assertNotNull(mappingsMap);
         assertNotNull(mappingsMap.get(index));

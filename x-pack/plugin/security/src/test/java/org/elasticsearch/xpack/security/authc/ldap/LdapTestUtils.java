@@ -50,7 +50,15 @@ public class LdapTestUtils {
         options.setResponseTimeoutMillis(SessionFactorySettings.TIMEOUT_DEFAULT.millis());
 
         final SSLConfiguration sslConfiguration = sslService.getSSLConfiguration("xpack.security.authc.realms.ldap.foo.ssl");
-        return LdapUtils.privilegedConnect(() -> new LDAPConnection(sslService.sslSocketFactory(sslConfiguration), options,
-            ldapurl.getHost(), ldapurl.getPort(), bindDN, bindPassword));
+        return LdapUtils.privilegedConnect(
+            () -> new LDAPConnection(
+                sslService.sslSocketFactory(sslConfiguration),
+                options,
+                ldapurl.getHost(),
+                ldapurl.getPort(),
+                bindDN,
+                bindPassword
+            )
+        );
     }
 }

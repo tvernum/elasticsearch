@@ -16,6 +16,6 @@ public class KibanaUser extends User {
     public static final String ROLE_NAME = UsernamesField.KIBANA_ROLE;
 
     public KibanaUser(boolean enabled) {
-        super(NAME, new String[]{ ROLE_NAME }, null, null, MetadataUtils.DEFAULT_RESERVED_METADATA, enabled);
+        super(NAME, new String[] { ROLE_NAME }, null, null, MetadataUtils.DEFAULT_RESERVED_METADATA, enabled);
     }
 }

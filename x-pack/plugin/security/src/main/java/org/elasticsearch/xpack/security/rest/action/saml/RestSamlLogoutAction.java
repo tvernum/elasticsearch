@@ -48,8 +48,13 @@ public class RestSamlLogoutAction extends SamlBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/saml/logout", this,
-            POST, "/_xpack/security/saml/logout", deprecationLogger);
+            POST,
+            "/_security/saml/logout",
+            this,
+            POST,
+            "/_xpack/security/saml/logout",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -61,16 +66,19 @@ public class RestSamlLogoutAction extends SamlBaseRestHandler {
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final SamlLogoutRequest logoutRequest = PARSER.parse(parser, null);
-            return channel -> client.execute(SamlLogoutAction.INSTANCE, logoutRequest,
-                    new RestBuilderListener<SamlLogoutResponse>(channel) {
-                        @Override
-                        public RestResponse buildResponse(SamlLogoutResponse response, XContentBuilder builder) throws Exception {
-                            builder.startObject();
-                            builder.field("redirect", response.getRedirectUrl());
-                            builder.endObject();
-                            return new BytesRestResponse(RestStatus.OK, builder);
-                        }
-                    });
+            return channel -> client.execute(
+                SamlLogoutAction.INSTANCE,
+                logoutRequest,
+                new RestBuilderListener<SamlLogoutResponse>(channel) {
+                    @Override
+                    public RestResponse buildResponse(SamlLogoutResponse response, XContentBuilder builder) throws Exception {
+                        builder.startObject();
+                        builder.field("redirect", response.getRedirectUrl());
+                        builder.endObject();
+                        return new BytesRestResponse(RestStatus.OK, builder);
+                    }
+                }
+            );
         }
     }
 }

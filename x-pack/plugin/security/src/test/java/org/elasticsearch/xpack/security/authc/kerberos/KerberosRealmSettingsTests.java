@@ -36,15 +36,27 @@ public class KerberosRealmSettingsTests extends ESTestCase {
         final String cacheTTL = randomLongBetween(10L, 100L) + "m";
         final boolean enableDebugLogs = randomBoolean();
         final boolean removeRealmName = randomBoolean();
-        final Settings settings = KerberosRealmTestCase.buildKerberosRealmSettings(KerberosRealmTestCase.REALM_NAME,
-            keytabPathConfig, maxUsers, cacheTTL, enableDebugLogs, removeRealmName);
+        final Settings settings = KerberosRealmTestCase.buildKerberosRealmSettings(
+            KerberosRealmTestCase.REALM_NAME,
+            keytabPathConfig,
+            maxUsers,
+            cacheTTL,
+            enableDebugLogs,
+            removeRealmName
+        );
         final RealmIdentifier identifier = new RealmIdentifier(KerberosRealmSettings.TYPE, KerberosRealmTestCase.REALM_NAME);
-        final RealmConfig config = new RealmConfig(identifier,
-            settings, TestEnvironment.newEnvironment(settings), new ThreadContext(settings));
+        final RealmConfig config = new RealmConfig(
+            identifier,
+            settings,
+            TestEnvironment.newEnvironment(settings),
+            new ThreadContext(settings)
+        );
 
         assertThat(config.getSetting(KerberosRealmSettings.HTTP_SERVICE_KEYTAB_PATH), equalTo(keytabPathConfig));
-        assertThat(config.getSetting(KerberosRealmSettings.CACHE_TTL_SETTING),
-                equalTo(TimeValue.parseTimeValue(cacheTTL, KerberosRealmSettings.CACHE_TTL_SETTING.getKey())));
+        assertThat(
+            config.getSetting(KerberosRealmSettings.CACHE_TTL_SETTING),
+            equalTo(TimeValue.parseTimeValue(cacheTTL, KerberosRealmSettings.CACHE_TTL_SETTING.getKey()))
+        );
         assertThat(config.getSetting(KerberosRealmSettings.CACHE_MAX_USERS_SETTING), equalTo(maxUsers));
         assertThat(config.getSetting(KerberosRealmSettings.SETTING_KRB_DEBUG_ENABLE), is(enableDebugLogs));
         assertThat(config.getSetting(KerberosRealmSettings.SETTING_REMOVE_REALM_NAME), is(removeRealmName));

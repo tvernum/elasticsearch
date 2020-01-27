@@ -45,14 +45,20 @@ public class XPackSettingsTests extends ESTestCase {
         if (isPBKDF2Available) {
             assertEquals(pbkdf2Algo, XPackSettings.PASSWORD_HASHING_ALGORITHM.get(settings));
         } else {
-            IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
-                () -> XPackSettings.PASSWORD_HASHING_ALGORITHM.get(settings));
+            IllegalArgumentException e = expectThrows(
+                IllegalArgumentException.class,
+                () -> XPackSettings.PASSWORD_HASHING_ALGORITHM.get(settings)
+            );
             assertThat(e.getMessage(), containsString("Support for PBKDF2WithHMACSHA512 must be available"));
         }
 
         final String bcryptAlgo = randomFrom("BCRYPT", "BCRYPT11");
-        assertEquals(bcryptAlgo, XPackSettings.PASSWORD_HASHING_ALGORITHM.get(
-            Settings.builder().put(XPackSettings.PASSWORD_HASHING_ALGORITHM.getKey(), bcryptAlgo).build()));
+        assertEquals(
+            bcryptAlgo,
+            XPackSettings.PASSWORD_HASHING_ALGORITHM.get(
+                Settings.builder().put(XPackSettings.PASSWORD_HASHING_ALGORITHM.getKey(), bcryptAlgo).build()
+            )
+        );
     }
 
     public void testDefaultSupportedProtocols() {

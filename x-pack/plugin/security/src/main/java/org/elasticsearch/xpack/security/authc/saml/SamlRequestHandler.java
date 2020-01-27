@@ -67,10 +67,11 @@ public class SamlRequestHandler {
 
     protected static final String SAML_NAMESPACE = "urn:oasis:names:tc:SAML:2.0:protocol";
 
-    private static final String[] XSD_FILES = new String[] { "/org/elasticsearch/xpack/security/authc/saml/saml-schema-protocol-2.0.xsd",
-            "/org/elasticsearch/xpack/security/authc/saml/saml-schema-assertion-2.0.xsd",
-            "/org/elasticsearch/xpack/security/authc/saml/xenc-schema.xsd",
-            "/org/elasticsearch/xpack/security/authc/saml/xmldsig-core-schema.xsd" };
+    private static final String[] XSD_FILES = new String[] {
+        "/org/elasticsearch/xpack/security/authc/saml/saml-schema-protocol-2.0.xsd",
+        "/org/elasticsearch/xpack/security/authc/saml/saml-schema-assertion-2.0.xsd",
+        "/org/elasticsearch/xpack/security/authc/saml/xenc-schema.xsd",
+        "/org/elasticsearch/xpack/security/authc/saml/xmldsig-core-schema.xsd" };
 
     private static final ThreadLocal<DocumentBuilder> THREAD_LOCAL_DOCUMENT_BUILDER = ThreadLocal.withInitial(() -> {
         try {
@@ -105,17 +106,29 @@ public class SamlRequestHandler {
     }
 
     private KeyInfoCredentialResolver createResolverForEncryptionKeys() {
-        final CollectionKeyInfoCredentialResolver collectionKeyInfoCredentialResolver =
-                new CollectionKeyInfoCredentialResolver(Collections.unmodifiableCollection(sp.getEncryptionCredentials()));
-        final LocalKeyInfoCredentialResolver localKeyInfoCredentialResolver =
-                new LocalKeyInfoCredentialResolver(Arrays.asList(new InlineX509DataProvider(), new KeyInfoReferenceProvider(),
-                        new RSAKeyValueProvider(), new DEREncodedKeyValueProvider()), collectionKeyInfoCredentialResolver);
+        final CollectionKeyInfoCredentialResolver collectionKeyInfoCredentialResolver = new CollectionKeyInfoCredentialResolver(
+            Collections.unmodifiableCollection(sp.getEncryptionCredentials())
+        );
+        final LocalKeyInfoCredentialResolver localKeyInfoCredentialResolver = new LocalKeyInfoCredentialResolver(
+            Arrays.asList(
+                new InlineX509DataProvider(),
+                new KeyInfoReferenceProvider(),
+                new RSAKeyValueProvider(),
+                new DEREncodedKeyValueProvider()
+            ),
+            collectionKeyInfoCredentialResolver
+        );
         return new ChainingKeyInfoCredentialResolver(Arrays.asList(localKeyInfoCredentialResolver, collectionKeyInfoCredentialResolver));
     }
 
     private EncryptedKeyResolver createResolverForEncryptedKeyElements() {
-        return new ChainingEncryptedKeyResolver(Arrays.asList(new InlineEncryptedKeyResolver(),
-                new SimpleRetrievalMethodEncryptedKeyResolver(), new SimpleKeyInfoReferenceEncryptedKeyResolver()));
+        return new ChainingEncryptedKeyResolver(
+            Arrays.asList(
+                new InlineEncryptedKeyResolver(),
+                new SimpleRetrievalMethodEncryptedKeyResolver(),
+                new SimpleKeyInfoReferenceEncryptedKeyResolver()
+            )
+        );
     }
 
     protected SpConfiguration getSpConfiguration() {
@@ -123,8 +136,7 @@ public class SamlRequestHandler {
     }
 
     protected String describe(X509Certificate certificate) {
-        return "X509Certificate{Subject=" + certificate.getSubjectDN() + "; SerialNo=" +
-                certificate.getSerialNumber().toString(16) + "}";
+        return "X509Certificate{Subject=" + certificate.getSubjectDN() + "; SerialNo=" + certificate.getSerialNumber().toString(16) + "}";
     }
 
     protected String describe(Collection<X509Credential> credentials) {
@@ -143,8 +155,14 @@ public class SamlRequestHandler {
         checkIdpSignature(credential -> {
             try (RestorableContextClassLoader ignore = new RestorableContextClassLoader(SignatureValidator.class)) {
                 SignatureValidator.validate(signature, credential);
-                logger.debug(() -> new ParameterizedMessage("SAML Signature [{}] matches credentials [{}] [{}]",
-                        signatureText, credential.getEntityId(), credential.getPublicKey()));
+                logger.debug(
+                    () -> new ParameterizedMessage(
+                        "SAML Signature [{}] matches credentials [{}] [{}]",
+                        signatureText,
+                        credential.getEntityId(),
+                        credential.getPublicKey()
+                    )
+                );
                 return true;
             } catch (PrivilegedActionException e) {
                 logger.warn("SecurityException while attempting to validate SAML signature", e);
@@ -162,8 +180,15 @@ public class SamlRequestHandler {
             try {
                 return check.apply(credential);
             } catch (SignatureException | SecurityException e) {
-                logger.debug(() -> new ParameterizedMessage("SAML Signature [{}] does not match credentials [{}] [{}] -- {}",
-                        signatureText, credential.getEntityId(), credential.getPublicKey(), e));
+                logger.debug(
+                    () -> new ParameterizedMessage(
+                        "SAML Signature [{}] does not match credentials [{}] [{}] -- {}",
+                        signatureText,
+                        credential.getEntityId(),
+                        credential.getPublicKey(),
+                        e
+                    )
+                );
                 logger.trace("SAML Signature failure caused by", e);
                 return false;
             } catch (Exception e) {
@@ -181,45 +206,51 @@ public class SamlRequestHandler {
      * Constructs a SAML specific exception with a consistent message regarding SAML Signature validation failures
      */
     private ElasticsearchSecurityException samlSignatureException(List<Credential> credentials, String signature, Exception cause) {
-        logger.warn("The XML Signature of this SAML message cannot be validated. Please verify that the saml realm uses the correct SAML" +
-                "metadata file/URL for this Identity Provider");
+        logger.warn(
+            "The XML Signature of this SAML message cannot be validated. Please verify that the saml realm uses the correct SAML"
+                + "metadata file/URL for this Identity Provider"
+        );
         final String msg = "SAML Signature [{}] could not be validated against [{}]";
         return samlException(msg, cause, signature, describeCredentials(credentials));
     }
 
     private ElasticsearchSecurityException samlSignatureException(List<Credential> credentials, String signature) {
-        logger.warn("The XML Signature of this SAML message cannot be validated. Please verify that the saml realm uses the correct SAML" +
-                "metadata file/URL for this Identity Provider");
+        logger.warn(
+            "The XML Signature of this SAML message cannot be validated. Please verify that the saml realm uses the correct SAML"
+                + "metadata file/URL for this Identity Provider"
+        );
         final String msg = "SAML Signature [{}] could not be validated against [{}]";
         return samlException(msg, signature, describeCredentials(credentials));
     }
 
     private String describeCredentials(List<Credential> credentials) {
-        return credentials.stream()
-                .map(c -> {
-                    if (c == null) {
-                        return "<null>";
-                    }
-                    byte[] encoded;
-                    if (c instanceof X509Credential) {
-                        X509Credential x = (X509Credential) c;
-                        try {
-                            encoded = x.getEntityCertificate().getEncoded();
-                        } catch (CertificateEncodingException e) {
-                            encoded = c.getPublicKey().getEncoded();
-                        }
-                    } else {
-                        encoded = c.getPublicKey().getEncoded();
-                    }
-                    return Base64.getEncoder().encodeToString(encoded).substring(0, 64) + "...";
-                })
-                .collect(Collectors.joining(","));
+        return credentials.stream().map(c -> {
+            if (c == null) {
+                return "<null>";
+            }
+            byte[] encoded;
+            if (c instanceof X509Credential) {
+                X509Credential x = (X509Credential) c;
+                try {
+                    encoded = x.getEntityCertificate().getEncoded();
+                } catch (CertificateEncodingException e) {
+                    encoded = c.getPublicKey().getEncoded();
+                }
+            } else {
+                encoded = c.getPublicKey().getEncoded();
+            }
+            return Base64.getEncoder().encodeToString(encoded).substring(0, 64) + "...";
+        }).collect(Collectors.joining(","));
     }
 
     protected void checkIssuer(Issuer issuer, XMLObject parent) {
         if (issuer == null) {
-            throw samlException("Element {} ({}) has no issuer, but expected [{}]",
-                    parent.getElementQName(), text(parent, 16), idp.getEntityId());
+            throw samlException(
+                "Element {} ({}) has no issuer, but expected [{}]",
+                parent.getElementQName(),
+                text(parent, 16),
+                idp.getEntityId()
+            );
         }
         if (idp.getEntityId().equals(issuer.getValue()) == false) {
             throw samlException("SAML Issuer [{}] does not match expected value [{}]", issuer.getValue(), idp.getEntityId());
@@ -249,8 +280,11 @@ public class SamlRequestHandler {
         try {
             Unmarshaller unmarshaller = unmarshallerFactory.getUnmarshaller(element);
             if (unmarshaller == null) {
-                throw samlException("XML element [{}] cannot be unmarshalled to SAML type [{}] (no unmarshaller)",
-                        element.getTagName(), type);
+                throw samlException(
+                    "XML element [{}] cannot be unmarshalled to SAML type [{}] (no unmarshaller)",
+                    element.getTagName(),
+                    type
+                );
             }
             final XMLObject object = unmarshaller.unmarshall(element);
             if (type.isInstance(object)) {

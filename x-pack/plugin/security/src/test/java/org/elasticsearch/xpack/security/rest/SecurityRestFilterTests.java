@@ -61,8 +61,7 @@ public class SecurityRestFilterTests extends ESTestCase {
         licenseState = mock(XPackLicenseState.class);
         when(licenseState.isAuthAllowed()).thenReturn(true);
         restHandler = mock(RestHandler.class);
-        filter = new SecurityRestFilter(licenseState,
-                new ThreadContext(Settings.EMPTY), authcService, restHandler, false);
+        filter = new SecurityRestFilter(licenseState, new ThreadContext(Settings.EMPTY), authcService, restHandler, false);
     }
 
     public void testProcess() throws Exception {
@@ -70,8 +69,7 @@ public class SecurityRestFilterTests extends ESTestCase {
         when(request.getHttpChannel()).thenReturn(mock(HttpChannel.class));
         Authentication authentication = mock(Authentication.class);
         doAnswer((i) -> {
-            ActionListener callback =
-                (ActionListener) i.getArguments()[1];
+            ActionListener callback = (ActionListener) i.getArguments()[1];
             callback.onResponse(authentication);
             return Void.TYPE;
         }).when(authcService).authenticate(eq(request), any(ActionListener.class));
@@ -92,8 +90,7 @@ public class SecurityRestFilterTests extends ESTestCase {
         RestRequest request = mock(RestRequest.class);
         Exception exception = authenticationError("failed authc");
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[1];
+            ActionListener callback = (ActionListener) i.getArguments()[1];
             callback.onFailure(exception);
             return Void.TYPE;
         }).when(authcService).authenticate(eq(request), any(ActionListener.class));
@@ -116,9 +113,10 @@ public class SecurityRestFilterTests extends ESTestCase {
     }
 
     public void testProcessFiltersBodyCorrectly() throws Exception {
-        FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
-                .withContent(new BytesArray("{\"password\": \"" + SecuritySettingsSourceField.TEST_PASSWORD + "\", \"foo\": \"bar\"}"),
-                        XContentType.JSON).build();
+        FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY).withContent(
+            new BytesArray("{\"password\": \"" + SecuritySettingsSourceField.TEST_PASSWORD + "\", \"foo\": \"bar\"}"),
+            XContentType.JSON
+        ).build();
         when(channel.request()).thenReturn(restRequest);
         SetOnce<RestRequest> handlerRequest = new SetOnce<>();
         restHandler = new FilteredRestHandler() {
@@ -134,9 +132,8 @@ public class SecurityRestFilterTests extends ESTestCase {
         };
         SetOnce<RestRequest> authcServiceRequest = new SetOnce<>();
         doAnswer((i) -> {
-            ActionListener callback =
-                    (ActionListener) i.getArguments()[1];
-            authcServiceRequest.set((RestRequest)i.getArguments()[0]);
+            ActionListener callback = (ActionListener) i.getArguments()[1];
+            authcServiceRequest.set((RestRequest) i.getArguments()[0]);
             callback.onResponse(new Authentication(XPackUser.INSTANCE, new RealmRef("test", "test", "t"), null));
             return Void.TYPE;
         }).when(authcService).authenticate(any(RestRequest.class), any(ActionListener.class));
@@ -147,8 +144,12 @@ public class SecurityRestFilterTests extends ESTestCase {
         assertEquals(restRequest, handlerRequest.get());
         assertEquals(restRequest.content(), handlerRequest.get().content());
         Map<String, Object> original = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY,
-                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION, handlerRequest.get().content().streamInput()).map();
+            .createParser(
+                NamedXContentRegistry.EMPTY,
+                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                handlerRequest.get().content().streamInput()
+            )
+            .map();
         assertEquals(2, original.size());
         assertEquals(SecuritySettingsSourceField.TEST_PASSWORD, original.get("password"));
         assertEquals("bar", original.get("foo"));
@@ -157,8 +158,12 @@ public class SecurityRestFilterTests extends ESTestCase {
         assertNotEquals(restRequest.content(), authcServiceRequest.get().content());
 
         Map<String, Object> map = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                        authcServiceRequest.get().content().streamInput()).map();
+            .createParser(
+                NamedXContentRegistry.EMPTY,
+                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                authcServiceRequest.get().content().streamInput()
+            )
+            .map();
         assertEquals(1, map.size());
         assertEquals("bar", map.get("foo"));
     }

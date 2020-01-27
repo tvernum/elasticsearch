@@ -41,19 +41,18 @@ public final class RestGetApiKeyAction extends ApiKeyBaseRestHandler {
         final String realmName = request.param("realm_name");
         final boolean myApiKeysOnly = request.paramAsBoolean("owner", false);
         final GetApiKeyRequest getApiKeyRequest = new GetApiKeyRequest(realmName, userName, apiKeyId, apiKeyName, myApiKeysOnly);
-        return channel -> client.execute(GetApiKeyAction.INSTANCE, getApiKeyRequest,
-                new RestBuilderListener<GetApiKeyResponse>(channel) {
-                    @Override
-                    public RestResponse buildResponse(GetApiKeyResponse getApiKeyResponse, XContentBuilder builder) throws Exception {
-                        getApiKeyResponse.toXContent(builder, channel.request());
+        return channel -> client.execute(GetApiKeyAction.INSTANCE, getApiKeyRequest, new RestBuilderListener<GetApiKeyResponse>(channel) {
+            @Override
+            public RestResponse buildResponse(GetApiKeyResponse getApiKeyResponse, XContentBuilder builder) throws Exception {
+                getApiKeyResponse.toXContent(builder, channel.request());
 
-                        // return HTTP status 404 if no API key found for API key id
-                        if (Strings.hasText(apiKeyId) && getApiKeyResponse.getApiKeyInfos().length == 0) {
-                            return new BytesRestResponse(RestStatus.NOT_FOUND, builder);
-                        }
-                        return new BytesRestResponse(RestStatus.OK, builder);
-                    }
-                });
+                // return HTTP status 404 if no API key found for API key id
+                if (Strings.hasText(apiKeyId) && getApiKeyResponse.getApiKeyInfos().length == 0) {
+                    return new BytesRestResponse(RestStatus.NOT_FOUND, builder);
+                }
+                return new BytesRestResponse(RestStatus.OK, builder);
+            }
+        });
     }
 
     @Override

@@ -53,9 +53,14 @@ public class SecurityActionFilter implements ActionFilter {
     private final SecurityContext securityContext;
     private final DestructiveOperations destructiveOperations;
 
-    public SecurityActionFilter(AuthenticationService authcService, AuthorizationService authzService,
-                                XPackLicenseState licenseState, ThreadPool threadPool,
-                                SecurityContext securityContext, DestructiveOperations destructiveOperations) {
+    public SecurityActionFilter(
+        AuthenticationService authcService,
+        AuthorizationService authzService,
+        XPackLicenseState licenseState,
+        ThreadPool threadPool,
+        SecurityContext securityContext,
+        DestructiveOperations destructiveOperations
+    ) {
         this.authcService = authcService;
         this.authzService = authzService;
         this.licenseState = licenseState;
@@ -65,25 +70,36 @@ public class SecurityActionFilter implements ActionFilter {
     }
 
     @Override
-    public <Request extends ActionRequest, Response extends ActionResponse> void apply(Task task, String action, Request request,
-                                                                                       ActionListener<Response> listener,
-                                                                                       ActionFilterChain<Request, Response> chain) {
+    public <Request extends ActionRequest, Response extends ActionResponse> void apply(
+        Task task,
+        String action,
+        Request request,
+        ActionListener<Response> listener,
+        ActionFilterChain<Request, Response> chain
+    ) {
         /*
          A functional requirement - when the license of security is disabled (invalid/expires), security will continue
          to operate normally, except all read operations will be blocked.
          */
         if (licenseState.isStatsAndHealthAllowed() == false && LICENSE_EXPIRATION_ACTION_MATCHER.test(action)) {
-            logger.error("blocking [{}] operation due to expired license. Cluster health, cluster stats and indices stats \n" +
-                    "operations are blocked on license expiration. All data operations (read and write) continue to work. \n" +
-                    "If you have a new license, please update it. Otherwise, please reach out to your support contact.", action);
+            logger.error(
+                "blocking [{}] operation due to expired license. Cluster health, cluster stats and indices stats \n"
+                    + "operations are blocked on license expiration. All data operations (read and write) continue to work. \n"
+                    + "If you have a new license, please update it. Otherwise, please reach out to your support contact.",
+                action
+            );
             throw LicenseUtils.newComplianceException(XPackField.SECURITY);
         }
 
         if (licenseState.isAuthAllowed()) {
-            final ActionListener<Response> contextPreservingListener =
-                    ContextPreservingActionListener.wrapPreservingContext(listener, threadContext);
+            final ActionListener<Response> contextPreservingListener = ContextPreservingActionListener.wrapPreservingContext(
+                listener,
+                threadContext
+            );
             ActionListener<Void> authenticatedListener = ActionListener.wrap(
-                    (aVoid) -> chain.proceed(task, action, request, contextPreservingListener), contextPreservingListener::onFailure);
+                (aVoid) -> chain.proceed(task, action, request, contextPreservingListener),
+                contextPreservingListener::onFailure
+            );
             final boolean useSystemUser = AuthorizationUtils.shouldReplaceUserWithSystem(threadContext, action);
             try {
                 if (useSystemUser) {
@@ -112,10 +128,15 @@ public class SecurityActionFilter implements ActionFilter {
             }
         } else if (SECURITY_ACTION_MATCHER.test(action)) {
             if (licenseState.isSecurityDisabledByLicenseDefaults()) {
-                listener.onFailure(new ElasticsearchException("Security must be explicitly enabled when using a [" +
-                        licenseState.getOperationMode().description() + "] license. " +
-                        "Enable security by setting [xpack.security.enabled] to [true] in the elasticsearch.yml file " +
-                        "and restart the node."));
+                listener.onFailure(
+                    new ElasticsearchException(
+                        "Security must be explicitly enabled when using a ["
+                            + licenseState.getOperationMode().description()
+                            + "] license. "
+                            + "Enable security by setting [xpack.security.enabled] to [true] in the elasticsearch.yml file "
+                            + "and restart the node."
+                    )
+                );
             } else {
                 listener.onFailure(LicenseUtils.newComplianceException(XPackField.SECURITY));
             }
@@ -129,13 +150,13 @@ public class SecurityActionFilter implements ActionFilter {
         return Integer.MIN_VALUE;
     }
 
-    private <Request extends ActionRequest> void applyInternal(String action, Request request,
-                                                               ActionListener<Void> listener) throws IOException {
+    private <Request extends ActionRequest> void applyInternal(String action, Request request, ActionListener<Void> listener)
+        throws IOException {
         if (CloseIndexAction.NAME.equals(action) || OpenIndexAction.NAME.equals(action) || DeleteIndexAction.NAME.equals(action)) {
             IndicesRequest indicesRequest = (IndicesRequest) request;
             try {
                 destructiveOperations.failDestructive(indicesRequest.indices());
-            } catch(IllegalArgumentException e) {
+            } catch (IllegalArgumentException e) {
                 listener.onFailure(e);
                 return;
             }
@@ -152,25 +173,32 @@ public class SecurityActionFilter implements ActionFilter {
          here if a request is not associated with any other user.
          */
         final String securityAction = actionMapper.action(action, request);
-        authcService.authenticate(securityAction, request, SystemUser.INSTANCE,
-                ActionListener.wrap((authc) -> {
-                    if (authc != null) {
-                        authorizeRequest(authc, securityAction, request, listener);
-                    } else if (licenseState.isAuthAllowed() == false) {
-                        listener.onResponse(null);
-                    } else {
-                        listener.onFailure(new IllegalStateException("no authentication present but auth is allowed"));
-                    }
-                }, listener::onFailure));
+        authcService.authenticate(securityAction, request, SystemUser.INSTANCE, ActionListener.wrap((authc) -> {
+            if (authc != null) {
+                authorizeRequest(authc, securityAction, request, listener);
+            } else if (licenseState.isAuthAllowed() == false) {
+                listener.onResponse(null);
+            } else {
+                listener.onFailure(new IllegalStateException("no authentication present but auth is allowed"));
+            }
+        }, listener::onFailure));
     }
 
-    private <Request extends ActionRequest> void authorizeRequest(Authentication authentication, String securityAction, Request request,
-                                                          ActionListener<Void> listener) {
+    private <Request extends ActionRequest> void authorizeRequest(
+        Authentication authentication,
+        String securityAction,
+        Request request,
+        ActionListener<Void> listener
+    ) {
         if (authentication == null) {
             listener.onFailure(new IllegalArgumentException("authentication must be non null for authorization"));
         } else {
-            authzService.authorize(authentication, securityAction, request, ActionListener.wrap(ignore -> listener.onResponse(null),
-                listener::onFailure));
+            authzService.authorize(
+                authentication,
+                securityAction,
+                request,
+                ActionListener.wrap(ignore -> listener.onResponse(null), listener::onFailure)
+            );
         }
     }
 }

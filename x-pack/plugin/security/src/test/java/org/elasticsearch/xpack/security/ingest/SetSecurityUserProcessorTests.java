@@ -24,8 +24,7 @@ import static org.hamcrest.Matchers.equalTo;
 public class SetSecurityUserProcessorTests extends ESTestCase {
 
     public void testProcessor() throws Exception {
-        User user = new User("_username", new String[]{"role1", "role2"}, "firstname lastname", "_email",
-                Map.of("key", "value"), true);
+        User user = new User("_username", new String[] { "role1", "role2" }, "firstname lastname", "_email", Map.of("key", "value"), true);
         Authentication.RealmRef realmRef = new Authentication.RealmRef("_name", "_type", "_node_name");
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         threadContext.putTransient(AuthenticationField.AUTHENTICATION_KEY, new Authentication(user, realmRef, null));
@@ -60,7 +59,7 @@ public class SetSecurityUserProcessorTests extends ESTestCase {
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         IngestDocument ingestDocument = new IngestDocument(new HashMap<>(), new HashMap<>());
         SetSecurityUserProcessor processor = new SetSecurityUserProcessor("_tag", threadContext, "_field", EnumSet.allOf(Property.class));
-        IllegalStateException e = expectThrows(IllegalStateException.class,  () -> processor.execute(ingestDocument));
+        IllegalStateException e = expectThrows(IllegalStateException.class, () -> processor.execute(ingestDocument));
         assertThat(e.getMessage(), equalTo("No user authenticated, only use this processor via authenticated user"));
     }
 

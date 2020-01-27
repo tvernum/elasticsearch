@@ -27,8 +27,7 @@ public final class SamlAuthenticateRequest extends ActionRequest {
         super(in);
     }
 
-    public SamlAuthenticateRequest() {
-    }
+    public SamlAuthenticateRequest() {}
 
     @Override
     public ActionRequestValidationException validate() {

@@ -33,9 +33,15 @@ public abstract class AbstractPrivilegeTestCase extends SecuritySingleNodeTestCa
         setUser(request, user);
         Response response = getRestClient().performRequest(request);
         StatusLine statusLine = response.getStatusLine();
-        String message = String.format(Locale.ROOT, "%s %s: Expected no error got %s %s with body %s",
-                request.getMethod(), request.getEndpoint(), statusLine.getStatusCode(),
-                statusLine.getReasonPhrase(), EntityUtils.toString(response.getEntity()));
+        String message = String.format(
+            Locale.ROOT,
+            "%s %s: Expected no error got %s %s with body %s",
+            request.getMethod(),
+            request.getEndpoint(),
+            statusLine.getStatusCode(),
+            statusLine.getReasonPhrase(),
+            EntityUtils.toString(response.getEntity())
+        );
         assertThat(message, statusLine.getStatusCode(), is(not(greaterThanOrEqualTo(400))));
     }
 
@@ -54,10 +60,16 @@ public abstract class AbstractPrivilegeTestCase extends SecuritySingleNodeTestCa
         ResponseException responseException = expectThrows(ResponseException.class, () -> getRestClient().performRequest(request));
         StatusLine statusLine = responseException.getResponse().getStatusLine();
         String requestBody = request.getEntity() == null ? "" : "with body " + EntityUtils.toString(request.getEntity());
-        String message = String.format(Locale.ROOT, "%s %s body %s: Expected 403, got %s %s with body %s",
-                request.getMethod(), request.getEndpoint(), requestBody,
-                statusLine.getStatusCode(), statusLine.getReasonPhrase(),
-                EntityUtils.toString(responseException.getResponse().getEntity()));
+        String message = String.format(
+            Locale.ROOT,
+            "%s %s body %s: Expected 403, got %s %s with body %s",
+            request.getMethod(),
+            request.getEndpoint(),
+            requestBody,
+            statusLine.getStatusCode(),
+            statusLine.getReasonPhrase(),
+            EntityUtils.toString(responseException.getResponse().getEntity())
+        );
         assertThat(message, statusLine.getStatusCode(), is(403));
     }
 

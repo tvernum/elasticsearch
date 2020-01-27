@@ -43,9 +43,9 @@ public abstract class CachingUsernamePasswordRealm extends UsernamePasswordRealm
         final TimeValue ttl = this.config.getSetting(CachingUsernamePasswordRealmSettings.CACHE_TTL_SETTING);
         if (ttl.getNanos() > 0) {
             cache = CacheBuilder.<String, ListenableFuture<CachedResult>>builder()
-                    .setExpireAfterWrite(ttl)
-                    .setMaximumWeight(this.config.getSetting(CachingUsernamePasswordRealmSettings.CACHE_MAX_USERS_SETTING))
-                    .build();
+                .setExpireAfterWrite(ttl)
+                .setMaximumWeight(this.config.getSetting(CachingUsernamePasswordRealmSettings.CACHE_MAX_USERS_SETTING))
+                .build();
         } else {
             cache = null;
         }
@@ -137,11 +137,19 @@ public abstract class CachingUsernamePasswordRealm extends UsernamePasswordRealm
                             // cached credential hash matches the credential hash for this forestalled request
                             handleCachedAuthentication(cachedResult.user, ActionListener.wrap(cacheResult -> {
                                 if (cacheResult.isAuthenticated()) {
-                                    logger.debug("realm [{}] authenticated user [{}], with roles [{}]",
-                                        name(), token.principal(), cacheResult.getUser().roles());
+                                    logger.debug(
+                                        "realm [{}] authenticated user [{}], with roles [{}]",
+                                        name(),
+                                        token.principal(),
+                                        cacheResult.getUser().roles()
+                                    );
                                 } else {
-                                    logger.debug("realm [{}] authenticated user [{}] from cache, but then failed [{}]",
-                                        name(), token.principal(), cacheResult.getMessage());
+                                    logger.debug(
+                                        "realm [{}] authenticated user [{}] from cache, but then failed [{}]",
+                                        name(),
+                                        token.principal(),
+                                        cacheResult.getMessage()
+                                    );
                                 }
                                 listener.onResponse(cacheResult);
                             }, listener::onFailure));
@@ -245,12 +253,14 @@ public abstract class CachingUsernamePasswordRealm extends UsernamePasswordRealm
                     }
                     // notify forestalled request listeners
                     listenableCacheEntry.onResponse(result);
-                }, e -> {
-                    // the next request should be forwarded, not halted by a failed lookup attempt
-                    cache.invalidate(username, listenableCacheEntry);
-                    // notify forestalled listeners
-                    listenableCacheEntry.onFailure(e);
-                }));
+                },
+                    e -> {
+                        // the next request should be forwarded, not halted by a failed lookup attempt
+                        cache.invalidate(username, listenableCacheEntry);
+                        // notify forestalled listeners
+                        listenableCacheEntry.onFailure(e);
+                    }
+                ));
             }
             listenableCacheEntry.addListener(ActionListener.wrap(cachedResult -> {
                 if (cachedResult.user != null) {

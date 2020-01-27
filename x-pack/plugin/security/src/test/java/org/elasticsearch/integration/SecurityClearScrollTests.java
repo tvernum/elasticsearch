@@ -38,36 +38,33 @@ public class SecurityClearScrollTests extends SecurityIntegTestCase {
     @Override
     protected String configUsers() {
         final String usersPasswdHashed = new String(getFastStoredHashAlgoForTests().hash(new SecureString("change_me".toCharArray())));
-        return super.configUsers() +
-            "allowed_user:" + usersPasswdHashed + "\n" +
-            "denied_user:" + usersPasswdHashed + "\n";
+        return super.configUsers() + "allowed_user:" + usersPasswdHashed + "\n" + "denied_user:" + usersPasswdHashed + "\n";
     }
 
     @Override
     protected String configUsersRoles() {
-        return super.configUsersRoles() +
-            "allowed_role:allowed_user\n" +
-            "denied_role:denied_user\n";
+        return super.configUsersRoles() + "allowed_role:allowed_user\n" + "denied_role:denied_user\n";
     }
 
     @Override
     protected String configRoles() {
-        return super.configRoles() +
-            "\nallowed_role:\n" +
-            "  cluster:\n" +
-            "    - cluster:admin/indices/scroll/clear_all \n" +
-            "denied_role:\n" +
-            "  indices:\n" +
-            "    - names: '*'\n" +
-            "      privileges: [ALL]\n";
+        return super.configRoles()
+            + "\nallowed_role:\n"
+            + "  cluster:\n"
+            + "    - cluster:admin/indices/scroll/clear_all \n"
+            + "denied_role:\n"
+            + "  indices:\n"
+            + "    - names: '*'\n"
+            + "      privileges: [ALL]\n";
     }
 
     @Before
     public void indexRandomDocuments() {
         BulkRequestBuilder bulkRequestBuilder = client().prepareBulk().setRefreshPolicy(IMMEDIATE);
         for (int i = 0; i < randomIntBetween(10, 50); i++) {
-            bulkRequestBuilder.add(client().prepareIndex("index")
-                .setId(String.valueOf(i)).setSource("{ \"foo\" : \"bar\" }", XContentType.JSON));
+            bulkRequestBuilder.add(
+                client().prepareIndex("index").setId(String.valueOf(i)).setSource("{ \"foo\" : \"bar\" }", XContentType.JSON)
+            );
         }
         BulkResponse bulkItemResponses = bulkRequestBuilder.get();
         assertThat(bulkItemResponses.hasFailures(), is(false));
@@ -83,7 +80,7 @@ public class SecurityClearScrollTests extends SecurityIntegTestCase {
 
     @After
     public void clearScrolls() {
-        //clear all scroll ids from the default admin user, just in case any of test fails
+        // clear all scroll ids from the default admin user, just in case any of test fails
         client().prepareClearScroll().addScrollId("_all").get();
     }
 
@@ -93,9 +90,7 @@ public class SecurityClearScrollTests extends SecurityIntegTestCase {
         Map<String, String> headers = new HashMap<>();
         headers.put(SecurityField.USER_SETTING.getKey(), user);
         headers.put(BASIC_AUTH_HEADER, basicAuth);
-        ClearScrollResponse clearScrollResponse = client().filterWithHeader(headers)
-            .prepareClearScroll()
-            .addScrollId("_all").get();
+        ClearScrollResponse clearScrollResponse = client().filterWithHeader(headers).prepareClearScroll().addScrollId("_all").get();
         assertThat(clearScrollResponse.isSucceeded(), is(true));
 
         assertThatScrollIdsDoNotExist(scrollIds);
@@ -107,10 +102,11 @@ public class SecurityClearScrollTests extends SecurityIntegTestCase {
         Map<String, String> headers = new HashMap<>();
         headers.put(SecurityField.USER_SETTING.getKey(), user);
         headers.put(BASIC_AUTH_HEADER, basicAuth);
-        assertThrows(client().filterWithHeader(headers)
-                .prepareClearScroll()
-                .addScrollId("_all"), ElasticsearchSecurityException.class,
-                "action [cluster:admin/indices/scroll/clear_all] is unauthorized for user [denied_user]");
+        assertThrows(
+            client().filterWithHeader(headers).prepareClearScroll().addScrollId("_all"),
+            ElasticsearchSecurityException.class,
+            "action [cluster:admin/indices/scroll/clear_all] is unauthorized for user [denied_user]"
+        );
 
         // deletion of scroll ids should work
         ClearScrollResponse clearByIdScrollResponse = client().prepareClearScroll().setScrollIds(scrollIds).get();
@@ -122,8 +118,10 @@ public class SecurityClearScrollTests extends SecurityIntegTestCase {
 
     private void assertThatScrollIdsDoNotExist(List<String> scrollIds) {
         for (String scrollId : scrollIds) {
-            SearchPhaseExecutionException expectedException =
-                    expectThrows(SearchPhaseExecutionException.class, () -> client().prepareSearchScroll(scrollId).get());
+            SearchPhaseExecutionException expectedException = expectThrows(
+                SearchPhaseExecutionException.class,
+                () -> client().prepareSearchScroll(scrollId).get()
+            );
             assertThat(expectedException.toString(), containsString("SearchContextMissingException"));
         }
     }

@@ -78,8 +78,12 @@ public class DelegatePkiAuthenticationRequestTests extends AbstractXContentTestC
     private List<X509Certificate> randomCertificateList() {
         List<X509Certificate> certificates = Arrays.asList(randomArray(1, 3, X509Certificate[]::new, () -> {
             try {
-                return readCert(getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/"
-                        + randomFrom("testclient.crt", "testnode.crt", "testnode-ip-only.crt", "openldap.crt", "samba4.crt")));
+                return readCert(
+                    getDataPath(
+                        "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/"
+                            + randomFrom("testclient.crt", "testnode.crt", "testnode-ip-only.crt", "openldap.crt", "samba4.crt")
+                    )
+                );
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

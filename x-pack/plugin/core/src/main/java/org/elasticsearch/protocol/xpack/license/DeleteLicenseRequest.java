@@ -11,7 +11,6 @@ import org.elasticsearch.common.io.stream.StreamInput;
 
 import java.io.IOException;
 
-
 public class DeleteLicenseRequest extends AcknowledgedRequest<DeleteLicenseRequest> {
 
     public DeleteLicenseRequest() {}

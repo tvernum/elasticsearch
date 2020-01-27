@@ -28,7 +28,7 @@ import org.apache.lucene.search.spans.SpanTermQuery;
 import java.util.HashSet;
 import java.util.Set;
 
-/** 
+/**
  * Extracts fields from a query, or throws UnsupportedOperationException.
  * <p>
  * Lucene queries have {@link Weight#extractTerms}, but this is really geared at things
@@ -38,7 +38,7 @@ import java.util.Set;
 class FieldExtractor {
 
     /**
-     * Populates {@code fields} with the set of fields used by the query, or throws 
+     * Populates {@code fields} with the set of fields used by the query, or throws
      * UnsupportedOperationException if it doesn't know how to do this.
      */
     static void extractFields(Query query, Set<String> fields) throws UnsupportedOperationException {
@@ -56,11 +56,11 @@ class FieldExtractor {
                 extractFields(clause, fields);
             }
         } else if (query instanceof SpanTermQuery) {
-            // we just do SpanTerm, other spans are trickier, they could contain 
+            // we just do SpanTerm, other spans are trickier, they could contain
             // the evil FieldMaskingSpanQuery: so SpanQuery.getField cannot be trusted.
-            fields.add(((SpanTermQuery)query).getField());
+            fields.add(((SpanTermQuery) query).getField());
         } else if (query instanceof TermQuery) {
-            fields.add(((TermQuery)query).getTerm().field());
+            fields.add(((TermQuery) query).getTerm().field());
         } else if (query instanceof SynonymQuery) {
             SynonymQuery q = (SynonymQuery) query;
             // all terms must have the same field
@@ -74,13 +74,13 @@ class FieldExtractor {
             // all terms must have the same field
             fields.add(q.getTermArrays()[0][0].field());
         } else if (query instanceof PointRangeQuery) {
-            fields.add(((PointRangeQuery)query).getField());
+            fields.add(((PointRangeQuery) query).getField());
         } else if (query instanceof PointInSetQuery) {
-            fields.add(((PointInSetQuery)query).getField());
+            fields.add(((PointInSetQuery) query).getField());
         } else if (query instanceof DocValuesFieldExistsQuery) {
-            fields.add(((DocValuesFieldExistsQuery)query).getField());
+            fields.add(((DocValuesFieldExistsQuery) query).getField());
         } else if (query instanceof DocValuesNumbersQuery) {
-            fields.add(((DocValuesNumbersQuery)query).getField());
+            fields.add(((DocValuesNumbersQuery) query).getField());
         } else if (query instanceof IndexOrDocValuesQuery) {
             // Both queries are supposed to be equivalent, so if any of them can be extracted, we are good
             try {

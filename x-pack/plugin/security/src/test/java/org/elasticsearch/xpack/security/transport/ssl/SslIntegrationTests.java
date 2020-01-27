@@ -64,22 +64,33 @@ public class SslIntegrationTests extends SecurityIntegTestCase {
     public void testThatConnectionToHTTPWorks() throws Exception {
         Settings.Builder builder = Settings.builder().put("xpack.security.http.ssl.enabled", true);
         addSSLSettingsForPEMFiles(
-            builder, "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.pem",
+            builder,
+            "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.pem",
             "testclient",
             "/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient.crt",
             "xpack.security.http.",
-            Arrays.asList("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt"));
+            Arrays.asList("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt")
+        );
         SSLService service = new SSLService(TestEnvironment.newEnvironment(buildEnvSettings(builder.build())));
 
         CredentialsProvider provider = new BasicCredentialsProvider();
-        provider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(nodeClientUsername(),
-                new String(nodeClientPassword().getChars())));
+        provider.setCredentials(
+            AuthScope.ANY,
+            new UsernamePasswordCredentials(nodeClientUsername(), new String(nodeClientPassword().getChars()))
+        );
         SSLConfiguration sslConfiguration = service.getSSLConfiguration("xpack.security.http.ssl");
-        try (CloseableHttpClient client = HttpClients.custom()
-                .setSSLSocketFactory(new SSLConnectionSocketFactory(service.sslSocketFactory(sslConfiguration),
-                        SSLConnectionSocketFactory.getDefaultHostnameVerifier()))
-                .setDefaultCredentialsProvider(provider).build();
-             CloseableHttpResponse response = SocketAccess.doPrivileged(() -> client.execute(new HttpGet(getNodeUrl())))) {
+        try (
+            CloseableHttpClient client = HttpClients.custom()
+                .setSSLSocketFactory(
+                    new SSLConnectionSocketFactory(
+                        service.sslSocketFactory(sslConfiguration),
+                        SSLConnectionSocketFactory.getDefaultHostnameVerifier()
+                    )
+                )
+                .setDefaultCredentialsProvider(provider)
+                .build();
+            CloseableHttpResponse response = SocketAccess.doPrivileged(() -> client.execute(new HttpGet(getNodeUrl())))
+        ) {
             assertThat(response.getStatusLine().getStatusCode(), is(200));
             String data = Streams.copyToString(new InputStreamReader(response.getEntity().getContent(), StandardCharsets.UTF_8));
             assertThat(data, containsString("You Know, for Search"));
@@ -93,16 +104,21 @@ public class SslIntegrationTests extends SecurityIntegTestCase {
         factory.init((KeyStore) null);
 
         sslContext.init(null, factory.getTrustManagers(), new SecureRandom());
-        SSLConnectionSocketFactory sf = new SSLConnectionSocketFactory(sslContext, new String[]{ "SSLv3" }, null,
-                NoopHostnameVerifier.INSTANCE);
+        SSLConnectionSocketFactory sf = new SSLConnectionSocketFactory(
+            sslContext,
+            new String[] { "SSLv3" },
+            null,
+            NoopHostnameVerifier.INSTANCE
+        );
         try (CloseableHttpClient client = HttpClients.custom().setSSLSocketFactory(sf).build()) {
             expectThrows(SSLHandshakeException.class, () -> SocketAccess.doPrivileged(() -> client.execute(new HttpGet(getNodeUrl()))));
         }
     }
 
     private String getNodeUrl() {
-        TransportAddress transportAddress =
-                randomFrom(internalCluster().getInstance(HttpServerTransport.class).boundAddress().boundAddresses());
+        TransportAddress transportAddress = randomFrom(
+            internalCluster().getInstance(HttpServerTransport.class).boundAddress().boundAddresses()
+        );
         final InetSocketAddress inetSocketAddress = transportAddress.address();
         return String.format(Locale.ROOT, "https://%s/", NetworkAddress.format(inetSocketAddress));
     }

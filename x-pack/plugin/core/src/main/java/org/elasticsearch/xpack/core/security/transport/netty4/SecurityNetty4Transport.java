@@ -54,14 +54,15 @@ public class SecurityNetty4Transport extends Netty4Transport {
     private final boolean sslEnabled;
 
     public SecurityNetty4Transport(
-            final Settings settings,
-            final Version version,
-            final ThreadPool threadPool,
-            final NetworkService networkService,
-            final PageCacheRecycler pageCacheRecycler,
-            final NamedWriteableRegistry namedWriteableRegistry,
-            final CircuitBreakerService circuitBreakerService,
-            final SSLService sslService) {
+        final Settings settings,
+        final Version version,
+        final ThreadPool threadPool,
+        final NetworkService networkService,
+        final PageCacheRecycler pageCacheRecycler,
+        final NamedWriteableRegistry namedWriteableRegistry,
+        final CircuitBreakerService circuitBreakerService,
+        final SSLService sslService
+    ) {
         super(settings, version, threadPool, networkService, pageCacheRecycler, namedWriteableRegistry, circuitBreakerService);
         this.exceptionHandler = new SecurityTransportExceptionHandler(logger, lifecycle, (c, e) -> super.onException(c, e));
         this.sslService = sslService;
@@ -154,8 +155,8 @@ public class SecurityNetty4Transport extends Netty4Transport {
         protected void initChannel(Channel ch) throws Exception {
             super.initChannel(ch);
             if (sslEnabled) {
-                ch.pipeline().addFirst(new ClientSslHandlerInitializer(sslConfiguration, sslService, hostnameVerificationEnabled,
-                    serverName));
+                ch.pipeline()
+                    .addFirst(new ClientSslHandlerInitializer(sslConfiguration, sslService, hostnameVerificationEnabled, serverName));
             }
         }
     }
@@ -167,8 +168,12 @@ public class SecurityNetty4Transport extends Netty4Transport {
         private final SSLService sslService;
         private final SNIServerName serverName;
 
-        private ClientSslHandlerInitializer(SSLConfiguration sslConfiguration, SSLService sslService, boolean hostnameVerificationEnabled,
-                                            SNIServerName serverName) {
+        private ClientSslHandlerInitializer(
+            SSLConfiguration sslConfiguration,
+            SSLService sslService,
+            boolean hostnameVerificationEnabled,
+            SNIServerName serverName
+        ) {
             this.sslConfiguration = sslConfiguration;
             this.hostnameVerificationEnabled = hostnameVerificationEnabled;
             this.sslService = sslService;
@@ -176,14 +181,13 @@ public class SecurityNetty4Transport extends Netty4Transport {
         }
 
         @Override
-        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise)
+            throws Exception {
             final SSLEngine sslEngine;
             if (hostnameVerificationEnabled) {
                 InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
                 // we create the socket based on the name given. don't reverse DNS
-                sslEngine = sslService.createSSLEngine(sslConfiguration, inetSocketAddress.getHostString(),
-                        inetSocketAddress.getPort());
+                sslEngine = sslService.createSSLEngine(sslConfiguration, inetSocketAddress.getHostString(), inetSocketAddress.getPort());
             } else {
                 sslEngine = sslService.createSSLEngine(sslConfiguration, null, -1);
             }

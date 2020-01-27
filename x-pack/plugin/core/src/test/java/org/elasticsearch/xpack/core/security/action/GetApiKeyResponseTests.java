@@ -26,8 +26,15 @@ public class GetApiKeyResponseTests extends ESTestCase {
     public void testSerialization() throws IOException {
         boolean withApiKeyName = randomBoolean();
         boolean withExpiration = randomBoolean();
-        ApiKey apiKeyInfo = createApiKeyInfo((withApiKeyName) ? randomAlphaOfLength(4) : null, randomAlphaOfLength(5), Instant.now(),
-                (withExpiration) ? Instant.now() : null, false, randomAlphaOfLength(4), randomAlphaOfLength(5));
+        ApiKey apiKeyInfo = createApiKeyInfo(
+            (withApiKeyName) ? randomAlphaOfLength(4) : null,
+            randomAlphaOfLength(5),
+            Instant.now(),
+            (withExpiration) ? Instant.now() : null,
+            false,
+            randomAlphaOfLength(4),
+            randomAlphaOfLength(5)
+        );
         GetApiKeyResponse response = new GetApiKeyResponse(Collections.singletonList(apiKeyInfo));
         try (BytesStreamOutput output = new BytesStreamOutput()) {
             response.writeTo(output);
@@ -39,31 +46,54 @@ public class GetApiKeyResponseTests extends ESTestCase {
     }
 
     public void testToXContent() throws IOException {
-        ApiKey apiKeyInfo1 = createApiKeyInfo("name1", "id-1", Instant.ofEpochMilli(100000L), Instant.ofEpochMilli(10000000L), false,
-                "user-a", "realm-x");
-        ApiKey apiKeyInfo2 = createApiKeyInfo("name2", "id-2", Instant.ofEpochMilli(100000L), Instant.ofEpochMilli(10000000L), true,
-                "user-b", "realm-y");
-        ApiKey apiKeyInfo3 = createApiKeyInfo(null, "id-3", Instant.ofEpochMilli(100000L), null, true,
-            "user-c", "realm-z");
+        ApiKey apiKeyInfo1 = createApiKeyInfo(
+            "name1",
+            "id-1",
+            Instant.ofEpochMilli(100000L),
+            Instant.ofEpochMilli(10000000L),
+            false,
+            "user-a",
+            "realm-x"
+        );
+        ApiKey apiKeyInfo2 = createApiKeyInfo(
+            "name2",
+            "id-2",
+            Instant.ofEpochMilli(100000L),
+            Instant.ofEpochMilli(10000000L),
+            true,
+            "user-b",
+            "realm-y"
+        );
+        ApiKey apiKeyInfo3 = createApiKeyInfo(null, "id-3", Instant.ofEpochMilli(100000L), null, true, "user-c", "realm-z");
         GetApiKeyResponse response = new GetApiKeyResponse(Arrays.asList(apiKeyInfo1, apiKeyInfo2, apiKeyInfo3));
         XContentBuilder builder = XContentFactory.jsonBuilder();
         response.toXContent(builder, ToXContent.EMPTY_PARAMS);
-        assertThat(Strings.toString(builder), equalTo(
+        assertThat(
+            Strings.toString(builder),
+            equalTo(
                 "{"
-                + "\"api_keys\":["
-                + "{\"id\":\"id-1\",\"name\":\"name1\",\"creation\":100000,\"expiration\":10000000,\"invalidated\":false,"
-                + "\"username\":\"user-a\",\"realm\":\"realm-x\"},"
-                + "{\"id\":\"id-2\",\"name\":\"name2\",\"creation\":100000,\"expiration\":10000000,\"invalidated\":true,"
-                + "\"username\":\"user-b\",\"realm\":\"realm-y\"},"
-                + "{\"id\":\"id-3\",\"name\":null,\"creation\":100000,\"invalidated\":true,"
-                + "\"username\":\"user-c\",\"realm\":\"realm-z\"}"
-                + "]"
-                + "}"));
+                    + "\"api_keys\":["
+                    + "{\"id\":\"id-1\",\"name\":\"name1\",\"creation\":100000,\"expiration\":10000000,\"invalidated\":false,"
+                    + "\"username\":\"user-a\",\"realm\":\"realm-x\"},"
+                    + "{\"id\":\"id-2\",\"name\":\"name2\",\"creation\":100000,\"expiration\":10000000,\"invalidated\":true,"
+                    + "\"username\":\"user-b\",\"realm\":\"realm-y\"},"
+                    + "{\"id\":\"id-3\",\"name\":null,\"creation\":100000,\"invalidated\":true,"
+                    + "\"username\":\"user-c\",\"realm\":\"realm-z\"}"
+                    + "]"
+                    + "}"
+            )
+        );
     }
 
-    private ApiKey createApiKeyInfo(String name, String id, Instant creation, Instant expiration, boolean invalidated, String username,
-                                        String realm) {
+    private ApiKey createApiKeyInfo(
+        String name,
+        String id,
+        Instant creation,
+        Instant expiration,
+        boolean invalidated,
+        String username,
+        String realm
+    ) {
         return new ApiKey(name, id, creation, expiration, invalidated, username, realm);
     }
 }
-

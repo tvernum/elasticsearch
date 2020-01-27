@@ -51,65 +51,85 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
     @Override
     public Settings nodeSettings(int nodeOrdinal) {
         return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put(XPackSettings.TOKEN_SERVICE_ENABLED_SETTING.getKey(), true)
-                // pki1 does not allow delegation
-                .put("xpack.security.authc.realms.pki.pki1.order", "1")
-                .putList("xpack.security.authc.realms.pki.pki1.certificate_authorities",
-                    getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString())
-                .put("xpack.security.authc.realms.pki.pki1.files.role_mapping", getDataPath("role_mapping.yml"))
-                // pki2 allows delegation but has a non-matching username pattern
-                .put("xpack.security.authc.realms.pki.pki2.order", "2")
-                .putList("xpack.security.authc.realms.pki.pki2.certificate_authorities",
-                    getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString())
-                .put("xpack.security.authc.realms.pki.pki2.username_pattern", "CN=MISMATCH(.*?)(?:,|$)")
-                .put("xpack.security.authc.realms.pki.pki2.delegation.enabled", true)
-                .put("xpack.security.authc.realms.pki.pki2.files.role_mapping", getDataPath("role_mapping.yml"))
-                // pki3 allows delegation and the username pattern (default) matches
-                .put("xpack.security.authc.realms.pki.pki3.order", "3")
-                .putList("xpack.security.authc.realms.pki.pki3.certificate_authorities",
-                    getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString())
-                .put("xpack.security.authc.realms.pki.pki3.delegation.enabled", true)
-                .put("xpack.security.authc.realms.pki.pki3.files.role_mapping", getDataPath("role_mapping.yml"))
-                .build();
+            .put(super.nodeSettings(nodeOrdinal))
+            .put(XPackSettings.TOKEN_SERVICE_ENABLED_SETTING.getKey(), true)
+            // pki1 does not allow delegation
+            .put("xpack.security.authc.realms.pki.pki1.order", "1")
+            .putList(
+                "xpack.security.authc.realms.pki.pki1.certificate_authorities",
+                getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString()
+            )
+            .put("xpack.security.authc.realms.pki.pki1.files.role_mapping", getDataPath("role_mapping.yml"))
+            // pki2 allows delegation but has a non-matching username pattern
+            .put("xpack.security.authc.realms.pki.pki2.order", "2")
+            .putList(
+                "xpack.security.authc.realms.pki.pki2.certificate_authorities",
+                getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString()
+            )
+            .put("xpack.security.authc.realms.pki.pki2.username_pattern", "CN=MISMATCH(.*?)(?:,|$)")
+            .put("xpack.security.authc.realms.pki.pki2.delegation.enabled", true)
+            .put("xpack.security.authc.realms.pki.pki2.files.role_mapping", getDataPath("role_mapping.yml"))
+            // pki3 allows delegation and the username pattern (default) matches
+            .put("xpack.security.authc.realms.pki.pki3.order", "3")
+            .putList(
+                "xpack.security.authc.realms.pki.pki3.certificate_authorities",
+                getDataPath("/org/elasticsearch/xpack/security/action/pki_delegation/testRootCA.crt").toString()
+            )
+            .put("xpack.security.authc.realms.pki.pki3.delegation.enabled", true)
+            .put("xpack.security.authc.realms.pki.pki3.files.role_mapping", getDataPath("role_mapping.yml"))
+            .build();
     }
 
     @Override
     protected String configUsers() {
-        final String usersPasswdHashed = new String(Hasher.resolve(
-            randomFrom("pbkdf2", "pbkdf2_1000", "bcrypt", "bcrypt9")).hash(SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING));
-        return super.configUsers() +
-            "user_manage:" + usersPasswdHashed + "\n" +
-            "user_manage_security:" + usersPasswdHashed + "\n" +
-            "user_delegate_pki:" + usersPasswdHashed + "\n" +
-            "user_all:" + usersPasswdHashed + "\n" +
-            "kibana_system:" + usersPasswdHashed + "\n";
+        final String usersPasswdHashed = new String(
+            Hasher.resolve(randomFrom("pbkdf2", "pbkdf2_1000", "bcrypt", "bcrypt9"))
+                .hash(SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)
+        );
+        return super.configUsers()
+            + "user_manage:"
+            + usersPasswdHashed
+            + "\n"
+            + "user_manage_security:"
+            + usersPasswdHashed
+            + "\n"
+            + "user_delegate_pki:"
+            + usersPasswdHashed
+            + "\n"
+            + "user_all:"
+            + usersPasswdHashed
+            + "\n"
+            + "kibana_system:"
+            + usersPasswdHashed
+            + "\n";
     }
 
     @Override
     protected String configRoles() {
-        return super.configRoles() + "\n" +
-                "role_manage:\n" +
-                "  cluster: [ manage ]\n" +
-                "\n" +
-                "role_manage_security:\n" +
-                "  cluster: [ manage_security ]\n" +
-                "\n" +
-                "role_delegate_pki:\n" +
-                "  cluster: [ delegate_pki ]\n" +
-                "\n" +
-                "role_all:\n" +
-                "  cluster: [ all ]\n";
+        return super.configRoles()
+            + "\n"
+            + "role_manage:\n"
+            + "  cluster: [ manage ]\n"
+            + "\n"
+            + "role_manage_security:\n"
+            + "  cluster: [ manage_security ]\n"
+            + "\n"
+            + "role_delegate_pki:\n"
+            + "  cluster: [ delegate_pki ]\n"
+            + "\n"
+            + "role_all:\n"
+            + "  cluster: [ all ]\n";
     }
 
     @Override
     protected String configUsersRoles() {
-        return super.configUsersRoles() + "\n" +
-                "role_manage:user_manage\n" +
-                "role_manage_security:user_manage_security\n" +
-                "role_delegate_pki:user_delegate_pki\n" +
-                "role_all:user_all\n" +
-                "kibana_system:kibana_system\n";
+        return super.configUsersRoles()
+            + "\n"
+            + "role_manage:user_manage\n"
+            + "role_manage_security:user_manage_security\n"
+            + "role_delegate_pki:user_delegate_pki\n"
+            + "role_all:user_all\n"
+            + "kibana_system:kibana_system\n";
     }
 
     @Override
@@ -143,10 +163,12 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
             for (String delegateeUsername : Arrays.asList("user_all", "user_delegate_pki", "kibana_system")) {
                 // delegate
                 RequestOptions.Builder optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-                optionsBuilder.addHeader("Authorization",
-                        basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING));
-                DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security().delegatePkiAuthentication(delegatePkiRequest,
-                        optionsBuilder.build());
+                optionsBuilder.addHeader(
+                    "Authorization",
+                    basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)
+                );
+                DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security()
+                    .delegatePkiAuthentication(delegatePkiRequest, optionsBuilder.build());
                 String token = delegatePkiResponse.getAccessToken();
                 assertThat(token, is(notNullValue()));
                 // authenticate
@@ -180,10 +202,12 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
             String delegateeUsername = randomFrom("user_all", "user_delegate_pki", "kibana_system");
             // delegate
             RequestOptions.Builder optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-            optionsBuilder.addHeader("Authorization",
-                    basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING));
-            DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security().delegatePkiAuthentication(delegatePkiRequest,
-                    optionsBuilder.build());
+            optionsBuilder.addHeader(
+                "Authorization",
+                basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)
+            );
+            DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security()
+                .delegatePkiAuthentication(delegatePkiRequest, optionsBuilder.build());
             String token = delegatePkiResponse.getAccessToken();
             assertThat(token, is(notNullValue()));
             // authenticate
@@ -208,14 +232,19 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
             // invalidate
             InvalidateTokenRequest invalidateRequest = new InvalidateTokenRequest(token, null, null, null);
             optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-            optionsBuilder.addHeader("Authorization",
-                    basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING));
+            optionsBuilder.addHeader(
+                "Authorization",
+                basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)
+            );
             InvalidateTokenResponse invalidateResponse = restClient.security().invalidateToken(invalidateRequest, optionsBuilder.build());
             assertThat(invalidateResponse.getInvalidatedTokens(), is(1));
             assertThat(invalidateResponse.getErrorsCount(), is(0));
             // failed authenticate
-            ElasticsearchStatusException e1 = expectThrows(ElasticsearchStatusException.class, () -> restClient.security()
-                    .authenticate(RequestOptions.DEFAULT.toBuilder().addHeader("Authorization", "Bearer " + token).build()));
+            ElasticsearchStatusException e1 = expectThrows(
+                ElasticsearchStatusException.class,
+                () -> restClient.security()
+                    .authenticate(RequestOptions.DEFAULT.toBuilder().addHeader("Authorization", "Bearer " + token).build())
+            );
             assertThat(e1.getMessage(), is("Elasticsearch exception [type=security_exception, reason=token expired]"));
         }
     }
@@ -234,13 +263,21 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
         try (RestHighLevelClient restClient = new TestRestHighLevelClient()) {
             for (String delegateeUsername : Arrays.asList("user_manage", "user_manage_security")) {
                 RequestOptions.Builder optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-                optionsBuilder.addHeader("Authorization",
-                        basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING));
-                ElasticsearchStatusException e = expectThrows(ElasticsearchStatusException.class, () -> {
-                    restClient.security().delegatePkiAuthentication(delegatePkiRequest, optionsBuilder.build());
-                });
-                assertThat(e.getMessage(), startsWith("Elasticsearch exception [type=security_exception, reason=action"
-                        + " [cluster:admin/xpack/security/delegate_pki] is unauthorized for user"));
+                optionsBuilder.addHeader(
+                    "Authorization",
+                    basicAuthHeaderValue(delegateeUsername, SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)
+                );
+                ElasticsearchStatusException e = expectThrows(
+                    ElasticsearchStatusException.class,
+                    () -> { restClient.security().delegatePkiAuthentication(delegatePkiRequest, optionsBuilder.build()); }
+                );
+                assertThat(
+                    e.getMessage(),
+                    startsWith(
+                        "Elasticsearch exception [type=security_exception, reason=action"
+                            + " [cluster:admin/xpack/security/delegate_pki] is unauthorized for user"
+                    )
+                );
             }
         }
     }
@@ -257,25 +294,44 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
             delegatePkiRequest = new DelegatePkiAuthenticationRequest(Arrays.asList(clientCertificate, intermediateCA, rootCA));
         }
         final RequestOptions testUserOptions = RequestOptions.DEFAULT.toBuilder()
-                .addHeader("Authorization", basicAuthHeaderValue(SecuritySettingsSource.TEST_USER_NAME,
-                        new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())))
-                .build();
+            .addHeader(
+                "Authorization",
+                basicAuthHeaderValue(
+                    SecuritySettingsSource.TEST_USER_NAME,
+                    new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())
+                )
+            )
+            .build();
         try (RestHighLevelClient restClient = new TestRestHighLevelClient()) {
             // put role mappings for delegated PKI
-            PutRoleMappingRequest request = new PutRoleMappingRequest("role_by_delegated_user", true,
-                    Collections.singletonList("role_by_delegated_user"), Collections.emptyList(),
-                    new FieldRoleMapperExpression("metadata.pki_delegated_by_user", "test_user"), null, RefreshPolicy.IMMEDIATE);
+            PutRoleMappingRequest request = new PutRoleMappingRequest(
+                "role_by_delegated_user",
+                true,
+                Collections.singletonList("role_by_delegated_user"),
+                Collections.emptyList(),
+                new FieldRoleMapperExpression("metadata.pki_delegated_by_user", "test_user"),
+                null,
+                RefreshPolicy.IMMEDIATE
+            );
             restClient.security().putRoleMapping(request, testUserOptions);
-            request = new PutRoleMappingRequest("role_by_delegated_realm", true, Collections.singletonList("role_by_delegated_realm"),
-                    Collections.emptyList(), new FieldRoleMapperExpression("metadata.pki_delegated_by_realm", "file"), null,
-                    RefreshPolicy.IMMEDIATE);
+            request = new PutRoleMappingRequest(
+                "role_by_delegated_realm",
+                true,
+                Collections.singletonList("role_by_delegated_realm"),
+                Collections.emptyList(),
+                new FieldRoleMapperExpression("metadata.pki_delegated_by_realm", "file"),
+                null,
+                RefreshPolicy.IMMEDIATE
+            );
             restClient.security().putRoleMapping(request, testUserOptions);
             // delegate
-            DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security().delegatePkiAuthentication(delegatePkiRequest,
-                    testUserOptions);
+            DelegatePkiAuthenticationResponse delegatePkiResponse = restClient.security()
+                .delegatePkiAuthentication(delegatePkiRequest, testUserOptions);
             // authenticate
-            AuthenticateResponse resp = restClient.security().authenticate(RequestOptions.DEFAULT.toBuilder()
-                    .addHeader("Authorization", "Bearer " + delegatePkiResponse.getAccessToken()).build());
+            AuthenticateResponse resp = restClient.security()
+                .authenticate(
+                    RequestOptions.DEFAULT.toBuilder().addHeader("Authorization", "Bearer " + delegatePkiResponse.getAccessToken()).build()
+                );
             User user = resp.getUser();
             assertThat(user, is(notNullValue()));
             assertThat(user.getUsername(), is("Elasticsearch Test Client"));
@@ -292,10 +348,10 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
             assertThat(authnRealm.getName(), is("pki3"));
             assertThat(authnRealm.getType(), is("pki"));
             // delete role mappings for delegated PKI
-            restClient.security().deleteRoleMapping(new DeleteRoleMappingRequest("role_by_delegated_user", RefreshPolicy.IMMEDIATE),
-                  testUserOptions);
-            restClient.security().deleteRoleMapping(new DeleteRoleMappingRequest("role_by_delegated_realm", RefreshPolicy.IMMEDIATE),
-                  testUserOptions);
+            restClient.security()
+                .deleteRoleMapping(new DeleteRoleMappingRequest("role_by_delegated_user", RefreshPolicy.IMMEDIATE), testUserOptions);
+            restClient.security()
+                .deleteRoleMapping(new DeleteRoleMappingRequest("role_by_delegated_realm", RefreshPolicy.IMMEDIATE), testUserOptions);
         }
     }
 
@@ -304,25 +360,42 @@ public class PkiAuthDelegationIntegTests extends SecurityIntegTestCase {
         X509Certificate intermediateCA = readCertForPkiDelegation("testIntermediateCA.crt");
         X509Certificate bogusCertificate = readCertForPkiDelegation("bogus.crt");
         RequestOptions.Builder optionsBuilder = RequestOptions.DEFAULT.toBuilder();
-        optionsBuilder.addHeader("Authorization", basicAuthHeaderValue(SecuritySettingsSource.TEST_USER_NAME,
-                new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())));
+        optionsBuilder.addHeader(
+            "Authorization",
+            basicAuthHeaderValue(
+                SecuritySettingsSource.TEST_USER_NAME,
+                new SecureString(SecuritySettingsSourceField.TEST_PASSWORD.toCharArray())
+            )
+        );
         try (RestHighLevelClient restClient = new TestRestHighLevelClient()) {
             // incomplete cert chain
             DelegatePkiAuthenticationRequest delegatePkiRequest1 = new DelegatePkiAuthenticationRequest(Arrays.asList(clientCertificate));
-            ElasticsearchStatusException e1 = expectThrows(ElasticsearchStatusException.class,
-                    () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest1, optionsBuilder.build()));
-            assertThat(e1.getMessage(), is("Elasticsearch exception [type=security_exception, reason=unable to authenticate user"
-                    + " [O=org, OU=Elasticsearch, CN=Elasticsearch Test Client] for action [cluster:admin/xpack/security/delegate_pki]]"));
+            ElasticsearchStatusException e1 = expectThrows(
+                ElasticsearchStatusException.class,
+                () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest1, optionsBuilder.build())
+            );
+            assertThat(
+                e1.getMessage(),
+                is(
+                    "Elasticsearch exception [type=security_exception, reason=unable to authenticate user"
+                        + " [O=org, OU=Elasticsearch, CN=Elasticsearch Test Client] for action [cluster:admin/xpack/security/delegate_pki]]"
+                )
+            );
             // swapped order
             DelegatePkiAuthenticationRequest delegatePkiRequest2 = new DelegatePkiAuthenticationRequest(
-                    Arrays.asList(intermediateCA, clientCertificate));
-            ValidationException e2 = expectThrows(ValidationException.class,
-                    () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest2, optionsBuilder.build()));
+                Arrays.asList(intermediateCA, clientCertificate)
+            );
+            ValidationException e2 = expectThrows(
+                ValidationException.class,
+                () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest2, optionsBuilder.build())
+            );
             assertThat(e2.getMessage(), is("Validation Failed: 1: certificates chain must be an ordered chain;"));
             // bogus certificate
             DelegatePkiAuthenticationRequest delegatePkiRequest3 = new DelegatePkiAuthenticationRequest(Arrays.asList(bogusCertificate));
-            ElasticsearchStatusException e3 = expectThrows(ElasticsearchStatusException.class,
-                    () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest3, optionsBuilder.build()));
+            ElasticsearchStatusException e3 = expectThrows(
+                ElasticsearchStatusException.class,
+                () -> restClient.security().delegatePkiAuthentication(delegatePkiRequest3, optionsBuilder.build())
+            );
             assertThat(e3.getMessage(), startsWith("Elasticsearch exception [type=security_exception, reason=unable to authenticate user"));
         }
     }

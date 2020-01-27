@@ -69,8 +69,12 @@ public class SamlLogoutRequestHandler extends SamlRequestHandler {
                 throw e;
             }
         } else {
-            throw samlException("SAML content [{}] should have a root element of Namespace=[{}] Tag=[{}]",
-                    root, SAML_NAMESPACE, REQUEST_TAG_NAME);
+            throw samlException(
+                "SAML content [{}] should have a root element of Namespace=[{}] Tag=[{}]",
+                root,
+                SAML_NAMESPACE,
+                REQUEST_TAG_NAME
+            );
         }
     }
 
@@ -117,12 +121,24 @@ public class SamlLogoutRequestHandler extends SamlRequestHandler {
         final String signatureText = Strings.cleanTruncate(signature, 32);
         checkIdpSignature(credential -> {
             if (XMLSigningUtil.verifyWithURI(credential, signatureAlgorithm, sigBytes, inputBytes)) {
-                logger.debug(() -> new ParameterizedMessage("SAML Signature [{}] matches credentials [{}] [{}]",
-                        signatureText, credential.getEntityId(), credential.getPublicKey()));
+                logger.debug(
+                    () -> new ParameterizedMessage(
+                        "SAML Signature [{}] matches credentials [{}] [{}]",
+                        signatureText,
+                        credential.getEntityId(),
+                        credential.getPublicKey()
+                    )
+                );
                 return true;
             } else {
-                logger.debug(() -> new ParameterizedMessage("SAML Signature [{}] failed against credentials [{}] [{}]",
-                        signatureText, credential.getEntityId(), credential.getPublicKey()));
+                logger.debug(
+                    () -> new ParameterizedMessage(
+                        "SAML Signature [{}] failed against credentials [{}] [{}]",
+                        signatureText,
+                        credential.getEntityId(),
+                        credential.getPublicKey()
+                    )
+                );
                 return false;
             }
         }, signatureText);
@@ -139,9 +155,11 @@ public class SamlLogoutRequestHandler extends SamlRequestHandler {
 
     private byte[] inflate(byte[] bytes) {
         Inflater inflater = new Inflater(true);
-        try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-             InflaterInputStream inflate = new InflaterInputStream(in, inflater);
-             ByteArrayOutputStream out = new ByteArrayOutputStream(bytes.length * 3 / 2)) {
+        try (
+            ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+            InflaterInputStream inflate = new InflaterInputStream(in, inflater);
+            ByteArrayOutputStream out = new ByteArrayOutputStream(bytes.length * 3 / 2)
+        ) {
             Streams.copy(inflate, out);
             return out.toByteArray();
         } catch (IOException e) {
@@ -170,30 +188,37 @@ public class SamlLogoutRequestHandler extends SamlRequestHandler {
         try {
             return decrypter.decrypt(encrypted);
         } catch (DecryptionException e) {
-            logger.debug(() -> new ParameterizedMessage("Failed to decrypt SAML EncryptedID [{}] with [{}]",
-                    text(encrypted, 512), describe(getSpConfiguration().getEncryptionCredentials())), e);
+            logger.debug(
+                () -> new ParameterizedMessage(
+                    "Failed to decrypt SAML EncryptedID [{}] with [{}]",
+                    text(encrypted, 512),
+                    describe(getSpConfiguration().getEncryptionCredentials())
+                ),
+                e
+            );
             throw samlException("Failed to decrypt SAML EncryptedID " + text(encrypted, 32), e);
         }
     }
 
     private String getSessionIndex(LogoutRequest logoutRequest) {
-        return logoutRequest.getSessionIndexes()
-                .stream()
-                .map(as -> as.getSessionIndex())
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+        return logoutRequest.getSessionIndexes().stream().map(as -> as.getSessionIndex()).filter(Objects::nonNull).findFirst().orElse(null);
     }
 
     private void checkDestination(LogoutRequest request) {
         final String url = getSpConfiguration().getLogoutUrl();
         if (url == null) {
-            throw samlException("SAML request " + request.getID() + " is for destination " + request.getDestination()
-                    + " but this realm is not configured for logout");
+            throw samlException(
+                "SAML request "
+                    + request.getID()
+                    + " is for destination "
+                    + request.getDestination()
+                    + " but this realm is not configured for logout"
+            );
         }
         if (url.equals(request.getDestination()) == false) {
-            throw samlException("SAML request " + request.getID() + " is for destination " + request.getDestination()
-                    + " but this realm uses " + url);
+            throw samlException(
+                "SAML request " + request.getID() + " is for destination " + request.getDestination() + " but this realm uses " + url
+            );
         }
     }
 
@@ -240,12 +265,19 @@ public class SamlLogoutRequestHandler extends SamlRequestHandler {
 
         @Override
         public String toString() {
-            return "SamlLogoutRequestHandler.Result{" +
-                    "requestId='" + requestId + '\'' +
-                    ", nameId=" + nameId +
-                    ", session='" + session + '\'' +
-                    ", relayState='" + relayState + '\'' +
-                    '}';
+            return "SamlLogoutRequestHandler.Result{"
+                + "requestId='"
+                + requestId
+                + '\''
+                + ", nameId="
+                + nameId
+                + ", session='"
+                + session
+                + '\''
+                + ", relayState='"
+                + relayState
+                + '\''
+                + '}';
         }
     }
 

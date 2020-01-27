@@ -28,15 +28,18 @@ public final class DelegatePkiAuthenticationResponse extends ActionResponse impl
     private static final ParseField EXPIRES_IN_FIELD = new ParseField("expires_in");
 
     public static final ConstructingObjectParser<DelegatePkiAuthenticationResponse, Void> PARSER = new ConstructingObjectParser<>(
-            "delegate_pki_response", true, a -> {
-                final String accessToken = (String) a[0];
-                final String type = (String) a[1];
-                if (false == "Bearer".equals(type)) {
-                    throw new IllegalArgumentException("Unknown token type [" + type + "], only [Bearer] type permitted");
-                }
-                final Long expiresIn = (Long) a[2];
-                return new DelegatePkiAuthenticationResponse(accessToken, TimeValue.timeValueSeconds(expiresIn));
-            });
+        "delegate_pki_response",
+        true,
+        a -> {
+            final String accessToken = (String) a[0];
+            final String type = (String) a[1];
+            if (false == "Bearer".equals(type)) {
+                throw new IllegalArgumentException("Unknown token type [" + type + "], only [Bearer] type permitted");
+            }
+            final Long expiresIn = (Long) a[2];
+            return new DelegatePkiAuthenticationResponse(accessToken, TimeValue.timeValueSeconds(expiresIn));
+        }
+    );
 
     static {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), ACCESS_TOKEN_FIELD);
@@ -47,7 +50,7 @@ public final class DelegatePkiAuthenticationResponse extends ActionResponse impl
     private String accessToken;
     private TimeValue expiresIn;
 
-    DelegatePkiAuthenticationResponse() { }
+    DelegatePkiAuthenticationResponse() {}
 
     public DelegatePkiAuthenticationResponse(String accessToken, TimeValue expiresIn) {
         this.accessToken = Objects.requireNonNull(accessToken);
@@ -77,11 +80,12 @@ public final class DelegatePkiAuthenticationResponse extends ActionResponse impl
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         DelegatePkiAuthenticationResponse that = (DelegatePkiAuthenticationResponse) o;
-        return Objects.equals(accessToken, that.accessToken) &&
-            Objects.equals(expiresIn, that.expiresIn);
+        return Objects.equals(accessToken, that.accessToken) && Objects.equals(expiresIn, that.expiresIn);
     }
 
     @Override

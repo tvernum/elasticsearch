@@ -34,8 +34,10 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 public class RestOpenIdConnectPrepareAuthenticationAction extends OpenIdConnectBaseRestHandler {
     private static final Logger logger = LogManager.getLogger();
 
-    static final ObjectParser<OpenIdConnectPrepareAuthenticationRequest, Void> PARSER = new ObjectParser<>("oidc_prepare_authentication",
-        OpenIdConnectPrepareAuthenticationRequest::new);
+    static final ObjectParser<OpenIdConnectPrepareAuthenticationRequest, Void> PARSER = new ObjectParser<>(
+        "oidc_prepare_authentication",
+        OpenIdConnectPrepareAuthenticationRequest::new
+    );
 
     static {
         PARSER.declareString(OpenIdConnectPrepareAuthenticationRequest::setRealmName, new ParseField("realm"));
@@ -55,7 +57,9 @@ public class RestOpenIdConnectPrepareAuthenticationAction extends OpenIdConnectB
         try (XContentParser parser = request.contentParser()) {
             final OpenIdConnectPrepareAuthenticationRequest prepareAuthenticationRequest = PARSER.parse(parser, null);
             logger.trace("OIDC Prepare Authentication: " + prepareAuthenticationRequest);
-            return channel -> client.execute(OpenIdConnectPrepareAuthenticationAction.INSTANCE, prepareAuthenticationRequest,
+            return channel -> client.execute(
+                OpenIdConnectPrepareAuthenticationAction.INSTANCE,
+                prepareAuthenticationRequest,
                 new RestBuilderListener<OpenIdConnectPrepareAuthenticationResponse>(channel) {
                     @Override
                     public RestResponse buildResponse(OpenIdConnectPrepareAuthenticationResponse response, XContentBuilder builder)
@@ -63,7 +67,8 @@ public class RestOpenIdConnectPrepareAuthenticationAction extends OpenIdConnectB
                         logger.trace("OIDC Prepare Authentication Response: " + response);
                         return new BytesRestResponse(RestStatus.OK, response.toXContent(builder, request));
                     }
-                });
+                }
+            );
         }
     }
 

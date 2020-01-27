@@ -41,12 +41,15 @@ public class RestPutPrivilegesAction extends SecurityBaseRestHandler {
     public RestPutPrivilegesAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
+        controller.registerWithDeprecatedHandler(PUT, "/_security/privilege/", this, PUT, "/_xpack/security/privilege/", deprecationLogger);
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/privilege/", this,
-            PUT, "/_xpack/security/privilege/", deprecationLogger);
-        controller.registerWithDeprecatedHandler(
-            POST, "/_security/privilege/", this,
-            POST, "/_xpack/security/privilege/", deprecationLogger);
+            POST,
+            "/_security/privilege/",
+            this,
+            POST,
+            "/_xpack/security/privilege/",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -56,9 +59,10 @@ public class RestPutPrivilegesAction extends SecurityBaseRestHandler {
 
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
-        PutPrivilegesRequestBuilder requestBuilder = new PutPrivilegesRequestBuilder(client)
-            .source(request.requiredContent(), request.getXContentType())
-            .setRefreshPolicy(request.param("refresh"));
+        PutPrivilegesRequestBuilder requestBuilder = new PutPrivilegesRequestBuilder(client).source(
+            request.requiredContent(),
+            request.getXContentType()
+        ).setRefreshPolicy(request.param("refresh"));
 
         return execute(requestBuilder);
     }
@@ -70,9 +74,9 @@ public class RestPutPrivilegesAction extends SecurityBaseRestHandler {
                 final List<ApplicationPrivilegeDescriptor> privileges = requestBuilder.request().getPrivileges();
                 Map<String, Map<String, Map<String, Boolean>>> result = new HashMap<>();
                 privileges.stream()
-                        .map(ApplicationPrivilegeDescriptor::getApplication)
-                        .distinct()
-                        .forEach(a -> result.put(a, new HashMap<>()));
+                    .map(ApplicationPrivilegeDescriptor::getApplication)
+                    .distinct()
+                    .forEach(a -> result.put(a, new HashMap<>()));
                 privileges.forEach(privilege -> {
                     String name = privilege.getName();
                     boolean created = response.created().getOrDefault(privilege.getApplication(), Collections.emptyList()).contains(name);

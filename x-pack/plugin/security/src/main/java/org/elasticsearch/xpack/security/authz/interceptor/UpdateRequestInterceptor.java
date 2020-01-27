@@ -27,10 +27,18 @@ public class UpdateRequestInterceptor extends FieldAndDocumentLevelSecurityReque
     }
 
     @Override
-    protected void disableFeatures(IndicesRequest updateRequest, boolean fieldLevelSecurityEnabled, boolean documentLevelSecurityEnabled,
-                                   ActionListener<Void> listener) {
-        listener.onFailure(new ElasticsearchSecurityException("Can't execute an update request if field or document level security " +
-            "is enabled", RestStatus.BAD_REQUEST));
+    protected void disableFeatures(
+        IndicesRequest updateRequest,
+        boolean fieldLevelSecurityEnabled,
+        boolean documentLevelSecurityEnabled,
+        ActionListener<Void> listener
+    ) {
+        listener.onFailure(
+            new ElasticsearchSecurityException(
+                "Can't execute an update request if field or document level security " + "is enabled",
+                RestStatus.BAD_REQUEST
+            )
+        );
     }
 
     @Override

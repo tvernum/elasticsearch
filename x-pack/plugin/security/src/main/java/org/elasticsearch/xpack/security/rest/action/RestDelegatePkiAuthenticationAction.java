@@ -62,15 +62,18 @@ public final class RestDelegatePkiAuthenticationAction extends SecurityBaseRestH
     protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final DelegatePkiAuthenticationRequest delegatePkiRequest = DelegatePkiAuthenticationRequest.fromXContent(parser);
-            return channel -> client.execute(DelegatePkiAuthenticationAction.INSTANCE, delegatePkiRequest,
-                    new RestBuilderListener<DelegatePkiAuthenticationResponse>(channel) {
-                        @Override
-                        public RestResponse buildResponse(DelegatePkiAuthenticationResponse delegatePkiResponse, XContentBuilder builder)
-                                throws Exception {
-                            delegatePkiResponse.toXContent(builder, channel.request());
-                            return new BytesRestResponse(RestStatus.OK, builder);
-                        }
-                    });
+            return channel -> client.execute(
+                DelegatePkiAuthenticationAction.INSTANCE,
+                delegatePkiRequest,
+                new RestBuilderListener<DelegatePkiAuthenticationResponse>(channel) {
+                    @Override
+                    public RestResponse buildResponse(DelegatePkiAuthenticationResponse delegatePkiResponse, XContentBuilder builder)
+                        throws Exception {
+                        delegatePkiResponse.toXContent(builder, channel.request());
+                        return new BytesRestResponse(RestStatus.OK, builder);
+                    }
+                }
+            );
         }
     }
 

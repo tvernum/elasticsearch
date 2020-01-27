@@ -27,7 +27,6 @@ public class XPackInfoRequestBuilder extends ActionRequestBuilder<XPackInfoReque
         return this;
     }
 
-
     public XPackInfoRequestBuilder setCategories(EnumSet<XPackInfoRequest.Category> categories) {
         request.setCategories(categories);
         return this;

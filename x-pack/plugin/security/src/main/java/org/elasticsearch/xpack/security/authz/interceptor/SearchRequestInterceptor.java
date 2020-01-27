@@ -23,18 +23,30 @@ public class SearchRequestInterceptor extends FieldAndDocumentLevelSecurityReque
     }
 
     @Override
-    public void disableFeatures(IndicesRequest indicesRequest, boolean fieldLevelSecurityEnabled, boolean documentLevelSecurityEnabled,
-                                ActionListener<Void> listener) {
+    public void disableFeatures(
+        IndicesRequest indicesRequest,
+        boolean fieldLevelSecurityEnabled,
+        boolean documentLevelSecurityEnabled,
+        ActionListener<Void> listener
+    ) {
         final SearchRequest request = (SearchRequest) indicesRequest;
         request.requestCache(false);
 
         if (documentLevelSecurityEnabled) {
             if (request.source() != null && request.source().suggest() != null) {
-                listener.onFailure(new ElasticsearchSecurityException("Suggest isn't supported if document level security is enabled",
-                        RestStatus.BAD_REQUEST));
+                listener.onFailure(
+                    new ElasticsearchSecurityException(
+                        "Suggest isn't supported if document level security is enabled",
+                        RestStatus.BAD_REQUEST
+                    )
+                );
             } else if (request.source() != null && request.source().profile()) {
-                listener.onFailure(new ElasticsearchSecurityException("A search request cannot be profiled if document level security " +
-                    "is enabled", RestStatus.BAD_REQUEST));
+                listener.onFailure(
+                    new ElasticsearchSecurityException(
+                        "A search request cannot be profiled if document level security " + "is enabled",
+                        RestStatus.BAD_REQUEST
+                    )
+                );
             } else {
                 listener.onResponse(null);
             }

@@ -93,9 +93,12 @@ public class FileUserRolesStore {
             return map == null ? emptyMap() : map;
         } catch (Exception e) {
             logger.error(
-                    (Supplier<?>) () -> new ParameterizedMessage("failed to parse users_roles file [{}]. skipping/removing all entries...",
-                            path.toAbsolutePath()),
-                    e);
+                (Supplier<?>) () -> new ParameterizedMessage(
+                    "failed to parse users_roles file [{}]. skipping/removing all entries...",
+                    path.toAbsolutePath()
+                ),
+                e
+            );
             return emptyMap();
         }
     }
@@ -128,7 +131,7 @@ public class FileUserRolesStore {
         int lineNr = 0;
         for (String line : lines) {
             lineNr++;
-            if (line.startsWith("#")) {  //comment
+            if (line.startsWith("#")) {  // comment
                 continue;
             }
             int i = line.indexOf(":");
@@ -139,20 +142,32 @@ public class FileUserRolesStore {
             String role = line.substring(0, i).trim();
             Validation.Error validationError = Validation.Roles.validateRoleName(role, true);
             if (validationError != null) {
-                logger.error("invalid role entry in users_roles file [{}], line [{}] - {}. skipping...", path.toAbsolutePath(), lineNr,
-                        validationError);
+                logger.error(
+                    "invalid role entry in users_roles file [{}], line [{}] - {}. skipping...",
+                    path.toAbsolutePath(),
+                    lineNr,
+                    validationError
+                );
                 continue;
             }
             String usersStr = line.substring(i + 1).trim();
             if (Strings.isEmpty(usersStr)) {
-                logger.error("invalid entry for role [{}] in users_roles file [{}], line [{}]. no users found. skipping...", role,
-                        path.toAbsolutePath(), lineNr);
+                logger.error(
+                    "invalid entry for role [{}] in users_roles file [{}], line [{}]. no users found. skipping...",
+                    role,
+                    path.toAbsolutePath(),
+                    lineNr
+                );
                 continue;
             }
             String[] roleUsers = USERS_DELIM.split(usersStr);
             if (roleUsers.length == 0) {
-                logger.error("invalid entry for role [{}] in users_roles file [{}], line [{}]. no users found. skipping...", role,
-                        path.toAbsolutePath(), lineNr);
+                logger.error(
+                    "invalid entry for role [{}] in users_roles file [{}], line [{}]. no users found. skipping...",
+                    role,
+                    path.toAbsolutePath(),
+                    lineNr
+                );
                 continue;
             }
 
@@ -184,9 +199,10 @@ public class FileUserRolesStore {
         }
 
         SecurityFiles.writeFileAtomically(
-                path,
-                roleToUsers,
-                e -> String.format(Locale.ROOT, "%s:%s", e.getKey(), collectionToCommaDelimitedString(e.getValue())));
+            path,
+            roleToUsers,
+            e -> String.format(Locale.ROOT, "%s:%s", e.getKey(), collectionToCommaDelimitedString(e.getValue()))
+        );
     }
 
     void notifyRefresh() {

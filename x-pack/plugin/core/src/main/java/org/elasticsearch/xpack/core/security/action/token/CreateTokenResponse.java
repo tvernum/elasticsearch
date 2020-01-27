@@ -39,8 +39,13 @@ public final class CreateTokenResponse extends ActionResponse implements ToXCont
         kerberosAuthenticationResponseToken = in.readOptionalString();
     }
 
-    public CreateTokenResponse(String tokenString, TimeValue expiresIn, String scope, String refreshToken,
-                               String kerberosAuthenticationResponseToken) {
+    public CreateTokenResponse(
+        String tokenString,
+        TimeValue expiresIn,
+        String scope,
+        String refreshToken,
+        String kerberosAuthenticationResponseToken
+    ) {
         this.tokenString = Objects.requireNonNull(tokenString);
         this.expiresIn = Objects.requireNonNull(expiresIn);
         this.scope = scope;
@@ -79,10 +84,7 @@ public final class CreateTokenResponse extends ActionResponse implements ToXCont
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject()
-            .field("access_token", tokenString)
-            .field("type", "Bearer")
-            .field("expires_in", expiresIn.seconds());
+        builder.startObject().field("access_token", tokenString).field("type", "Bearer").field("expires_in", expiresIn.seconds());
         if (refreshToken != null) {
             builder.field("refresh_token", refreshToken);
         }
@@ -98,14 +100,16 @@ public final class CreateTokenResponse extends ActionResponse implements ToXCont
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         CreateTokenResponse that = (CreateTokenResponse) o;
-        return Objects.equals(tokenString, that.tokenString) &&
-            Objects.equals(expiresIn, that.expiresIn) &&
-            Objects.equals(scope, that.scope) &&
-            Objects.equals(refreshToken, that.refreshToken) &&
-            Objects.equals(kerberosAuthenticationResponseToken,  that.kerberosAuthenticationResponseToken);
+        return Objects.equals(tokenString, that.tokenString)
+            && Objects.equals(expiresIn, that.expiresIn)
+            && Objects.equals(scope, that.scope)
+            && Objects.equals(refreshToken, that.refreshToken)
+            && Objects.equals(kerberosAuthenticationResponseToken, that.kerberosAuthenticationResponseToken);
     }
 
     @Override

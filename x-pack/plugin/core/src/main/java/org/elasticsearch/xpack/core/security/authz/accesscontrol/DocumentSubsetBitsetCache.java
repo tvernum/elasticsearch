@@ -79,14 +79,20 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
      * The TTL defaults to 2 hours. We default to a large cache size ({@link #CACHE_SIZE_SETTING}), and aggressively
      * expire unused entries so that the cache does not hold on to memory unnecessarily.
      */
-    static final Setting<TimeValue> CACHE_TTL_SETTING =
-        Setting.timeSetting("xpack.security.dls.bitset.cache.ttl", TimeValue.timeValueHours(2), Property.NodeScope);
+    static final Setting<TimeValue> CACHE_TTL_SETTING = Setting.timeSetting(
+        "xpack.security.dls.bitset.cache.ttl",
+        TimeValue.timeValueHours(2),
+        Property.NodeScope
+    );
 
     /**
      * The size defaults to 10% of heap so that it automatically scales up with larger node size
      */
-    static final Setting<ByteSizeValue> CACHE_SIZE_SETTING = Setting.memorySizeSetting("xpack.security.dls.bitset.cache.size",
-            "10%", Property.NodeScope);
+    static final Setting<ByteSizeValue> CACHE_SIZE_SETTING = Setting.memorySizeSetting(
+        "xpack.security.dls.bitset.cache.size",
+        "10%",
+        Property.NodeScope
+    );
 
     private static final BitSet NULL_MARKER = new FixedBitSet(0);
 
@@ -239,10 +245,14 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
                     final BitSet bs = BitSet.of(s.iterator(), context.reader().maxDoc());
                     final long bitSetBytes = bs.ramBytesUsed();
                     if (bitSetBytes > this.maxWeightBytes) {
-                        logger.warn("built a DLS BitSet that uses [{}] bytes; the DLS BitSet cache has a maximum size of [{}] bytes;" +
-                                " this object cannot be cached and will need to be rebuilt for each use;" +
-                                " consider increasing the value of [{}]",
-                            bitSetBytes, maxWeightBytes, CACHE_SIZE_SETTING.getKey());
+                        logger.warn(
+                            "built a DLS BitSet that uses [{}] bytes; the DLS BitSet cache has a maximum size of [{}] bytes;"
+                                + " this object cannot be cached and will need to be rebuilt for each use;"
+                                + " consider increasing the value of [{}]",
+                            bitSetBytes,
+                            maxWeightBytes,
+                            CACHE_SIZE_SETTING.getKey()
+                        );
                     } else if (bitSetBytes + bitsetCache.weight() > maxWeightBytes) {
                         maybeLogCacheFullWarning();
                     }
@@ -267,7 +277,8 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
         if (cacheFullWarningTime.compareAndSet(nextLogTime, nextCheck)) {
             logger.info(
                 "the Document Level Security BitSet cache is full which may impact performance; consider increasing the value of [{}]",
-                CACHE_SIZE_SETTING.getKey());
+                CACHE_SIZE_SETTING.getKey()
+            );
         }
     }
 
@@ -277,11 +288,7 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
 
     public Map<String, Object> usageStats() {
         final ByteSizeValue ram = new ByteSizeValue(ramBytesUsed(), ByteSizeUnit.BYTES);
-        return Map.of(
-            "count", entryCount(),
-            "memory", ram.toString(),
-            "memory_in_bytes", ram.getBytes()
-        );
+        return Map.of("count", entryCount(), "memory", ram.toString(), "memory_in_bytes", ram.getBytes());
     }
 
     private class BitsetCacheKey {
@@ -302,8 +309,7 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
                 return false;
             }
             final BitsetCacheKey that = (BitsetCacheKey) other;
-            return Objects.equals(this.index, that.index) &&
-                Objects.equals(this.query, that.query);
+            return Objects.equals(this.index, that.index) && Objects.equals(this.query, that.query);
         }
 
         @Override
@@ -325,12 +331,14 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
         this.bitsetCache.keys().forEach(bck -> {
             final Set<BitsetCacheKey> set = this.keysByIndex.get(bck.index);
             if (set == null) {
-                throw new IllegalStateException("Key [" + bck + "] is in the cache, but there is no entry for [" + bck.index +
-                    "] in the lookup map");
+                throw new IllegalStateException(
+                    "Key [" + bck + "] is in the cache, but there is no entry for [" + bck.index + "] in the lookup map"
+                );
             }
             if (set.contains(bck) == false) {
-                throw new IllegalStateException("Key [" + bck + "] is in the cache, but the lookup entry for [" + bck.index +
-                    "] does not contain that key");
+                throw new IllegalStateException(
+                    "Key [" + bck + "] is in the cache, but the lookup entry for [" + bck.index + "] does not contain that key"
+                );
             }
         });
         this.keysByIndex.values().stream().flatMap(Set::stream).forEach(bck -> {

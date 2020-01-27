@@ -40,14 +40,17 @@ public final class DelegatePkiAuthenticationRequest extends ActionRequest implem
     private static final ParseField X509_CERTIFICATE_CHAIN_FIELD = new ParseField("x509_certificate_chain");
 
     public static final ConstructingObjectParser<DelegatePkiAuthenticationRequest, Void> PARSER = new ConstructingObjectParser<>(
-            "delegate_pki_request", false, a -> {
-                @SuppressWarnings("unchecked")
-                List<X509Certificate> certificates = (List<X509Certificate>) a[0];
-                return new DelegatePkiAuthenticationRequest(certificates);
-            });
+        "delegate_pki_request",
+        false,
+        a -> {
+            @SuppressWarnings("unchecked")
+            List<X509Certificate> certificates = (List<X509Certificate>) a[0];
+            return new DelegatePkiAuthenticationRequest(certificates);
+        }
+    );
 
     static {
-        PARSER.declareFieldArray(optionalConstructorArg(), (parser,c) -> {
+        PARSER.declareFieldArray(optionalConstructorArg(), (parser, c) -> {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(Base64.getDecoder().decode(parser.text()))) {
                 return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(bis);
             } catch (CertificateException | IOException e) {
@@ -111,8 +114,10 @@ public final class DelegatePkiAuthenticationRequest extends ActionRequest implem
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         DelegatePkiAuthenticationRequest that = (DelegatePkiAuthenticationRequest) o;
         return Objects.equals(certificateChain, that.certificateChain);
     }
@@ -127,12 +132,12 @@ public final class DelegatePkiAuthenticationRequest extends ActionRequest implem
         builder.startObject().startArray(X509_CERTIFICATE_CHAIN_FIELD.getPreferredName());
         try {
             for (X509Certificate cert : certificateChain) {
-                 builder.value(Base64.getEncoder().encodeToString(cert.getEncoded()));
-             }
-         } catch (CertificateEncodingException e) {
-             throw new IOException(e);
-         }
-         return builder.endArray().endObject();
+                builder.value(Base64.getEncoder().encodeToString(cert.getEncoded()));
+            }
+        } catch (CertificateEncodingException e) {
+            throw new IOException(e);
+        }
+        return builder.endArray().endObject();
     }
 
 }

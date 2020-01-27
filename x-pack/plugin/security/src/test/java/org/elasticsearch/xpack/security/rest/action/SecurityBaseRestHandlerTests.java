@@ -31,7 +31,8 @@ public class SecurityBaseRestHandlerTests extends ESTestCase {
         when(licenseState.isSecurityAvailable()).thenReturn(true);
         when(licenseState.isSecurityDisabledByLicenseDefaults()).thenReturn(securityDisabledByLicenseDefaults);
         when(licenseState.getOperationMode()).thenReturn(
-            randomFrom(License.OperationMode.BASIC, License.OperationMode.STANDARD, License.OperationMode.GOLD));
+            randomFrom(License.OperationMode.BASIC, License.OperationMode.STANDARD, License.OperationMode.GOLD)
+        );
         SecurityBaseRestHandler handler = new SecurityBaseRestHandler(Settings.EMPTY, licenseState) {
 
             @Override

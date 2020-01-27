@@ -40,12 +40,12 @@ public class IpFilteringUpdateTests extends SecurityIntegTestCase {
 
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
-        String randomClientPortRange = randomClientPort + "-" + (randomClientPort+100);
+        String randomClientPortRange = randomClientPort + "-" + (randomClientPort + 100);
         return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put("xpack.security.transport.filter.deny", "127.0.0.200")
-                .put("transport.profiles.client.port", randomClientPortRange)
-                .build();
+            .put(super.nodeSettings(nodeOrdinal))
+            .put("xpack.security.transport.filter.deny", "127.0.0.200")
+            .put("transport.profiles.client.port", randomClientPortRange)
+            .build();
     }
 
     public void testThatIpFilterConfigurationCanBeChangedDynamically() throws Exception {
@@ -58,24 +58,24 @@ public class IpFilteringUpdateTests extends SecurityIntegTestCase {
         assertConnectionAccepted("client", "127.0.0.8");
 
         Settings settings = Settings.builder()
-                .put("xpack.security.transport.filter.allow", "127.0.0.1")
-                .put("xpack.security.transport.filter.deny", "127.0.0.8")
-                .build();
+            .put("xpack.security.transport.filter.allow", "127.0.0.1")
+            .put("xpack.security.transport.filter.deny", "127.0.0.8")
+            .build();
         updateSettings(settings);
         assertConnectionRejected("default", "127.0.0.8");
 
         settings = Settings.builder()
-                .putList("xpack.security.http.filter.allow", "127.0.0.1")
-                .putList("xpack.security.http.filter.deny", "127.0.0.8")
-                .build();
+            .putList("xpack.security.http.filter.allow", "127.0.0.1")
+            .putList("xpack.security.http.filter.deny", "127.0.0.8")
+            .build();
         updateSettings(settings);
         assertConnectionRejected("default", "127.0.0.8");
         assertConnectionRejected(".http", "127.0.0.8");
 
         settings = Settings.builder()
-                .put("transport.profiles.client.xpack.security.filter.allow", "127.0.0.1")
-                .put("transport.profiles.client.xpack.security.filter.deny", "127.0.0.8")
-                .build();
+            .put("transport.profiles.client.xpack.security.filter.allow", "127.0.0.1")
+            .put("transport.profiles.client.xpack.security.filter.deny", "127.0.0.8")
+            .build();
         updateSettings(settings);
         assertConnectionRejected("default", "127.0.0.8");
         assertConnectionRejected(".http", "127.0.0.8");
@@ -92,9 +92,9 @@ public class IpFilteringUpdateTests extends SecurityIntegTestCase {
 
         // now disable ip filtering dynamically and make sure nothing is rejected
         settings = Settings.builder()
-                .put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false)
-                .put(IPFilter.IP_FILTER_ENABLED_HTTP_SETTING.getKey(), true)
-                .build();
+            .put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false)
+            .put(IPFilter.IP_FILTER_ENABLED_HTTP_SETTING.getKey(), true)
+            .build();
         updateSettings(settings);
         assertConnectionAccepted("default", "127.0.0.8");
         assertConnectionAccepted("client", "127.0.0.8");
@@ -111,9 +111,7 @@ public class IpFilteringUpdateTests extends SecurityIntegTestCase {
         // now also disable for HTTP
         if (httpEnabled) {
             assertConnectionRejected(".http", "127.0.0.8");
-            settings = Settings.builder()
-                    .put(IPFilter.IP_FILTER_ENABLED_HTTP_SETTING.getKey(), false)
-                    .build();
+            settings = Settings.builder().put(IPFilter.IP_FILTER_ENABLED_HTTP_SETTING.getKey(), false).build();
             // as we permanently switch between persistent and transient settings, just set both here to make sure we overwrite
             assertAcked(client().admin().cluster().prepareUpdateSettings().setPersistentSettings(settings));
             assertAcked(client().admin().cluster().prepareUpdateSettings().setTransientSettings(settings));
@@ -123,33 +121,24 @@ public class IpFilteringUpdateTests extends SecurityIntegTestCase {
 
     // issue #762, occurred because in the above test we use HTTP and transport
     public void testThatDisablingIpFilterWorksAsExpected() throws Exception {
-        Settings settings = Settings.builder()
-                .put("xpack.security.transport.filter.deny", "127.0.0.8")
-                .build();
+        Settings settings = Settings.builder().put("xpack.security.transport.filter.deny", "127.0.0.8").build();
         updateSettings(settings);
         assertConnectionRejected("default", "127.0.0.8");
 
-        settings = Settings.builder()
-                .put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false)
-                .build();
+        settings = Settings.builder().put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false).build();
         updateSettings(settings);
         assertConnectionAccepted("default", "127.0.0.8");
     }
 
     public void testThatDisablingIpFilterForProfilesWorksAsExpected() throws Exception {
-        Settings settings = Settings.builder()
-                .put("transport.profiles.client.xpack.security.filter.deny", "127.0.0.8")
-                .build();
+        Settings settings = Settings.builder().put("transport.profiles.client.xpack.security.filter.deny", "127.0.0.8").build();
         updateSettings(settings);
         assertConnectionRejected("client", "127.0.0.8");
 
-        settings = Settings.builder()
-                .put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false)
-                .build();
+        settings = Settings.builder().put(IPFilter.IP_FILTER_ENABLED_SETTING.getKey(), false).build();
         updateSettings(settings);
         assertConnectionAccepted("client", "127.0.0.8");
     }
-
 
     private void updateSettings(Settings settings) {
         if (randomBoolean()) {

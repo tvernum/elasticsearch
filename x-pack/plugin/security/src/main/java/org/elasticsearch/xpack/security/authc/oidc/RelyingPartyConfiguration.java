@@ -27,8 +27,15 @@ public class RelyingPartyConfiguration {
     private final JWSAlgorithm signatureAlgorithm;
     private final URI postLogoutRedirectUri;
 
-    public RelyingPartyConfiguration(ClientID clientId, SecureString clientSecret, URI redirectUri, ResponseType responseType,
-                                     Scope requestedScope, JWSAlgorithm algorithm, @Nullable URI postLogoutRedirectUri) {
+    public RelyingPartyConfiguration(
+        ClientID clientId,
+        SecureString clientSecret,
+        URI redirectUri,
+        ResponseType responseType,
+        Scope requestedScope,
+        JWSAlgorithm algorithm,
+        @Nullable URI postLogoutRedirectUri
+    ) {
         this.clientId = Objects.requireNonNull(clientId, "clientId must be provided");
         this.clientSecret = Objects.requireNonNull(clientSecret, "clientSecret must be provided");
         this.redirectUri = Objects.requireNonNull(redirectUri, "redirectUri must be provided");

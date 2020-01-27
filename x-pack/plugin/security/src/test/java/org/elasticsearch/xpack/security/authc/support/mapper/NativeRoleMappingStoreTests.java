@@ -56,39 +56,70 @@ import static org.mockito.Mockito.when;
 
 public class NativeRoleMappingStoreTests extends ESTestCase {
     private final String concreteSecurityIndexName = randomFrom(
-        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6, RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7);
+        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
+        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7
+    );
 
     public void testResolveRoles() throws Exception {
         // Does match DN
-        final ExpressionRoleMapping mapping1 = new ExpressionRoleMapping("dept_h",
-                new FieldExpression("dn", Collections.singletonList(new FieldValue("*,ou=dept_h,o=forces,dc=gc,dc=ca"))),
-                Arrays.asList("dept_h", "defence"), Collections.emptyList(), Collections.emptyMap(), true);
-        // Does not match - user is not in this group
-        final ExpressionRoleMapping mapping2 = new ExpressionRoleMapping("admin",
-            new FieldExpression("groups", Collections.singletonList(
-                new FieldValue(randomiseDn("cn=esadmin,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")))),
-            Arrays.asList("admin"), Collections.emptyList(), Collections.emptyMap(), true);
-        // Does match - user is one of these groups
-        final ExpressionRoleMapping mapping3 = new ExpressionRoleMapping("flight",
-                new FieldExpression("groups", Arrays.asList(
-                        new FieldValue(randomiseDn("cn=alphaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")),
-                        new FieldValue(randomiseDn("cn=betaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")),
-                        new FieldValue(randomiseDn("cn=gammaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca"))
-                )),
+        final ExpressionRoleMapping mapping1 = new ExpressionRoleMapping(
+            "dept_h",
+            new FieldExpression("dn", Collections.singletonList(new FieldValue("*,ou=dept_h,o=forces,dc=gc,dc=ca"))),
+            Arrays.asList("dept_h", "defence"),
             Collections.emptyList(),
-            Arrays.asList(new TemplateRoleName(new BytesArray("{ \"source\":\"{{metadata.extra_group}}\" }"),
-                TemplateRoleName.Format.STRING)),
-            Collections.emptyMap(), true);
+            Collections.emptyMap(),
+            true
+        );
+        // Does not match - user is not in this group
+        final ExpressionRoleMapping mapping2 = new ExpressionRoleMapping(
+            "admin",
+            new FieldExpression(
+                "groups",
+                Collections.singletonList(new FieldValue(randomiseDn("cn=esadmin,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")))
+            ),
+            Arrays.asList("admin"),
+            Collections.emptyList(),
+            Collections.emptyMap(),
+            true
+        );
+        // Does match - user is one of these groups
+        final ExpressionRoleMapping mapping3 = new ExpressionRoleMapping(
+            "flight",
+            new FieldExpression(
+                "groups",
+                Arrays.asList(
+                    new FieldValue(randomiseDn("cn=alphaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")),
+                    new FieldValue(randomiseDn("cn=betaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")),
+                    new FieldValue(randomiseDn("cn=gammaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca"))
+                )
+            ),
+            Collections.emptyList(),
+            Arrays.asList(
+                new TemplateRoleName(new BytesArray("{ \"source\":\"{{metadata.extra_group}}\" }"), TemplateRoleName.Format.STRING)
+            ),
+            Collections.emptyMap(),
+            true
+        );
         // Does not match - mapping is not enabled
-        final ExpressionRoleMapping mapping4 = new ExpressionRoleMapping("mutants",
-                new FieldExpression("groups", Collections.singletonList(
-                        new FieldValue(randomiseDn("cn=mutants,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")))),
-            Arrays.asList("mutants"), Collections.emptyList(), Collections.emptyMap(), false);
+        final ExpressionRoleMapping mapping4 = new ExpressionRoleMapping(
+            "mutants",
+            new FieldExpression(
+                "groups",
+                Collections.singletonList(new FieldValue(randomiseDn("cn=mutants,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")))
+            ),
+            Arrays.asList("mutants"),
+            Collections.emptyList(),
+            Collections.emptyMap(),
+            false
+        );
 
         final Client client = mock(Client.class);
         SecurityIndexManager securityIndex = mock(SecurityIndexManager.class);
-        ScriptService scriptService  = new ScriptService(Settings.EMPTY,
-            Collections.singletonMap(MustacheScriptEngine.NAME, new MustacheScriptEngine()), ScriptModule.CORE_CONTEXTS);
+        ScriptService scriptService = new ScriptService(
+            Settings.EMPTY,
+            Collections.singletonMap(MustacheScriptEngine.NAME, new MustacheScriptEngine()),
+            ScriptModule.CORE_CONTEXTS
+        );
         when(securityIndex.isAvailable()).thenReturn(true);
 
         final NativeRoleMappingStore store = new NativeRoleMappingStore(Settings.EMPTY, client, securityIndex, scriptService) {
@@ -100,16 +131,24 @@ public class NativeRoleMappingStoreTests extends ESTestCase {
             }
         };
 
-        final RealmConfig realm = new RealmConfig(new RealmConfig.RealmIdentifier("ldap", "ldap1"), Settings.EMPTY,
-                mock(Environment.class), new ThreadContext(Settings.EMPTY));
+        final RealmConfig realm = new RealmConfig(
+            new RealmConfig.RealmIdentifier("ldap", "ldap1"),
+            Settings.EMPTY,
+            mock(Environment.class),
+            new ThreadContext(Settings.EMPTY)
+        );
 
         final PlainActionFuture<Set<String>> future = new PlainActionFuture<>();
-        final UserRoleMapper.UserData user = new UserRoleMapper.UserData("sasquatch",
-                randomiseDn("cn=walter.langowski,ou=people,ou=dept_h,o=forces,dc=gc,dc=ca"),
-                List.of(
-                        randomiseDn("cn=alphaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca"),
-                        randomiseDn("cn=mutants,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")
-                ), Map.of("extra_group", "flight"), realm);
+        final UserRoleMapper.UserData user = new UserRoleMapper.UserData(
+            "sasquatch",
+            randomiseDn("cn=walter.langowski,ou=people,ou=dept_h,o=forces,dc=gc,dc=ca"),
+            List.of(
+                randomiseDn("cn=alphaflight,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca"),
+                randomiseDn("cn=mutants,ou=groups,ou=dept_h,o=forces,dc=gc,dc=ca")
+            ),
+            Map.of("extra_group", "flight"),
+            realm
+        );
 
         logger.info("UserData is [{}]", user);
         store.resolveRoles(user, future);
@@ -145,7 +184,15 @@ public class NativeRoleMappingStoreTests extends ESTestCase {
 
     private SecurityIndexManager.State indexState(boolean isUpToDate, ClusterHealthStatus healthStatus) {
         return new SecurityIndexManager.State(
-            Instant.now(), isUpToDate, true, true, null, concreteSecurityIndexName, healthStatus, IndexMetaData.State.OPEN);
+            Instant.now(),
+            isUpToDate,
+            true,
+            true,
+            null,
+            concreteSecurityIndexName,
+            healthStatus,
+            IndexMetaData.State.OPEN
+        );
     }
 
     public void testCacheClearOnIndexHealthChange() {
@@ -179,8 +226,9 @@ public class NativeRoleMappingStoreTests extends ESTestCase {
 
         // green to yellow or yellow to green
         previousState = dummyState(randomFrom(ClusterHealthStatus.GREEN, ClusterHealthStatus.YELLOW));
-        currentState = dummyState(previousState.indexHealth == ClusterHealthStatus.GREEN ?
-            ClusterHealthStatus.YELLOW : ClusterHealthStatus.GREEN);
+        currentState = dummyState(
+            previousState.indexHealth == ClusterHealthStatus.GREEN ? ClusterHealthStatus.YELLOW : ClusterHealthStatus.GREEN
+        );
         store.onSecurityIndexStateChange(previousState, currentState);
         assertEquals(expectedInvalidation, numInvalidation.get());
     }
@@ -229,8 +277,12 @@ public class NativeRoleMappingStoreTests extends ESTestCase {
             return null;
         }).when(client).execute(eq(ClearRealmCacheAction.INSTANCE), any(ClearRealmCacheRequest.class), any(ActionListener.class));
 
-        final NativeRoleMappingStore store = new NativeRoleMappingStore(Settings.EMPTY, client, mock(SecurityIndexManager.class),
-            mock(ScriptService.class));
+        final NativeRoleMappingStore store = new NativeRoleMappingStore(
+            Settings.EMPTY,
+            client,
+            mock(SecurityIndexManager.class),
+            mock(ScriptService.class)
+        );
 
         if (attachRealm) {
             final Environment env = TestEnvironment.newEnvironment(settings);

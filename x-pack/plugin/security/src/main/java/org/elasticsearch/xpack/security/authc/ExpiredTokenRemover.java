@@ -50,8 +50,12 @@ final class ExpiredTokenRemover extends AbstractRunnable {
     private final TimeValue timeout;
     private boolean checkMainIndexForExpiredTokens;
 
-    ExpiredTokenRemover(Settings settings, Client client, SecurityIndexManager securityMainIndex,
-                        SecurityIndexManager securityTokensIndex) {
+    ExpiredTokenRemover(
+        Settings settings,
+        Client client,
+        SecurityIndexManager securityMainIndex,
+        SecurityIndexManager securityTokensIndex
+    ) {
         this.client = client;
         this.securityMainIndex = securityMainIndex;
         this.securityTokensIndex = securityTokensIndex;
@@ -78,24 +82,27 @@ final class ExpiredTokenRemover extends AbstractRunnable {
             expiredDbq.getSearchRequest().source().timeout(timeout);
         }
         final Instant now = Instant.now();
-        expiredDbq
-            .setQuery(QueryBuilders.boolQuery()
+        expiredDbq.setQuery(
+            QueryBuilders.boolQuery()
                 .filter(QueryBuilders.termsQuery("doc_type", TokenService.TOKEN_DOC_TYPE))
-                .filter(QueryBuilders.rangeQuery("creation_time")
-                        .lte(now.minus(MAXIMUM_TOKEN_LIFETIME_HOURS, ChronoUnit.HOURS).toEpochMilli())));
+                .filter(
+                    QueryBuilders.rangeQuery("creation_time").lte(now.minus(MAXIMUM_TOKEN_LIFETIME_HOURS, ChronoUnit.HOURS).toEpochMilli())
+                )
+        );
         logger.trace(() -> new ParameterizedMessage("Removing old tokens: [{}]", Strings.toString(expiredDbq)));
-        executeAsyncWithOrigin(client, SECURITY_ORIGIN, DeleteByQueryAction.INSTANCE, expiredDbq,
-                ActionListener.wrap(bulkResponse -> {
-                    debugDbqResponse(bulkResponse);
-                    // tokens can still linger on the main index for their maximum lifetime after the tokens index has been created, because
-                    // only after the tokens index has been created all nodes will store tokens there and not on the main security index
-                    if (checkMainIndexForExpiredTokens && securityTokensIndex.indexExists()
-                            && securityTokensIndex.getCreationTime().isBefore(now.minus(MAXIMUM_TOKEN_LIFETIME_HOURS, ChronoUnit.HOURS))
-                            && bulkResponse.getBulkFailures().isEmpty() && bulkResponse.getSearchFailures().isEmpty()) {
-                        checkMainIndexForExpiredTokens = false;
-                    }
-                    markComplete();
-                }, this::onFailure));
+        executeAsyncWithOrigin(client, SECURITY_ORIGIN, DeleteByQueryAction.INSTANCE, expiredDbq, ActionListener.wrap(bulkResponse -> {
+            debugDbqResponse(bulkResponse);
+            // tokens can still linger on the main index for their maximum lifetime after the tokens index has been created, because
+            // only after the tokens index has been created all nodes will store tokens there and not on the main security index
+            if (checkMainIndexForExpiredTokens
+                && securityTokensIndex.indexExists()
+                && securityTokensIndex.getCreationTime().isBefore(now.minus(MAXIMUM_TOKEN_LIFETIME_HOURS, ChronoUnit.HOURS))
+                && bulkResponse.getBulkFailures().isEmpty()
+                && bulkResponse.getSearchFailures().isEmpty()) {
+                checkMainIndexForExpiredTokens = false;
+            }
+            markComplete();
+        }, this::onFailure));
     }
 
     void submit(ThreadPool threadPool) {
@@ -106,15 +113,28 @@ final class ExpiredTokenRemover extends AbstractRunnable {
 
     private void debugDbqResponse(BulkByScrollResponse response) {
         if (logger.isDebugEnabled()) {
-            logger.debug("delete by query of tokens finished with [{}] deletions, [{}] bulk failures, [{}] search failures",
-                    response.getDeleted(), response.getBulkFailures().size(), response.getSearchFailures().size());
+            logger.debug(
+                "delete by query of tokens finished with [{}] deletions, [{}] bulk failures, [{}] search failures",
+                response.getDeleted(),
+                response.getBulkFailures().size(),
+                response.getSearchFailures().size()
+            );
             for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
-                logger.debug(new ParameterizedMessage("deletion failed for index [{}], id [{}]",
-                        failure.getIndex(), failure.getId()), failure.getCause());
+                logger.debug(
+                    new ParameterizedMessage("deletion failed for index [{}], id [{}]", failure.getIndex(), failure.getId()),
+                    failure.getCause()
+                );
             }
             for (ScrollableHitSource.SearchFailure failure : response.getSearchFailures()) {
-                logger.debug(new ParameterizedMessage("search failed for index [{}], shard [{}] on node [{}]",
-                        failure.getIndex(), failure.getShardId(), failure.getNodeId()), failure.getReason());
+                logger.debug(
+                    new ParameterizedMessage(
+                        "search failed for index [{}], shard [{}] on node [{}]",
+                        failure.getIndex(),
+                        failure.getShardId(),
+                        failure.getNodeId()
+                    ),
+                    failure.getReason()
+                );
             }
         }
     }

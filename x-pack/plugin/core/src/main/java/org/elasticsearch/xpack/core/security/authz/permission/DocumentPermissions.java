@@ -86,8 +86,12 @@ public final class DocumentPermissions {
      * @return {@link BooleanQuery} for the filter
      * @throws IOException thrown if there is an exception during parsing
      */
-    public BooleanQuery filter(User user, ScriptService scriptService, ShardId shardId,
-                                      Function<ShardId, QueryShardContext> queryShardContextProvider) throws IOException {
+    public BooleanQuery filter(
+        User user,
+        ScriptService scriptService,
+        ShardId shardId,
+        Function<ShardId, QueryShardContext> queryShardContextProvider
+    ) throws IOException {
         if (hasDocumentLevelPermissions()) {
             BooleanQuery.Builder filter;
             if (queries != null && limitedByQueries != null) {
@@ -111,13 +115,22 @@ public final class DocumentPermissions {
         return null;
     }
 
-    private static void buildRoleQuery(User user, ScriptService scriptService, ShardId shardId,
-                                       Function<ShardId, QueryShardContext> queryShardContextProvider, Set<BytesReference> queries,
-                                       BooleanQuery.Builder filter) throws IOException {
+    private static void buildRoleQuery(
+        User user,
+        ScriptService scriptService,
+        ShardId shardId,
+        Function<ShardId, QueryShardContext> queryShardContextProvider,
+        Set<BytesReference> queries,
+        BooleanQuery.Builder filter
+    ) throws IOException {
         for (BytesReference bytesReference : queries) {
             QueryShardContext queryShardContext = queryShardContextProvider.apply(shardId);
-            QueryBuilder queryBuilder = DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(bytesReference, scriptService,
-                queryShardContext.getXContentRegistry(), user);
+            QueryBuilder queryBuilder = DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(
+                bytesReference,
+                scriptService,
+                queryShardContext.getXContentRegistry(),
+                user
+            );
             if (queryBuilder != null) {
                 failIfQueryUsesClient(queryBuilder, queryShardContext);
                 Query roleQuery = queryShardContext.toQuery(queryBuilder).query();
@@ -125,12 +138,10 @@ public final class DocumentPermissions {
                 if (queryShardContext.getMapperService().hasNested()) {
                     NestedHelper nestedHelper = new NestedHelper(queryShardContext.getMapperService());
                     if (nestedHelper.mightMatchNestedDocs(roleQuery)) {
-                        roleQuery = new BooleanQuery.Builder().add(roleQuery, FILTER)
-                            .add(Queries.newNonNestedFilter(), FILTER).build();
+                        roleQuery = new BooleanQuery.Builder().add(roleQuery, FILTER).add(Queries.newNonNestedFilter(), FILTER).build();
                     }
                     // If access is allowed on root doc then also access is allowed on all nested docs of that root document:
-                    BitSetProducer rootDocs = queryShardContext
-                        .bitsetFilter(Queries.newNonNestedFilter());
+                    BitSetProducer rootDocs = queryShardContext.bitsetFilter(Queries.newNonNestedFilter());
                     ToChildBlockJoinQuery includeNestedDocs = new ToChildBlockJoinQuery(roleQuery, rootDocs);
                     filter.add(includeNestedDocs, SHOULD);
                 }
@@ -148,10 +159,13 @@ public final class DocumentPermissions {
      * the DLS query until the get thread pool has been exhausted:
      * https://github.com/elastic/x-plugins/issues/3145
      */
-    static void failIfQueryUsesClient(QueryBuilder queryBuilder, QueryRewriteContext original)
-            throws IOException {
+    static void failIfQueryUsesClient(QueryBuilder queryBuilder, QueryRewriteContext original) throws IOException {
         QueryRewriteContext copy = new QueryRewriteContext(
-                original.getXContentRegistry(), original.getWriteableRegistry(), null, original::nowInMillis);
+            original.getXContentRegistry(),
+            original.getWriteableRegistry(),
+            null,
+            original::nowInMillis
+        );
         Rewriteable.rewrite(queryBuilder, copy);
         if (copy.hasAsyncActions()) {
             throw new IllegalStateException("role queries are not allowed to execute additional requests");
@@ -187,10 +201,9 @@ public final class DocumentPermissions {
      * @param limitedByDocumentPermissions {@link DocumentPermissions} used to limit the document level access
      * @return instance of {@link DocumentPermissions}
      */
-    public DocumentPermissions limitDocumentPermissions(
-            DocumentPermissions limitedByDocumentPermissions) {
+    public DocumentPermissions limitDocumentPermissions(DocumentPermissions limitedByDocumentPermissions) {
         assert limitedByQueries == null
-                && limitedByDocumentPermissions.limitedByQueries == null : "nested scoping for document permissions is not permitted";
+            && limitedByDocumentPermissions.limitedByQueries == null : "nested scoping for document permissions is not permitted";
         if (queries == null && limitedByDocumentPermissions.queries == null) {
             return DocumentPermissions.allowAll();
         }

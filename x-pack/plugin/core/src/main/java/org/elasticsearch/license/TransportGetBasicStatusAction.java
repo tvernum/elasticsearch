@@ -24,11 +24,22 @@ import java.io.IOException;
 public class TransportGetBasicStatusAction extends TransportMasterNodeReadAction<GetBasicStatusRequest, GetBasicStatusResponse> {
 
     @Inject
-    public TransportGetBasicStatusAction(TransportService transportService, ClusterService clusterService,
-                                         ThreadPool threadPool, ActionFilters actionFilters,
-                                         IndexNameExpressionResolver indexNameExpressionResolver) {
-        super(GetBasicStatusAction.NAME, transportService, clusterService, threadPool, actionFilters,
-                GetBasicStatusRequest::new, indexNameExpressionResolver);
+    public TransportGetBasicStatusAction(
+        TransportService transportService,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver
+    ) {
+        super(
+            GetBasicStatusAction.NAME,
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            GetBasicStatusRequest::new,
+            indexNameExpressionResolver
+        );
     }
 
     @Override
@@ -42,8 +53,12 @@ public class TransportGetBasicStatusAction extends TransportMasterNodeReadAction
     }
 
     @Override
-    protected void masterOperation(Task task, GetBasicStatusRequest request, ClusterState state,
-                                   ActionListener<GetBasicStatusResponse> listener) throws Exception {
+    protected void masterOperation(
+        Task task,
+        GetBasicStatusRequest request,
+        ClusterState state,
+        ActionListener<GetBasicStatusResponse> listener
+    ) throws Exception {
         LicensesMetaData licensesMetaData = state.metaData().custom(LicensesMetaData.TYPE);
         if (licensesMetaData == null) {
             listener.onResponse(new GetBasicStatusResponse(true));

@@ -23,7 +23,9 @@ import java.util.EnumSet;
 /**
  * Contains metadata about registered licenses
  */
-public class LicensesMetaData extends AbstractNamedDiffable<MetaData.Custom> implements MetaData.Custom,
+public class LicensesMetaData extends AbstractNamedDiffable<MetaData.Custom>
+    implements
+        MetaData.Custom,
         MergableCustomMetaData<LicensesMetaData> {
 
     public static final String TYPE = "licenses";
@@ -39,14 +41,14 @@ public class LicensesMetaData extends AbstractNamedDiffable<MetaData.Custom> imp
      * ever existed in the cluster state
      */
     public static final License LICENSE_TOMBSTONE = License.builder()
-            .type(License.LicenseType.TRIAL)
-            .issuer("elasticsearch")
-            .uid("TOMBSTONE")
-            .issuedTo("")
-            .maxNodes(0)
-            .issueDate(0)
-            .expiryDate(0)
-            .build();
+        .type(License.LicenseType.TRIAL)
+        .issuer("elasticsearch")
+        .uid("TOMBSTONE")
+        .issuedTo("")
+        .maxNodes(0)
+        .issueDate(0)
+        .expiryDate(0)
+        .build();
 
     private License license;
 
@@ -78,20 +80,20 @@ public class LicensesMetaData extends AbstractNamedDiffable<MetaData.Custom> imp
 
     @Override
     public String toString() {
-        return "LicensesMetaData{" +
-                "license=" + license +
-                ", trialVersion=" + trialVersion +
-                '}';
+        return "LicensesMetaData{" + "license=" + license + ", trialVersion=" + trialVersion + '}';
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         LicensesMetaData that = (LicensesMetaData) o;
 
-        if (license != null ? !license.equals(that.license) : that.license != null) return false;
+        if (license != null ? !license.equals(that.license) : that.license != null)
+            return false;
         return trialVersion != null ? trialVersion.equals(that.trialVersion) : that.trialVersion == null;
     }
 
@@ -205,8 +207,7 @@ public class LicensesMetaData extends AbstractNamedDiffable<MetaData.Custom> imp
     public LicensesMetaData merge(LicensesMetaData other) {
         if (other.license == null) {
             return this;
-        } else if (license == null
-                || OperationMode.compare(other.license.operationMode(), license.operationMode()) > 0) {
+        } else if (license == null || OperationMode.compare(other.license.operationMode(), license.operationMode()) > 0) {
             return other;
         }
         return this;

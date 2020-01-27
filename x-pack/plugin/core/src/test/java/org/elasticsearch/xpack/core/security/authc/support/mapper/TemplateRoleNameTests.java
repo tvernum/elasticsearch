@@ -43,18 +43,22 @@ public class TemplateRoleNameTests extends ESTestCase {
         assertThat(role1.getFormat(), equalTo(Format.STRING));
 
         final TemplateRoleName role2 = parse(
-            "{ \"template\": \"{\\\"source\\\":\\\"{{#tojson}}groups{{/tojson}}\\\"}\", \"format\":\"json\" }");
+            "{ \"template\": \"{\\\"source\\\":\\\"{{#tojson}}groups{{/tojson}}\\\"}\", \"format\":\"json\" }"
+        );
         assertThat(role2, Matchers.instanceOf(TemplateRoleName.class));
-        assertThat(role2.getTemplate().utf8ToString(),
-            equalTo("{\"source\":\"{{#tojson}}groups{{/tojson}}\"}"));
+        assertThat(role2.getTemplate().utf8ToString(), equalTo("{\"source\":\"{{#tojson}}groups{{/tojson}}\"}"));
         assertThat(role2.getFormat(), equalTo(Format.JSON));
     }
 
     public void testToXContent() throws Exception {
-        final String json = "{" +
-            "\"template\":\"{\\\"source\\\":\\\"" + randomAlphaOfLengthBetween(8, 24) + "\\\"}\"," +
-            "\"format\":\"" + randomFrom(Format.values()).formatName() + "\"" +
-            "}";
+        final String json = "{"
+            + "\"template\":\"{\\\"source\\\":\\\""
+            + randomAlphaOfLengthBetween(8, 24)
+            + "\\\"}\","
+            + "\"format\":\""
+            + randomFrom(Format.values()).formatName()
+            + "\""
+            + "}";
         assertThat(Strings.toString(parse(json)), equalTo(json));
     }
 
@@ -67,8 +71,11 @@ public class TemplateRoleNameTests extends ESTestCase {
     }
 
     public void testEvaluateRoles() throws Exception {
-        final ScriptService scriptService = new ScriptService(Settings.EMPTY,
-            Collections.singletonMap(MustacheScriptEngine.NAME, new MustacheScriptEngine()), ScriptModule.CORE_CONTEXTS);
+        final ScriptService scriptService = new ScriptService(
+            Settings.EMPTY,
+            Collections.singletonMap(MustacheScriptEngine.NAME, new MustacheScriptEngine()),
+            ScriptModule.CORE_CONTEXTS
+        );
         final ExpressionModel model = new ExpressionModel();
         model.defineField("username", "hulk");
         model.defineField("groups", Arrays.asList("avengers", "defenders", "panthenon"));
@@ -79,8 +86,10 @@ public class TemplateRoleNameTests extends ESTestCase {
         final TemplateRoleName user = new TemplateRoleName(new BytesArray("{ \"source\":\"_user_{{username}}\" }"), Format.STRING);
         assertThat(user.getRoleNames(scriptService, model), contains("_user_hulk"));
 
-        final TemplateRoleName groups = new TemplateRoleName(new BytesArray("{ \"source\":\"{{#tojson}}groups{{/tojson}}\" }"),
-            Format.JSON);
+        final TemplateRoleName groups = new TemplateRoleName(
+            new BytesArray("{ \"source\":\"{{#tojson}}groups{{/tojson}}\" }"),
+            Format.JSON
+        );
         assertThat(groups.getRoleNames(scriptService, model), contains("avengers", "defenders", "panthenon"));
     }
 
@@ -102,16 +111,16 @@ public class TemplateRoleNameTests extends ESTestCase {
     }
 
     public void tryEquals(TemplateRoleName original) {
-        final EqualsHashCodeTestUtils.CopyFunction<TemplateRoleName> copy =
-            rmt -> new TemplateRoleName(rmt.getTemplate(), rmt.getFormat());
+        final EqualsHashCodeTestUtils.CopyFunction<TemplateRoleName> copy = rmt -> new TemplateRoleName(rmt.getTemplate(), rmt.getFormat());
         final EqualsHashCodeTestUtils.MutateFunction<TemplateRoleName> mutate = rmt -> {
             if (randomBoolean()) {
-                return new TemplateRoleName(rmt.getTemplate(),
-                    randomValueOtherThan(rmt.getFormat(), () -> randomFrom(Format.values())));
+                return new TemplateRoleName(rmt.getTemplate(), randomValueOtherThan(rmt.getFormat(), () -> randomFrom(Format.values())));
             } else {
                 final String templateStr = rmt.getTemplate().utf8ToString();
-                return new TemplateRoleName(new BytesArray(templateStr.substring(randomIntBetween(1, templateStr.length() / 2))),
-                    rmt.getFormat());
+                return new TemplateRoleName(
+                    new BytesArray(templateStr.substring(randomIntBetween(1, templateStr.length() / 2))),
+                    rmt.getFormat()
+                );
             }
         };
         EqualsHashCodeTestUtils.checkEqualsAndHashCode(original, copy, mutate);

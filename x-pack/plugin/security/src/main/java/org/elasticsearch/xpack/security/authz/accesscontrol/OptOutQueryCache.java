@@ -37,10 +37,11 @@ public final class OptOutQueryCache extends AbstractIndexComponent implements Li
     private volatile boolean licenseStateListenerRegistered;
 
     public OptOutQueryCache(
-            final IndexSettings indexSettings,
-            final IndicesQueryCache indicesQueryCache,
-            final ThreadContext context,
-            final XPackLicenseState licenseState) {
+        final IndexSettings indexSettings,
+        final IndicesQueryCache indicesQueryCache,
+        final ThreadContext context,
+        final XPackLicenseState licenseState
+    ) {
         super(indexSettings);
         this.indicesQueryCache = indicesQueryCache;
         this.context = Objects.requireNonNull(context, "threadContext must not be null");
@@ -91,8 +92,7 @@ public final class OptOutQueryCache extends AbstractIndexComponent implements Li
             return indicesQueryCache.doCache(weight, policy);
         }
 
-        IndicesAccessControl indicesAccessControl = context.getTransient(
-                AuthorizationServiceField.INDICES_PERMISSIONS_KEY);
+        IndicesAccessControl indicesAccessControl = context.getTransient(AuthorizationServiceField.INDICES_PERMISSIONS_KEY);
         if (indicesAccessControl == null) {
             logger.debug("opting out of the query cache. current request doesn't hold indices permissions");
             return weight;
@@ -126,7 +126,7 @@ public final class OptOutQueryCache extends AbstractIndexComponent implements Li
             // we don't know how to safely extract the fields of this query, don't cache.
             return false;
         }
-        
+
         // we successfully extracted the set of fields: check each one
         for (String field : fields) {
             // don't cache any internal fields (e.g. _field_names), these are complicated.

@@ -56,8 +56,14 @@ public abstract class GroupsResolverTestCase extends ESTestCase {
         }
     }
 
-    protected static List<String> resolveBlocking(GroupsResolver resolver, LDAPInterface ldapConnection, String dn, TimeValue timeLimit,
-                                                  Logger logger, Collection<Attribute> attributes) {
+    protected static List<String> resolveBlocking(
+        GroupsResolver resolver,
+        LDAPInterface ldapConnection,
+        String dn,
+        TimeValue timeLimit,
+        Logger logger,
+        Collection<Attribute> attributes
+    ) {
         PlainActionFuture<List<String>> future = new PlainActionFuture<>();
         resolver.resolve(ldapConnection, dn, timeLimit, logger, attributes, future);
         return future.actionGet();

@@ -37,8 +37,7 @@ public class DocumentPermissionsTests extends ESTestCase {
         assertThat(documentPermissions1.filter(null, null, null, null), is(nullValue()));
 
         Set<BytesReference> queries = Collections.singleton(new BytesArray("{\"match_all\" : {}}"));
-        final DocumentPermissions documentPermissions2 = DocumentPermissions
-                .filteredBy(queries);
+        final DocumentPermissions documentPermissions2 = DocumentPermissions.filteredBy(queries);
         assertThat(documentPermissions2, is(notNullValue()));
         assertThat(documentPermissions2.hasDocumentLevelPermissions(), is(true));
         assertThat(documentPermissions2.getQueries(), equalTo(queries));
@@ -50,12 +49,14 @@ public class DocumentPermissionsTests extends ESTestCase {
         assertThat(documentPermissions3.getLimitedByQueries(), equalTo(queries));
 
         final DocumentPermissions documentPermissions4 = DocumentPermissions.allowAll()
-                .limitDocumentPermissions(DocumentPermissions.allowAll());
+            .limitDocumentPermissions(DocumentPermissions.allowAll());
         assertThat(documentPermissions4, is(notNullValue()));
         assertThat(documentPermissions4.hasDocumentLevelPermissions(), is(false));
 
-        AssertionError ae = expectThrows(AssertionError.class,
-                () -> DocumentPermissions.allowAll().limitDocumentPermissions(documentPermissions3));
+        AssertionError ae = expectThrows(
+            AssertionError.class,
+            () -> DocumentPermissions.allowAll().limitDocumentPermissions(documentPermissions3)
+        );
         assertThat(ae.getMessage(), containsString("nested scoping for document permissions is not permitted"));
     }
 
@@ -63,14 +64,12 @@ public class DocumentPermissionsTests extends ESTestCase {
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         final long nowInMillis = randomNonNegativeLong();
-        QueryRewriteContext context = new QueryRewriteContext(xContentRegistry(), writableRegistry(), client,
-                () -> nowInMillis);
+        QueryRewriteContext context = new QueryRewriteContext(xContentRegistry(), writableRegistry(), client, () -> nowInMillis);
         QueryBuilder queryBuilder1 = new TermsQueryBuilder("field", "val1", "val2");
         DocumentPermissions.failIfQueryUsesClient(queryBuilder1, context);
 
         QueryBuilder queryBuilder2 = new TermsQueryBuilder("field", new TermsLookup("_index", "_id", "_path"));
-        Exception e = expectThrows(IllegalStateException.class,
-                () -> DocumentPermissions.failIfQueryUsesClient(queryBuilder2, context));
+        Exception e = expectThrows(IllegalStateException.class, () -> DocumentPermissions.failIfQueryUsesClient(queryBuilder2, context));
         assertThat(e.getMessage(), equalTo("role queries are not allowed to execute additional requests"));
     }
 }

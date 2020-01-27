@@ -119,7 +119,6 @@ final class PatternRule implements IpFilterRule {
         }
     }
 
-
     @Override
     public boolean matches(InetSocketAddress remoteAddress) {
         InetAddress inetAddress = remoteAddress.getAddress();

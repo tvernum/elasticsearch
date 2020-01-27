@@ -22,18 +22,20 @@ import org.elasticsearch.xpack.security.transport.filter.IPFilter;
 
 public class SecurityNetty4ServerTransport extends SecurityNetty4Transport {
 
-    @Nullable private final IPFilter authenticator;
+    @Nullable
+    private final IPFilter authenticator;
 
     public SecurityNetty4ServerTransport(
-            final Settings settings,
-            final Version version,
-            final ThreadPool threadPool,
-            final NetworkService networkService,
-            final PageCacheRecycler pageCacheRecycler,
-            final NamedWriteableRegistry namedWriteableRegistry,
-            final CircuitBreakerService circuitBreakerService,
-            @Nullable final IPFilter authenticator,
-            final SSLService sslService) {
+        final Settings settings,
+        final Version version,
+        final ThreadPool threadPool,
+        final NetworkService networkService,
+        final PageCacheRecycler pageCacheRecycler,
+        final NamedWriteableRegistry namedWriteableRegistry,
+        final CircuitBreakerService circuitBreakerService,
+        @Nullable final IPFilter authenticator,
+        final SSLService sslService
+    ) {
         super(settings, version, threadPool, networkService, pageCacheRecycler, namedWriteableRegistry, circuitBreakerService, sslService);
         this.authenticator = authenticator;
     }

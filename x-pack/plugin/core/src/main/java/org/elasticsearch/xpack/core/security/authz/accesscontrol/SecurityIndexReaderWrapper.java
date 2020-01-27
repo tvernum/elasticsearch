@@ -48,9 +48,13 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
     private final ThreadContext threadContext;
     private final ScriptService scriptService;
 
-    public SecurityIndexReaderWrapper(Function<ShardId, QueryShardContext> queryShardContextProvider,
-                                      DocumentSubsetBitsetCache bitsetCache, ThreadContext threadContext, XPackLicenseState licenseState,
-                                      ScriptService scriptService) {
+    public SecurityIndexReaderWrapper(
+        Function<ShardId, QueryShardContext> queryShardContextProvider,
+        DocumentSubsetBitsetCache bitsetCache,
+        ThreadContext threadContext,
+        XPackLicenseState licenseState,
+        ScriptService scriptService
+    ) {
         this.scriptService = scriptService;
         this.queryShardContextProvider = queryShardContextProvider;
         this.bitsetCache = bitsetCache;
@@ -102,7 +106,7 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
         return indicesAccessControl;
     }
 
-    protected User getUser(){
+    protected User getUser() {
         Authentication authentication = Authentication.getAuthentication(threadContext);
         return authentication.getUser();
     }

@@ -35,9 +35,10 @@ public class StartTrialLicenseTests extends AbstractLicensesIntegrationTestCase 
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
         return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put("node.data", true)
-                .put(LicenseService.SELF_GENERATED_LICENSE_TYPE.getKey(), "basic").build();
+            .put(super.nodeSettings(nodeOrdinal))
+            .put("node.data", true)
+            .put(LicenseService.SELF_GENERATED_LICENSE_TYPE.getKey(), "basic")
+            .build();
     }
 
     @Override

@@ -32,10 +32,16 @@ public final class CreateApiKeyRequestBuilder extends ActionRequestBuilder<Creat
 
     @SuppressWarnings("unchecked")
     static final ConstructingObjectParser<CreateApiKeyRequest, Void> PARSER = new ConstructingObjectParser<>(
-            "api_key_request", false, (args, v) -> {
-                return new CreateApiKeyRequest((String) args[0], (List<RoleDescriptor>) args[1],
-                        TimeValue.parseTimeValue((String) args[2], null, "expiration"));
-            });
+        "api_key_request",
+        false,
+        (args, v) -> {
+            return new CreateApiKeyRequest(
+                (String) args[0],
+                (List<RoleDescriptor>) args[1],
+                TimeValue.parseTimeValue((String) args[2], null, "expiration")
+            );
+        }
+    );
 
     static {
         PARSER.declareString(constructorArg(), new ParseField("name"));
@@ -72,8 +78,10 @@ public final class CreateApiKeyRequestBuilder extends ActionRequestBuilder<Creat
 
     public CreateApiKeyRequestBuilder source(BytesReference source, XContentType xContentType) throws IOException {
         final NamedXContentRegistry registry = NamedXContentRegistry.EMPTY;
-        try (InputStream stream = source.streamInput();
-                XContentParser parser = xContentType.xContent().createParser(registry, LoggingDeprecationHandler.INSTANCE, stream)) {
+        try (
+            InputStream stream = source.streamInput();
+            XContentParser parser = xContentType.xContent().createParser(registry, LoggingDeprecationHandler.INSTANCE, stream)
+        ) {
             CreateApiKeyRequest createApiKeyRequest = PARSER.parse(parser, null);
             setName(createApiKeyRequest.getName());
             setRoleDescriptors(createApiKeyRequest.getRoleDescriptors());

@@ -27,6 +27,7 @@ public class ClearRolesCacheRequest extends BaseNodesRequest<ClearRolesCacheRequ
         super(in);
         names = in.readOptionalStringArray();
     }
+
     /**
      * Sets the roles for which caches will be evicted. When not set all the roles will be evicted from the cache.
      *
@@ -62,7 +63,9 @@ public class ClearRolesCacheRequest extends BaseNodesRequest<ClearRolesCacheRequ
             this.names = request.names();
         }
 
-        public String[] getNames() { return names; }
+        public String[] getNames() {
+            return names;
+        }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {

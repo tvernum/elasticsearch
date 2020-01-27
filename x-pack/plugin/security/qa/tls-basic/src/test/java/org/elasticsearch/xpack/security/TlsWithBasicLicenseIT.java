@@ -53,10 +53,7 @@ public class TlsWithBasicLicenseIT extends ESRestTestCase {
 
     @Override
     protected Settings restClientSettings() {
-        return Settings.builder()
-            .put(TRUSTSTORE_PATH, httpTrustStore)
-            .put(TRUSTSTORE_PASSWORD, "password")
-            .build();
+        return Settings.builder().put(TRUSTSTORE_PATH, httpTrustStore).put(TRUSTSTORE_PASSWORD, "password").build();
     }
 
     public void testWithBasicLicense() throws Exception {
@@ -117,6 +114,4 @@ public class TlsWithBasicLicenseIT extends ESRestTestCase {
         assertThat(paths, containsInAnyOrder("http.crt", "transport.crt", "ca.crt"));
     }
 
-
 }
-

@@ -83,8 +83,11 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         listener = new AtomicReference<>();
         client = new NoOpClient(getTestName()) {
             @Override
-            protected <Request extends ActionRequest, Response extends ActionResponse>
-            void doExecute(ActionType<Response> action, Request request, ActionListener<Response> listener) {
+            protected <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                ActionType<Response> action,
+                Request request,
+                ActionListener<Response> listener
+            ) {
                 NativePrivilegeStoreTests.this.requests.add(request);
                 NativePrivilegeStoreTests.this.listener.set(listener);
             }
@@ -114,8 +117,11 @@ public class NativePrivilegeStoreTests extends ESTestCase {
     }
 
     public void testGetSinglePrivilegeByName() throws Exception {
-        final ApplicationPrivilegeDescriptor sourcePrivilege = new ApplicationPrivilegeDescriptor("myapp", "admin",
-            newHashSet("action:admin/*", "action:login", "data:read/*"), emptyMap()
+        final ApplicationPrivilegeDescriptor sourcePrivilege = new ApplicationPrivilegeDescriptor(
+            "myapp",
+            "admin",
+            newHashSet("action:admin/*", "action:login", "data:read/*"),
+            emptyMap()
         );
 
         final PlainActionFuture<ApplicationPrivilegeDescriptor> future = new PlainActionFuture<>();
@@ -127,10 +133,12 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(request.id(), equalTo("application-privilege_myapp:admin"));
 
         final String docSource = Strings.toString(sourcePrivilege);
-        listener.get().onResponse(new GetResponse(
-            new GetResult(request.index(), request.id(), 0, 1, 1L, true,
-                new BytesArray(docSource), emptyMap(), emptyMap())
-        ));
+        listener.get()
+            .onResponse(
+                new GetResponse(
+                    new GetResult(request.index(), request.id(), 0, 1, 1L, true, new BytesArray(docSource), emptyMap(), emptyMap())
+                )
+            );
         final ApplicationPrivilegeDescriptor getPrivilege = future.get(1, TimeUnit.SECONDS);
         assertThat(getPrivilege, equalTo(sourcePrivilege));
     }
@@ -144,10 +152,10 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(request.index(), equalTo(RestrictedIndicesNames.SECURITY_MAIN_ALIAS));
         assertThat(request.id(), equalTo("application-privilege_myapp:admin"));
 
-        listener.get().onResponse(new GetResponse(
-            new GetResult(request.index(), request.id(), UNASSIGNED_SEQ_NO, 0, -1,
-                false, null, emptyMap(), emptyMap())
-        ));
+        listener.get()
+            .onResponse(
+                new GetResponse(new GetResult(request.index(), request.id(), UNASSIGNED_SEQ_NO, 0, -1, false, null, emptyMap(), emptyMap()))
+            );
         final ApplicationPrivilegeDescriptor getPrivilege = future.get(1, TimeUnit.SECONDS);
         assertThat(getPrivilege, Matchers.nullValue());
     }
@@ -171,10 +179,27 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(query, containsString("{\"term\":{\"type\":{\"value\":\"application-privilege\""));
 
         final SearchHit[] hits = buildHits(sourcePrivileges);
-        listener.get().onResponse(new SearchResponse(new SearchResponseSections(
-            new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
-            null, null, false, false, null, 1),
-        "_scrollId1", 1, 1, 0, 1, null, null));
+        listener.get()
+            .onResponse(
+                new SearchResponse(
+                    new SearchResponseSections(
+                        new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
+                        null,
+                        null,
+                        false,
+                        false,
+                        null,
+                        1
+                    ),
+                    "_scrollId1",
+                    1,
+                    1,
+                    0,
+                    1,
+                    null,
+                    null
+                )
+            );
 
         assertResult(sourcePrivileges, future);
     }
@@ -193,10 +218,27 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(query, containsString("{\"term\":{\"type\":{\"value\":\"application-privilege\""));
 
         final SearchHit[] hits = new SearchHit[0];
-        listener.get().onResponse(new SearchResponse(new SearchResponseSections(
-            new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
-            null, null, false, false, null, 1),
-        "_scrollId1", 1, 1, 0, 1, null, null));
+        listener.get()
+            .onResponse(
+                new SearchResponse(
+                    new SearchResponseSections(
+                        new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
+                        null,
+                        null,
+                        false,
+                        false,
+                        null,
+                        1
+                    ),
+                    "_scrollId1",
+                    1,
+                    1,
+                    0,
+                    1,
+                    null,
+                    null
+                )
+            );
     }
 
     public void testGetPrivilegesByStarApplicationName() throws Exception {
@@ -212,10 +254,27 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(query, containsString("{\"term\":{\"type\":{\"value\":\"application-privilege\""));
 
         final SearchHit[] hits = new SearchHit[0];
-        listener.get().onResponse(new SearchResponse(new SearchResponseSections(
-            new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
-            null, null, false, false, null, 1),
-        "_scrollId1", 1, 1, 0, 1, null, null));
+        listener.get()
+            .onResponse(
+                new SearchResponse(
+                    new SearchResponseSections(
+                        new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
+                        null,
+                        null,
+                        false,
+                        false,
+                        null,
+                        1
+                    ),
+                    "_scrollId1",
+                    1,
+                    1,
+                    0,
+                    1,
+                    null,
+                    null
+                )
+            );
     }
 
     public void testGetAllPrivileges() throws Exception {
@@ -237,10 +296,27 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         assertThat(query, not(containsString("{\"terms\"")));
 
         final SearchHit[] hits = buildHits(sourcePrivileges);
-        listener.get().onResponse(new SearchResponse(new SearchResponseSections(
-            new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
-            null, null, false, false, null, 1),
-            "_scrollId1", 1, 1, 0, 1, null, null));
+        listener.get()
+            .onResponse(
+                new SearchResponse(
+                    new SearchResponseSections(
+                        new SearchHits(hits, new TotalHits(hits.length, TotalHits.Relation.EQUAL_TO), 0f),
+                        null,
+                        null,
+                        false,
+                        false,
+                        null,
+                        1
+                    ),
+                    "_scrollId1",
+                    1,
+                    1,
+                    0,
+                    1,
+                    null,
+                    null
+                )
+            );
 
         assertResult(sourcePrivileges, future);
     }
@@ -267,16 +343,13 @@ public class NativePrivilegeStoreTests extends ESTestCase {
             ApplicationPrivilegeDescriptor privilege = putPrivileges.get(i);
             IndexRequest request = indexRequests.get(i);
             assertThat(request.indices(), arrayContaining(RestrictedIndicesNames.SECURITY_MAIN_ALIAS));
-            assertThat(request.id(), equalTo(
-                "application-privilege_" + privilege.getApplication() + ":" + privilege.getName()
-            ));
+            assertThat(request.id(), equalTo("application-privilege_" + privilege.getApplication() + ":" + privilege.getName()));
             final XContentBuilder builder = privilege.toXContent(XContentBuilder.builder(XContentType.JSON.xContent()), true);
             assertThat(request.source(), equalTo(BytesReference.bytes(builder)));
             final boolean created = privilege.getName().equals("user") == false;
-            indexListener.onResponse(new IndexResponse(
-                new ShardId(RestrictedIndicesNames.SECURITY_MAIN_ALIAS, uuid, i),
-                request.id(), 1, 1, 1, created
-            ));
+            indexListener.onResponse(
+                new IndexResponse(new ShardId(RestrictedIndicesNames.SECURITY_MAIN_ALIAS, uuid, i), request.id(), 1, 1, 1, created)
+            );
         }
 
         assertBusy(() -> assertFalse(requests.isEmpty()), 1, TimeUnit.SECONDS);
@@ -313,10 +386,9 @@ public class NativePrivilegeStoreTests extends ESTestCase {
             assertThat(request.indices(), arrayContaining(RestrictedIndicesNames.SECURITY_MAIN_ALIAS));
             assertThat(request.id(), equalTo("application-privilege_app1:" + name));
             final boolean found = name.equals("p2") == false;
-            deleteListener.onResponse(new DeleteResponse(
-                new ShardId(RestrictedIndicesNames.SECURITY_MAIN_ALIAS, uuid, i),
-                request.id(), 1, 1, 1, found
-            ));
+            deleteListener.onResponse(
+                new DeleteResponse(new ShardId(RestrictedIndicesNames.SECURITY_MAIN_ALIAS, uuid, i), request.id(), 1, 1, 1, found)
+            );
         }
 
         assertBusy(() -> assertFalse(requests.isEmpty()), 1, TimeUnit.SECONDS);
@@ -341,8 +413,10 @@ public class NativePrivilegeStoreTests extends ESTestCase {
         return hits;
     }
 
-    private void assertResult(List<ApplicationPrivilegeDescriptor> sourcePrivileges,
-                              PlainActionFuture<Collection<ApplicationPrivilegeDescriptor>> future) throws Exception {
+    private void assertResult(
+        List<ApplicationPrivilegeDescriptor> sourcePrivileges,
+        PlainActionFuture<Collection<ApplicationPrivilegeDescriptor>> future
+    ) throws Exception {
         final Collection<ApplicationPrivilegeDescriptor> getPrivileges = future.get(1, TimeUnit.SECONDS);
         assertThat(getPrivileges, iterableWithSize(sourcePrivileges.size()));
         assertThat(new HashSet<>(getPrivileges), equalTo(new HashSet<>(sourcePrivileges)));

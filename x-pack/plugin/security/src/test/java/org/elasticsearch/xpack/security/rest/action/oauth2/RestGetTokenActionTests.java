@@ -35,8 +35,7 @@ import static org.hamcrest.Matchers.hasEntry;
 public class RestGetTokenActionTests extends ESTestCase {
 
     public void testListenerHandlesExceptionProperly() {
-        FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
-                .build();
+        FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY).build();
         final SetOnce<RestResponse> responseSetOnce = new SetOnce<>();
         RestChannel restChannel = new AbstractRestChannel(restRequest, randomBoolean()) {
             @Override
@@ -51,8 +50,8 @@ public class RestGetTokenActionTests extends ESTestCase {
         RestResponse response = responseSetOnce.get();
         assertNotNull(response);
 
-        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false,
-                XContentType.fromMediaType(response.contentType())).v2();
+        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false, XContentType.fromMediaType(response.contentType()))
+            .v2();
         assertThat(map, hasEntry("error", "unsupported_grant_type"));
         assertThat(map, hasEntry("error_description", ve.getMessage()));
         assertEquals(2, map.size());
@@ -69,16 +68,20 @@ public class RestGetTokenActionTests extends ESTestCase {
             }
         };
         CreateTokenResponseActionListener listener = new CreateTokenResponseActionListener(restChannel, restRequest, NoOpLogger.INSTANCE);
-        CreateTokenResponse createTokenResponse =
-                new CreateTokenResponse(randomAlphaOfLengthBetween(1, 256), TimeValue.timeValueHours(1L), null, randomAlphaOfLength(4),
-                        randomAlphaOfLength(5));
+        CreateTokenResponse createTokenResponse = new CreateTokenResponse(
+            randomAlphaOfLengthBetween(1, 256),
+            TimeValue.timeValueHours(1L),
+            null,
+            randomAlphaOfLength(4),
+            randomAlphaOfLength(5)
+        );
         listener.onResponse(createTokenResponse);
 
         RestResponse response = responseSetOnce.get();
         assertNotNull(response);
 
-        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false,
-                XContentType.fromMediaType(response.contentType())).v2();
+        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false, XContentType.fromMediaType(response.contentType()))
+            .v2();
         assertEquals(RestStatus.OK, response.status());
         assertThat(map, hasEntry("type", "Bearer"));
         assertThat(map, hasEntry("access_token", createTokenResponse.getTokenString()));
@@ -107,8 +110,8 @@ public class RestGetTokenActionTests extends ESTestCase {
         RestResponse response = responseSetOnce.get();
         assertNotNull(response);
 
-        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false,
-                XContentType.fromMediaType(response.contentType())).v2();
+        Map<String, Object> map = XContentHelper.convertToMap(response.content(), false, XContentType.fromMediaType(response.contentType()))
+            .v2();
         assertThat(map, hasEntry("error", RestGetTokenAction.TokenRequestError._UNAUTHORIZED.name().toLowerCase(Locale.ROOT)));
         if (addBase64EncodedToken) {
             assertThat(map, hasEntry("error_description", "FAIL"));
@@ -120,14 +123,18 @@ public class RestGetTokenActionTests extends ESTestCase {
     }
 
     public void testParser() throws Exception {
-        final String request = "{" +
-                "\"grant_type\": \"password\"," +
-                "\"username\": \"user1\"," +
-                "\"password\": \"" + SecuritySettingsSourceField.TEST_PASSWORD + "\"," +
-                "\"scope\": \"FULL\"" +
-                "}";
-        try (XContentParser parser = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)) {
+        final String request = "{"
+            + "\"grant_type\": \"password\","
+            + "\"username\": \"user1\","
+            + "\"password\": \""
+            + SecuritySettingsSourceField.TEST_PASSWORD
+            + "\","
+            + "\"scope\": \"FULL\""
+            + "}";
+        try (
+            XContentParser parser = XContentType.JSON.xContent()
+                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)
+        ) {
             CreateTokenRequest createTokenRequest = RestGetTokenAction.PARSER.parse(parser, null);
             assertEquals("password", createTokenRequest.getGrantType());
             assertEquals("user1", createTokenRequest.getUsername());
@@ -138,13 +145,17 @@ public class RestGetTokenActionTests extends ESTestCase {
 
     public void testParserRefreshRequest() throws Exception {
         final String token = randomAlphaOfLengthBetween(4, 32);
-        final String request = "{" +
-                "\"grant_type\": \"refresh_token\"," +
-                "\"refresh_token\": \"" + token + "\"," +
-                "\"scope\": \"FULL\"" +
-                "}";
-        try (XContentParser parser = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)) {
+        final String request = "{"
+            + "\"grant_type\": \"refresh_token\","
+            + "\"refresh_token\": \""
+            + token
+            + "\","
+            + "\"scope\": \"FULL\""
+            + "}";
+        try (
+            XContentParser parser = XContentType.JSON.xContent()
+                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, request)
+        ) {
             CreateTokenRequest createTokenRequest = RestGetTokenAction.PARSER.parse(parser, null);
             assertEquals("refresh_token", createTokenRequest.getGrantType());
             assertEquals(token, createTokenRequest.getRefreshToken());

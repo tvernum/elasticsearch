@@ -38,13 +38,17 @@ public class LdapMetaDataResolverTests extends ESTestCase {
     public void testParseSettings() throws Exception {
         final RealmConfig.RealmIdentifier realmId = new RealmConfig.RealmIdentifier(LdapRealmSettings.LDAP_TYPE, "my_ldap");
         final Settings settings = Settings.builder()
-                .put("path.home", createTempDir())
-                .putList(RealmSettings.getFullSettingKey(realmId.getName(),
-                        LdapMetaDataResolverSettings.ADDITIONAL_META_DATA_SETTING.apply(LdapRealmSettings.LDAP_TYPE)),
-                        "cn", "uid")
-                .build();
-        RealmConfig config = new RealmConfig(realmId,
-                settings, TestEnvironment.newEnvironment(settings), new ThreadContext(settings));
+            .put("path.home", createTempDir())
+            .putList(
+                RealmSettings.getFullSettingKey(
+                    realmId.getName(),
+                    LdapMetaDataResolverSettings.ADDITIONAL_META_DATA_SETTING.apply(LdapRealmSettings.LDAP_TYPE)
+                ),
+                "cn",
+                "uid"
+            )
+            .build();
+        RealmConfig config = new RealmConfig(realmId, settings, TestEnvironment.newEnvironment(settings), new ThreadContext(settings));
         resolver = new LdapMetaDataResolver(config, false);
         assertThat(resolver.attributeNames(), arrayContaining("cn", "uid"));
     }
@@ -52,10 +56,10 @@ public class LdapMetaDataResolverTests extends ESTestCase {
     public void testResolveSingleValuedAttributeFromCachedAttributes() throws Exception {
         resolver = new LdapMetaDataResolver(Arrays.asList("cn", "uid"), true);
         final Collection<Attribute> attributes = Arrays.asList(
-                new Attribute("cn", "Clint Barton"),
-                new Attribute("uid", "hawkeye"),
-                new Attribute("email", "clint.barton@shield.gov"),
-                new Attribute("memberOf", "cn=staff,ou=groups,dc=example,dc=com", "cn=admin,ou=groups,dc=example,dc=com")
+            new Attribute("cn", "Clint Barton"),
+            new Attribute("uid", "hawkeye"),
+            new Attribute("email", "clint.barton@shield.gov"),
+            new Attribute("memberOf", "cn=staff,ou=groups,dc=example,dc=com", "cn=admin,ou=groups,dc=example,dc=com")
         );
         final Map<String, Object> map = resolve(attributes);
         assertThat(map.size(), equalTo(2));
@@ -66,8 +70,8 @@ public class LdapMetaDataResolverTests extends ESTestCase {
     public void testResolveMultiValuedAttributeFromCachedAttributes() throws Exception {
         resolver = new LdapMetaDataResolver(Arrays.asList("cn", "uid"), true);
         final Collection<Attribute> attributes = Arrays.asList(
-                new Attribute("cn", "Clint Barton", "hawkeye"),
-                new Attribute("uid", "hawkeye")
+            new Attribute("cn", "Clint Barton", "hawkeye"),
+            new Attribute("uid", "hawkeye")
         );
         final Map<String, Object> map = resolve(attributes);
         assertThat(map.size(), equalTo(2));

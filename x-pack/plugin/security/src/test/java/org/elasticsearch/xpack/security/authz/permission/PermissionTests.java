@@ -50,9 +50,7 @@ public class PermissionTests extends ESTestCase {
     }
 
     public void testRunAs() {
-        Role permission = Role.builder("some_role")
-                .runAs(new Privilege("name", "user1", "run*"))
-                .build();
+        Role permission = Role.builder("some_role").runAs(new Privilege("name", "user1", "run*")).build();
         assertThat(permission.runAs().check("user1"), is(true));
         assertThat(permission.runAs().check("user"), is(false));
         assertThat(permission.runAs().check("run" + randomAlphaOfLengthBetween(1, 10)), is(true));

@@ -55,7 +55,8 @@ public class StartupSelfGeneratedLicenseTask extends ClusterStateUpdateTask {
         // do not generate a license if any license is present
         if (currentLicensesMetaData == null) {
             License.LicenseType type = SelfGeneratedLicense.validateSelfGeneratedType(
-                LicenseService.SELF_GENERATED_LICENSE_TYPE.get(settings));
+                LicenseService.SELF_GENERATED_LICENSE_TYPE.get(settings)
+            );
             return updateWithLicense(currentState, type);
         } else if (LicenseUtils.signatureNeedsUpdate(currentLicensesMetaData.getLicense(), currentState.nodes())) {
             return updateLicenseSignature(currentState, currentLicensesMetaData);
@@ -73,22 +74,25 @@ public class StartupSelfGeneratedLicenseTask extends ClusterStateUpdateTask {
         long issueDate = license.issueDate();
         long expiryDate = license.expiryDate();
         // extend the basic license expiration date if needed since extendBasic will not be called now
-        if (License.LicenseType.isBasic(type) &&  expiryDate != LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS) {
+        if (License.LicenseType.isBasic(type) && expiryDate != LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS) {
             expiryDate = LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS;
         }
         License.Builder specBuilder = License.builder()
-                .uid(license.uid())
-                .issuedTo(license.issuedTo())
-                .maxNodes(selfGeneratedLicenseMaxNodes)
-                .issueDate(issueDate)
-                .type(type)
-                .expiryDate(expiryDate);
+            .uid(license.uid())
+            .issuedTo(license.issuedTo())
+            .maxNodes(selfGeneratedLicenseMaxNodes)
+            .issueDate(issueDate)
+            .type(type)
+            .expiryDate(expiryDate);
         License selfGeneratedLicense = SelfGeneratedLicense.create(specBuilder, currentState.nodes());
         Version trialVersion = currentLicenseMetaData.getMostRecentTrialVersion();
         LicensesMetaData newLicenseMetadata = new LicensesMetaData(selfGeneratedLicense, trialVersion);
         mdBuilder.putCustom(LicensesMetaData.TYPE, newLicenseMetadata);
-        logger.info("Updating existing license to the new version.\n\nOld license:\n {}\n\n New license:\n{}",
-            license, newLicenseMetadata.getLicense());
+        logger.info(
+            "Updating existing license to the new version.\n\nOld license:\n {}\n\n New license:\n{}",
+            license,
+            newLicenseMetadata.getLicense()
+        );
         return ClusterState.builder(currentState).metaData(mdBuilder).build();
     }
 
@@ -102,20 +106,24 @@ public class StartupSelfGeneratedLicenseTask extends ClusterStateUpdateTask {
         MetaData.Builder mdBuilder = MetaData.builder(currentState.metaData());
         LicensesMetaData newLicenseMetadata = createBasicLicenseFromExistingLicense(currentLicenseMetadata);
         mdBuilder.putCustom(LicensesMetaData.TYPE, newLicenseMetadata);
-        logger.info("Existing basic license has an expiration. Basic licenses no longer expire." +
-                "Regenerating license.\n\nOld license:\n {}\n\n New license:\n{}", license, newLicenseMetadata.getLicense());
+        logger.info(
+            "Existing basic license has an expiration. Basic licenses no longer expire."
+                + "Regenerating license.\n\nOld license:\n {}\n\n New license:\n{}",
+            license,
+            newLicenseMetadata.getLicense()
+        );
         return ClusterState.builder(currentState).metaData(mdBuilder).build();
     }
 
     private LicensesMetaData createBasicLicenseFromExistingLicense(LicensesMetaData currentLicenseMetadata) {
         License currentLicense = currentLicenseMetadata.getLicense();
         License.Builder specBuilder = License.builder()
-                .uid(currentLicense.uid())
-                .issuedTo(currentLicense.issuedTo())
-                .maxNodes(selfGeneratedLicenseMaxNodes)
-                .issueDate(currentLicense.issueDate())
-                .type(License.LicenseType.BASIC)
-                .expiryDate(LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS);
+            .uid(currentLicense.uid())
+            .issuedTo(currentLicense.issuedTo())
+            .maxNodes(selfGeneratedLicenseMaxNodes)
+            .issueDate(currentLicense.issueDate())
+            .type(License.LicenseType.BASIC)
+            .expiryDate(LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS);
         License selfGeneratedLicense = SelfGeneratedLicense.create(specBuilder, currentLicense.version());
         Version trialVersion = currentLicenseMetadata.getMostRecentTrialVersion();
         return new LicensesMetaData(selfGeneratedLicense, trialVersion);
@@ -131,12 +139,12 @@ public class StartupSelfGeneratedLicenseTask extends ClusterStateUpdateTask {
             expiryDate = issueDate + LicenseService.NON_BASIC_SELF_GENERATED_LICENSE_DURATION.getMillis();
         }
         License.Builder specBuilder = License.builder()
-                .uid(UUID.randomUUID().toString())
-                .issuedTo(clusterService.getClusterName().value())
-                .maxNodes(selfGeneratedLicenseMaxNodes)
-                .issueDate(issueDate)
-                .type(type)
-                .expiryDate(expiryDate);
+            .uid(UUID.randomUUID().toString())
+            .issuedTo(clusterService.getClusterName().value())
+            .maxNodes(selfGeneratedLicenseMaxNodes)
+            .issueDate(issueDate)
+            .type(type)
+            .expiryDate(expiryDate);
         License selfGeneratedLicense = SelfGeneratedLicense.create(specBuilder, currentState.nodes());
         LicensesMetaData licensesMetaData;
         if (License.LicenseType.TRIAL.equals(type)) {

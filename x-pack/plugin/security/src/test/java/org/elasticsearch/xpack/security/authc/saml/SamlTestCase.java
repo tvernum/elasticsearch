@@ -49,7 +49,7 @@ public abstract class SamlTestCase extends ESTestCase {
 
     private static boolean isTurkishLocale() {
         return Locale.getDefault().getLanguage().equals(new Locale("tr").getLanguage())
-                || Locale.getDefault().getLanguage().equals(new Locale("az").getLanguage());
+            || Locale.getDefault().getLanguage().equals(new Locale("az").getLanguage());
     }
 
     @AfterClass
@@ -89,20 +89,26 @@ public abstract class SamlTestCase extends ESTestCase {
             default:
                 keySize = randomFrom(1024, 2048);
         }
-        Path keyPath = PathUtils.get(SamlTestCase.class.getResource
-                ("/org/elasticsearch/xpack/security/authc/saml/saml_" + algorithm + "_" + keySize + ".key").toURI());
-        Path certPath = PathUtils.get(SamlTestCase.class.getResource
-                ("/org/elasticsearch/xpack/security/authc/saml/saml_" + algorithm + "_" + keySize + ".crt").toURI());
+        Path keyPath = PathUtils.get(
+            SamlTestCase.class.getResource("/org/elasticsearch/xpack/security/authc/saml/saml_" + algorithm + "_" + keySize + ".key")
+                .toURI()
+        );
+        Path certPath = PathUtils.get(
+            SamlTestCase.class.getResource("/org/elasticsearch/xpack/security/authc/saml/saml_" + algorithm + "_" + keySize + ".crt")
+                .toURI()
+        );
         X509Certificate certificate = CertParsingUtils.readX509Certificates(Collections.singletonList(certPath))[0];
         PrivateKey privateKey = PemUtils.readPrivateKey(keyPath, ""::toCharArray);
         return new Tuple<>(certificate, privateKey);
     }
 
     protected static Tuple<X509Certificate, PrivateKey> readKeyPair(String keyName) throws Exception {
-        Path keyPath = PathUtils.get(SamlTestCase.class.getResource
-            ("/org/elasticsearch/xpack/security/authc/saml/saml_" + keyName + ".key").toURI());
-        Path certPath = PathUtils.get(SamlTestCase.class.getResource
-            ("/org/elasticsearch/xpack/security/authc/saml/saml_" + keyName+ ".crt").toURI());
+        Path keyPath = PathUtils.get(
+            SamlTestCase.class.getResource("/org/elasticsearch/xpack/security/authc/saml/saml_" + keyName + ".key").toURI()
+        );
+        Path certPath = PathUtils.get(
+            SamlTestCase.class.getResource("/org/elasticsearch/xpack/security/authc/saml/saml_" + keyName + ".crt").toURI()
+        );
         X509Certificate certificate = CertParsingUtils.readX509Certificates(Collections.singletonList(certPath))[0];
         PrivateKey privateKey = PemUtils.readPrivateKey(keyPath, ""::toCharArray);
         return new Tuple<>(certificate, privateKey);
@@ -110,8 +116,12 @@ public abstract class SamlTestCase extends ESTestCase {
 
     protected static List<Credential> buildOpenSamlCredential(final Tuple<X509Certificate, PrivateKey> keyPair) {
         try {
-            return Arrays.asList(new X509KeyManagerX509CredentialAdapter(
-                    CertParsingUtils.keyManager(new Certificate[]{keyPair.v1()}, keyPair.v2(), new char[0]), "key"));
+            return Arrays.asList(
+                new X509KeyManagerX509CredentialAdapter(
+                    CertParsingUtils.keyManager(new Certificate[] { keyPair.v1() }, keyPair.v2(), new char[0]),
+                    "key"
+                )
+            );
 
         } catch (Exception e) {
             throw ExceptionsHelper.convertToRuntime(e);
@@ -122,7 +132,9 @@ public abstract class SamlTestCase extends ESTestCase {
         final List<Credential> credentials = keyPairs.stream().map((keyPair) -> {
             try {
                 return new X509KeyManagerX509CredentialAdapter(
-                        CertParsingUtils.keyManager(new Certificate[]{keyPair.v1()}, keyPair.v2(), new char[0]), "key");
+                    CertParsingUtils.keyManager(new Certificate[] { keyPair.v1() }, keyPair.v2(), new char[0]),
+                    "key"
+                );
             } catch (Exception e) {
                 throw ExceptionsHelper.convertToRuntime(e);
             }

@@ -34,24 +34,44 @@ import java.util.function.Consumer;
 public final class SSLChannelContext extends SocketChannelContext {
 
     private static final long CLOSE_TIMEOUT_NANOS = new TimeValue(10, TimeUnit.SECONDS).nanos();
-    private static final Runnable DEFAULT_TIMEOUT_CANCELLER = () -> {
-    };
+    private static final Runnable DEFAULT_TIMEOUT_CANCELLER = () -> {};
 
     private final SSLDriver sslDriver;
     private final InboundChannelBuffer networkReadBuffer;
     private final LinkedList<FlushOperation> encryptedFlushes = new LinkedList<>();
     private Runnable closeTimeoutCanceller = DEFAULT_TIMEOUT_CANCELLER;
 
-    SSLChannelContext(NioSocketChannel channel, NioSelector selector, Config.Socket socketConfig,
-                      Consumer<Exception> exceptionHandler, SSLDriver sslDriver, NioChannelHandler readWriteHandler,
-                      InboundChannelBuffer applicationBuffer) {
-        this(channel, selector, socketConfig, exceptionHandler, sslDriver, readWriteHandler, InboundChannelBuffer.allocatingInstance(),
-            applicationBuffer);
+    SSLChannelContext(
+        NioSocketChannel channel,
+        NioSelector selector,
+        Config.Socket socketConfig,
+        Consumer<Exception> exceptionHandler,
+        SSLDriver sslDriver,
+        NioChannelHandler readWriteHandler,
+        InboundChannelBuffer applicationBuffer
+    ) {
+        this(
+            channel,
+            selector,
+            socketConfig,
+            exceptionHandler,
+            sslDriver,
+            readWriteHandler,
+            InboundChannelBuffer.allocatingInstance(),
+            applicationBuffer
+        );
     }
 
-    SSLChannelContext(NioSocketChannel channel, NioSelector selector, Config.Socket socketConfig,
-                      Consumer<Exception> exceptionHandler, SSLDriver sslDriver, NioChannelHandler readWriteHandler,
-                      InboundChannelBuffer networkReadBuffer, InboundChannelBuffer channelBuffer) {
+    SSLChannelContext(
+        NioSocketChannel channel,
+        NioSelector selector,
+        Config.Socket socketConfig,
+        Consumer<Exception> exceptionHandler,
+        SSLDriver sslDriver,
+        NioChannelHandler readWriteHandler,
+        InboundChannelBuffer networkReadBuffer,
+        InboundChannelBuffer channelBuffer
+    ) {
         super(channel, selector, socketConfig, exceptionHandler, readWriteHandler, channelBuffer);
         this.sslDriver = sslDriver;
         this.networkReadBuffer = networkReadBuffer;
@@ -223,8 +243,7 @@ public final class SSLChannelContext extends SocketChannelContext {
 
     private static class CloseNotifyOperation implements WriteOperation {
 
-        private static final BiConsumer<Void, Exception> LISTENER = (v, t) -> {
-        };
+        private static final BiConsumer<Void, Exception> LISTENER = (v, t) -> {};
         private static final Object WRITE_OBJECT = new Object();
         private final SocketChannelContext channelContext;
 

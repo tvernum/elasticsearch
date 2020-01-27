@@ -66,7 +66,7 @@ class StoreTrustConfig extends TrustConfig {
             return CertParsingUtils.trustManager(trustStore, trustStoreAlgorithm);
         } catch (FileNotFoundException | NoSuchFileException e) {
             throw missingTrustConfigFile(e, TRUSTSTORE_FILE, storePath);
-        } catch (AccessDeniedException  e) {
+        } catch (AccessDeniedException e) {
             throw unreadableTrustConfigFile(e, TRUSTSTORE_FILE, storePath);
         } catch (AccessControlException e) {
             throw blockedTrustConfigFile(e, environment, TRUSTSTORE_FILE, List.of(storePath));
@@ -101,12 +101,15 @@ class StoreTrustConfig extends TrustConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         StoreTrustConfig that = (StoreTrustConfig) o;
 
-        if (trustStorePath != null ? !trustStorePath.equals(that.trustStorePath) : that.trustStorePath != null) return false;
+        if (trustStorePath != null ? !trustStorePath.equals(that.trustStorePath) : that.trustStorePath != null)
+            return false;
         if (trustStorePassword != null ? !trustStorePassword.equals(that.trustStorePassword) : that.trustStorePassword != null)
             return false;
         return trustStoreAlgorithm != null ? trustStoreAlgorithm.equals(that.trustStoreAlgorithm) : that.trustStoreAlgorithm == null;
@@ -122,8 +125,6 @@ class StoreTrustConfig extends TrustConfig {
 
     @Override
     public String toString() {
-        return "trustStorePath=[" + trustStorePath +
-                "], trustStoreAlgorithm=[" + trustStoreAlgorithm +
-                "]";
+        return "trustStorePath=[" + trustStorePath + "], trustStoreAlgorithm=[" + trustStoreAlgorithm + "]";
     }
 }

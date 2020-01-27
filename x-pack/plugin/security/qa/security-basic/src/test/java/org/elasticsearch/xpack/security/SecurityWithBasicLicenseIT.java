@@ -35,17 +35,13 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
     @Override
     protected Settings restAdminSettings() {
         String token = basicAuthHeaderValue("admin_user", new SecureString("admin-password".toCharArray()));
-        return Settings.builder()
-            .put(ThreadContext.PREFIX + ".Authorization", token)
-            .build();
+        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     @Override
     protected Settings restClientSettings() {
         String token = basicAuthHeaderValue("security_test_user", new SecureString("security-test-password".toCharArray()));
-        return Settings.builder()
-            .put(ThreadContext.PREFIX + ".Authorization", token)
-            .build();
+        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     public void testWithBasicLicense() throws Exception {
@@ -130,10 +126,12 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
 
     private void checkHasPrivileges() throws IOException {
         final Request request = new Request("GET", "/_security/user/_has_privileges");
-        request.setJsonEntity("{" +
-            "\"cluster\": [ \"manage\", \"monitor\" ]," +
-            "\"index\": [{ \"names\": [ \"index_allowed\", \"index_denied\" ], \"privileges\": [ \"read\", \"all\" ] }]" +
-            "}");
+        request.setJsonEntity(
+            "{"
+                + "\"cluster\": [ \"manage\", \"monitor\" ],"
+                + "\"index\": [{ \"names\": [ \"index_allowed\", \"index_denied\" ], \"privileges\": [ \"read\", \"all\" ] }]"
+                + "}"
+        );
         Response response = client().performRequest(request);
         final Map<String, Object> auth = entityAsMap(response);
         assertThat(ObjectPath.evaluate(auth, "username"), equalTo("security_test_user"));
@@ -163,19 +161,18 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
 
     private Request buildGetTokenRequest() {
         final Request getToken = new Request("POST", "/_security/oauth2/token");
-        getToken.setJsonEntity("{\"grant_type\" : \"password\",\n" +
-            "  \"username\" : \"security_test_user\",\n" +
-            "  \"password\" : \"security-test-password\"\n" +
-            "}");
+        getToken.setJsonEntity(
+            "{\"grant_type\" : \"password\",\n"
+                + "  \"username\" : \"security_test_user\",\n"
+                + "  \"password\" : \"security-test-password\"\n"
+                + "}"
+        );
         return getToken;
     }
 
     private Request buildGetApiKeyRequest() {
         final Request getApiKey = new Request("POST", "/_security/api_key");
-        getApiKey.setJsonEntity("{\"name\" : \"my-api-key\",\n" +
-            "  \"expiration\" : \"2d\",\n" +
-            "  \"role_descriptors\" : {} \n" +
-            "}");
+        getApiKey.setJsonEntity("{\"name\" : \"my-api-key\",\n" + "  \"expiration\" : \"2d\",\n" + "  \"role_descriptors\" : {} \n" + "}");
         return getApiKey;
     }
 
@@ -191,8 +188,10 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
         assertThat(getApiKeyResponse.getStatusLine().getStatusCode(), equalTo(200));
         final Map<String, Object> apiKeyResponseMap = entityAsMap(getApiKeyResponse);
         assertOK(getApiKeyResponse);
-        return new Tuple<>(ObjectPath.evaluate(apiKeyResponseMap, "api_key").toString(),
-            ObjectPath.evaluate(apiKeyResponseMap, "id").toString());
+        return new Tuple<>(
+            ObjectPath.evaluate(apiKeyResponseMap, "api_key").toString(),
+            ObjectPath.evaluate(apiKeyResponseMap, "id").toString()
+        );
     }
 
     private void assertFailToGetToken() {
@@ -238,20 +237,22 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
 
     private void assertAddRoleWithDLS(boolean shouldSucceed) throws IOException {
         final Request addRole = new Request("POST", "/_security/role/dlsrole");
-        addRole.setJsonEntity("{\n" +
-            "  \"cluster\": [\"all\"],\n" +
-            "  \"indices\": [\n" +
-            "    {\n" +
-            "      \"names\": [ \"index1\", \"index2\" ],\n" +
-            "      \"privileges\": [\"all\"],\n" +
-            "      \"query\": \"{\\\"match\\\": {\\\"title\\\": \\\"foo\\\"}}\" \n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"run_as\": [ \"other_user\" ],\n" +
-            "  \"metadata\" : { // optional\n" +
-            "    \"version\" : 1\n" +
-            "  }\n" +
-            "}");
+        addRole.setJsonEntity(
+            "{\n"
+                + "  \"cluster\": [\"all\"],\n"
+                + "  \"indices\": [\n"
+                + "    {\n"
+                + "      \"names\": [ \"index1\", \"index2\" ],\n"
+                + "      \"privileges\": [\"all\"],\n"
+                + "      \"query\": \"{\\\"match\\\": {\\\"title\\\": \\\"foo\\\"}}\" \n"
+                + "    }\n"
+                + "  ],\n"
+                + "  \"run_as\": [ \"other_user\" ],\n"
+                + "  \"metadata\" : { // optional\n"
+                + "    \"version\" : 1\n"
+                + "  }\n"
+                + "}"
+        );
         if (shouldSucceed) {
             Response addRoleResponse = adminClient().performRequest(addRole);
             assertThat(addRoleResponse.getStatusLine().getStatusCode(), equalTo(200));
@@ -264,22 +265,24 @@ public class SecurityWithBasicLicenseIT extends ESRestTestCase {
 
     private void assertAddRoleWithFLS(boolean shouldSucceed) throws IOException {
         final Request addRole = new Request("POST", "/_security/role/dlsrole");
-        addRole.setJsonEntity("{\n" +
-            "  \"cluster\": [\"all\"],\n" +
-            "  \"indices\": [\n" +
-            "    {\n" +
-            "      \"names\": [ \"index1\", \"index2\" ],\n" +
-            "      \"privileges\": [\"all\"],\n" +
-            "      \"field_security\" : { // optional\n" +
-            "        \"grant\" : [ \"title\", \"body\" ]\n" +
-            "      }\n" +
-            "    }\n" +
-            "  ],\n" +
-            "  \"run_as\": [ \"other_user\" ],\n" +
-            "  \"metadata\" : { // optional\n" +
-            "    \"version\" : 1\n" +
-            "  }\n" +
-            "}");
+        addRole.setJsonEntity(
+            "{\n"
+                + "  \"cluster\": [\"all\"],\n"
+                + "  \"indices\": [\n"
+                + "    {\n"
+                + "      \"names\": [ \"index1\", \"index2\" ],\n"
+                + "      \"privileges\": [\"all\"],\n"
+                + "      \"field_security\" : { // optional\n"
+                + "        \"grant\" : [ \"title\", \"body\" ]\n"
+                + "      }\n"
+                + "    }\n"
+                + "  ],\n"
+                + "  \"run_as\": [ \"other_user\" ],\n"
+                + "  \"metadata\" : { // optional\n"
+                + "    \"version\" : 1\n"
+                + "  }\n"
+                + "}"
+        );
         if (shouldSucceed) {
             Response addRoleResponse = adminClient().performRequest(addRole);
             assertThat(addRoleResponse.getStatusLine().getStatusCode(), equalTo(200));

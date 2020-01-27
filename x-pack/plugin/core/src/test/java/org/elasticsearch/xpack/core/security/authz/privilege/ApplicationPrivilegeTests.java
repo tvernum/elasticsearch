@@ -50,8 +50,11 @@ public class ApplicationPrivilegeTests extends ESTestCase {
         assertValidationFailure("app*", "application names", () -> ApplicationPrivilege.validateApplicationName("app*"));
         // no special characters with wildcards
         final String appNameWithSpecialCharAndWildcard = "app" + specialCharacter.get() + "*";
-        assertValidationFailure(appNameWithSpecialCharAndWildcard, "application name",
-            () -> ApplicationPrivilege.validateApplicationNameOrWildcard(appNameWithSpecialCharAndWildcard));
+        assertValidationFailure(
+            appNameWithSpecialCharAndWildcard,
+            "application name",
+            () -> ApplicationPrivilege.validateApplicationNameOrWildcard(appNameWithSpecialCharAndWildcard)
+        );
 
         String appNameWithSpecialChars = "myapp" + randomFrom('-', '_');
         for (int i = randomIntBetween(1, 12); i > 0; i--) {
@@ -77,7 +80,7 @@ public class ApplicationPrivilegeTests extends ESTestCase {
         assertValidationFailure("1read", "privilege names", () -> ApplicationPrivilege.validatePrivilegeName("1read"));
         // cannot contain special characters
         final String specialChars = ":;$#%()+=/',";
-        final String withSpecialChar = "read" + specialChars.charAt(randomInt(specialChars.length()-1));
+        final String withSpecialChar = "read" + specialChars.charAt(randomInt(specialChars.length() - 1));
         assertValidationFailure(withSpecialChar, "privilege names", () -> ApplicationPrivilege.validatePrivilegeName(withSpecialChar));
 
         // these should all be OK
@@ -157,7 +160,8 @@ public class ApplicationPrivilegeTests extends ESTestCase {
             orig -> createPrivilege(orig.getApplication(), "x" + getPrivilegeName(orig), orig.getPatterns()),
             orig -> new ApplicationPrivilege(orig.getApplication(), getPrivilegeName(orig), "*")
         );
-        EqualsHashCodeTestUtils.checkEqualsAndHashCode(privilege,
+        EqualsHashCodeTestUtils.checkEqualsAndHashCode(
+            privilege,
             original -> createPrivilege(original.getApplication(), getPrivilegeName(original), original.getPatterns()),
             mutate
         );
@@ -175,7 +179,7 @@ public class ApplicationPrivilegeTests extends ESTestCase {
         }
     }
 
-    private void assertValidationFailure(String reason,String messageContent, ThrowingRunnable body) {
+    private void assertValidationFailure(String reason, String messageContent, ThrowingRunnable body) {
         final IllegalArgumentException exception;
         try {
             exception = expectThrows(IllegalArgumentException.class, body);

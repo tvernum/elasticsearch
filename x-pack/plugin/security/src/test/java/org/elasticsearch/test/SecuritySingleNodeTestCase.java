@@ -64,8 +64,7 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
     @BeforeClass
     public static void initDefaultSettings() {
         if (SECURITY_DEFAULT_SETTINGS == null) {
-            SECURITY_DEFAULT_SETTINGS =
-                    new SecuritySettingsSource(randomBoolean(), createTempDir(), ESIntegTestCase.Scope.SUITE);
+            SECURITY_DEFAULT_SETTINGS = new SecuritySettingsSource(randomBoolean(), createTempDir(), ESIntegTestCase.Scope.SUITE);
         }
     }
 
@@ -101,13 +100,16 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
     }
 
     @Rule
-    //Rules are the only way to have something run before the before (final) method inherited from ESSingleNodeTestCase
+    // Rules are the only way to have something run before the before (final) method inherited from ESSingleNodeTestCase
     public ExternalResource externalResource = new ExternalResource() {
         @Override
         protected void before() {
             if (customSecuritySettingsSource == null) {
-                customSecuritySettingsSource =
-                        new CustomSecuritySettingsSource(transportSSLEnabled(), createTempDir(), ESIntegTestCase.Scope.SUITE);
+                customSecuritySettingsSource = new CustomSecuritySettingsSource(
+                    transportSSLEnabled(),
+                    createTempDir(),
+                    ESIntegTestCase.Scope.SUITE
+                );
             }
         }
     };
@@ -142,7 +144,7 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
     };
 
     @Before
-    //before methods from the superclass are run before this, which means that the current cluster is ready to go
+    // before methods from the superclass are run before this, which means that the current cluster is ready to go
     public void assertXPackIsInstalled() {
         doAssertXPackIsInstalled();
     }
@@ -152,10 +154,16 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
         for (NodeInfo nodeInfo : nodeInfos.getNodes()) {
             // TODO: disable this assertion for now, due to random runs with mock plugins. perhaps run without mock plugins?
             // assertThat(nodeInfo.getPlugins().getInfos(), hasSize(2));
-            Collection<String> pluginNames =
-                    nodeInfo.getPlugins().getPluginInfos().stream().map(PluginInfo::getClassname).collect(Collectors.toList());
-            assertThat("plugin [" + LocalStateSecurity.class.getName() + "] not found in [" + pluginNames + "]", pluginNames,
-                    hasItem(LocalStateSecurity.class.getName()));
+            Collection<String> pluginNames = nodeInfo.getPlugins()
+                .getPluginInfos()
+                .stream()
+                .map(PluginInfo::getClassname)
+                .collect(Collectors.toList());
+            assertThat(
+                "plugin [" + LocalStateSecurity.class.getName() + "] not found in [" + pluginNames + "]",
+                pluginNames,
+                hasItem(LocalStateSecurity.class.getName())
+            );
         }
     }
 
@@ -169,8 +177,10 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
         builder.put("path.home", customSecuritySettingsSource.nodePath(0));
         Settings.Builder customBuilder = Settings.builder().put(customSettings);
         if (customBuilder.getSecureSettings() != null) {
-            SecuritySettingsSource.addSecureSettings(builder, secureSettings ->
-                    secureSettings.merge((MockSecureSettings) customBuilder.getSecureSettings()));
+            SecuritySettingsSource.addSecureSettings(
+                builder,
+                secureSettings -> secureSettings.merge((MockSecureSettings) customBuilder.getSecureSettings())
+            );
         }
         if (builder.getSecureSettings() == null) {
             builder.setSecureSettings(new MockSecureSettings());
@@ -260,8 +270,10 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
 
     @Override
     public Client wrapClient(final Client client) {
-        Map<String, String> headers = Collections.singletonMap("Authorization",
-            basicAuthHeaderValue(nodeClientUsername(), nodeClientPassword()));
+        Map<String, String> headers = Collections.singletonMap(
+            "Authorization",
+            basicAuthHeaderValue(nodeClientUsername(), nodeClientPassword())
+        );
         // we need to wrap node clients because we do not specify a user for nodes and all requests will use the system
         // user. This is ok for internal n2n stuff but the test framework does other things like wiping indices, repositories, etc
         // that the system user cannot do. so we wrap the node client with a user that can do these things since the client() calls
@@ -294,8 +306,11 @@ public abstract class SecuritySingleNodeTestCase extends ESSingleNodeTestCase {
         return restClient;
     }
 
-    private static RestClient createRestClient(Client client, RestClientBuilder.HttpClientConfigCallback httpClientConfigCallback,
-                                               String protocol) {
+    private static RestClient createRestClient(
+        Client client,
+        RestClientBuilder.HttpClientConfigCallback httpClientConfigCallback,
+        String protocol
+    ) {
         NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo().get();
         assertFalse(nodesInfoResponse.hasFailures());
         assertEquals(nodesInfoResponse.getNodes().size(), 1);

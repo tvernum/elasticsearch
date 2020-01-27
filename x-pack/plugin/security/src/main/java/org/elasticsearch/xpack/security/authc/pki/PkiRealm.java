@@ -94,9 +94,9 @@ public class PkiRealm extends Realm implements CachingRealm {
         this.roleMapper = roleMapper;
         this.roleMapper.refreshRealmOnChange(this);
         this.cache = CacheBuilder.<BytesKey, User>builder()
-                .setExpireAfterWrite(config.getSetting(PkiRealmSettings.CACHE_TTL_SETTING))
-                .setMaximumWeight(config.getSetting(PkiRealmSettings.CACHE_MAX_USERS_SETTING))
-                .build();
+            .setExpireAfterWrite(config.getSetting(PkiRealmSettings.CACHE_TTL_SETTING))
+            .setMaximumWeight(config.getSetting(PkiRealmSettings.CACHE_MAX_USERS_SETTING))
+            .build();
         this.delegatedRealms = null;
         validateAuthenticationDelegationConfiguration(config);
     }
@@ -150,8 +150,13 @@ public class PkiRealm extends Realm implements CachingRealm {
             final BytesKey fingerprint = computeTokenFingerprint(token);
             User user = cache.get(fingerprint);
             if (user != null) {
-                logger.debug((Supplier<?>) () -> new ParameterizedMessage("Using cached authentication for DN [{}], as principal [{}]",
-                        token.dn(), user.principal()));
+                logger.debug(
+                    (Supplier<?>) () -> new ParameterizedMessage(
+                        "Using cached authentication for DN [{}], as principal [{}]",
+                        token.dn(),
+                        user.principal()
+                    )
+                );
                 if (delegatedRealms.hasDelegation()) {
                     delegatedRealms.resolve(user.principal(), listener);
                 } else {
@@ -167,9 +172,13 @@ public class PkiRealm extends Realm implements CachingRealm {
                 // we do it for BWC purposes. Changing this is a breaking change.
                 final String principal = getPrincipalFromSubjectDN(principalPattern, token, logger);
                 if (principal == null) {
-                    logger.debug((Supplier<?>) () -> new ParameterizedMessage(
-                            "the extracted principal after cert chain validation, from DN [{}], using pattern [{}] is null", token.dn(),
-                            principalPattern.toString()));
+                    logger.debug(
+                        (Supplier<?>) () -> new ParameterizedMessage(
+                            "the extracted principal after cert chain validation, from DN [{}], using pattern [{}] is null",
+                            token.dn(),
+                            principalPattern.toString()
+                        )
+                    );
                     listener.onResponse(AuthenticationResult.unsuccessful("Could not parse principal from Subject DN " + token.dn(), null));
                 } else {
                     final ActionListener<AuthenticationResult> cachingListener = ActionListener.wrap(result -> {
@@ -181,9 +190,14 @@ public class PkiRealm extends Realm implements CachingRealm {
                         listener.onResponse(result);
                     }, listener::onFailure);
                     if (false == principal.equals(token.principal())) {
-                        logger.debug((Supplier<?>) () -> new ParameterizedMessage(
+                        logger.debug(
+                            (Supplier<?>) () -> new ParameterizedMessage(
                                 "the extracted principal before [{}] and after [{}] cert chain validation, for DN [{}], are different",
-                                token.principal(), principal, token.dn()));
+                                token.principal(),
+                                principal,
+                                token.dn()
+                            )
+                        );
                     }
                     if (delegatedRealms.hasDelegation()) {
                         delegatedRealms.resolve(principal, cachingListener);
@@ -200,9 +214,14 @@ public class PkiRealm extends Realm implements CachingRealm {
     private void buildUser(X509AuthenticationToken token, String principal, ActionListener<AuthenticationResult> listener) {
         final Map<String, Object> metadata;
         if (token.isDelegated()) {
-            metadata = Map.of("pki_dn", token.dn(),
-                    "pki_delegated_by_user", token.getDelegateeAuthentication().getUser().principal(),
-                    "pki_delegated_by_realm", token.getDelegateeAuthentication().getAuthenticatedBy().getName());
+            metadata = Map.of(
+                "pki_dn",
+                token.dn(),
+                "pki_delegated_by_user",
+                token.getDelegateeAuthentication().getUser().principal(),
+                "pki_delegated_by_realm",
+                token.getDelegateeAuthentication().getAuthenticatedBy().getName()
+            );
         } else {
             metadata = Map.of("pki_dn", token.dn());
         }
@@ -222,14 +241,24 @@ public class PkiRealm extends Realm implements CachingRealm {
         String dn = token.credentials()[0].getSubjectX500Principal().toString();
         Matcher matcher = principalPattern.matcher(dn);
         if (false == matcher.find()) {
-            logger.debug((Supplier<?>) () -> new ParameterizedMessage("could not extract principal from DN [{}] using pattern [{}]", dn,
-                    principalPattern.toString()));
+            logger.debug(
+                (Supplier<?>) () -> new ParameterizedMessage(
+                    "could not extract principal from DN [{}] using pattern [{}]",
+                    dn,
+                    principalPattern.toString()
+                )
+            );
             return null;
         }
         String principal = matcher.group(1);
         if (Strings.isNullOrEmpty(principal)) {
-            logger.debug((Supplier<?>) () -> new ParameterizedMessage("the extracted principal from DN [{}] using pattern [{}] is empty",
-                    dn, principalPattern.toString()));
+            logger.debug(
+                (Supplier<?>) () -> new ParameterizedMessage(
+                    "the extracted principal from DN [{}] using pattern [{}] is empty",
+                    dn,
+                    principalPattern.toString()
+                )
+            );
             return null;
         }
         return principal;
@@ -257,8 +286,9 @@ public class PkiRealm extends Realm implements CachingRealm {
     }
 
     private X509TrustManager trustManagers(RealmConfig realmConfig) {
-        final List<String> certificateAuthorities = realmConfig.hasSetting(PkiRealmSettings.CAPATH_SETTING) ?
-                realmConfig.getSetting(PkiRealmSettings.CAPATH_SETTING) : null;
+        final List<String> certificateAuthorities = realmConfig.hasSetting(PkiRealmSettings.CAPATH_SETTING)
+            ? realmConfig.getSetting(PkiRealmSettings.CAPATH_SETTING)
+            : null;
         String truststorePath = realmConfig.getSetting(PkiRealmSettings.TRUST_STORE_PATH).orElse(null);
         if (truststorePath == null && certificateAuthorities == null) {
             return null;
@@ -282,20 +312,30 @@ public class PkiRealm extends Realm implements CachingRealm {
 
     private static X509TrustManager trustManagersFromTruststore(String truststorePath, RealmConfig realmConfig) {
         if (realmConfig.hasSetting(PkiRealmSettings.TRUST_STORE_PASSWORD) == false
-                && realmConfig.hasSetting(PkiRealmSettings.LEGACY_TRUST_STORE_PASSWORD) == false) {
-            throw new IllegalArgumentException("Neither [" +
-                    RealmSettings.getFullSettingKey(realmConfig, PkiRealmSettings.TRUST_STORE_PASSWORD) + "] or [" +
-                    RealmSettings.getFullSettingKey(realmConfig, PkiRealmSettings.LEGACY_TRUST_STORE_PASSWORD)
-                    + "] is configured");
+            && realmConfig.hasSetting(PkiRealmSettings.LEGACY_TRUST_STORE_PASSWORD) == false) {
+            throw new IllegalArgumentException(
+                "Neither ["
+                    + RealmSettings.getFullSettingKey(realmConfig, PkiRealmSettings.TRUST_STORE_PASSWORD)
+                    + "] or ["
+                    + RealmSettings.getFullSettingKey(realmConfig, PkiRealmSettings.LEGACY_TRUST_STORE_PASSWORD)
+                    + "] is configured"
+            );
         }
         try (SecureString password = realmConfig.getSetting(PkiRealmSettings.TRUST_STORE_PASSWORD)) {
             String trustStoreAlgorithm = realmConfig.getSetting(PkiRealmSettings.TRUST_STORE_ALGORITHM);
             String trustStoreType = SSLConfigurationSettings.getKeyStoreType(
-                    realmConfig.getConcreteSetting(PkiRealmSettings.TRUST_STORE_TYPE), realmConfig.settings(),
-                    truststorePath);
+                realmConfig.getConcreteSetting(PkiRealmSettings.TRUST_STORE_TYPE),
+                realmConfig.settings(),
+                truststorePath
+            );
             try {
-                return CertParsingUtils.trustManager(truststorePath, trustStoreType, password.getChars(), trustStoreAlgorithm, realmConfig
-                    .env());
+                return CertParsingUtils.trustManager(
+                    truststorePath,
+                    trustStoreType,
+                    password.getChars(),
+                    trustStoreAlgorithm,
+                    realmConfig.env()
+                );
             } catch (Exception e) {
                 throw new IllegalArgumentException("failed to load specified truststore", e);
             }
@@ -347,13 +387,18 @@ public class PkiRealm extends Realm implements CachingRealm {
         if (delegationEnabled) {
             List<String> exceptionMessages = new ArrayList<>(2);
             if (this.trustManager == null) {
-                exceptionMessages.add("a trust configuration ("
-                        + config.getConcreteSetting(PkiRealmSettings.CAPATH_SETTING).getKey() + " or "
-                        + config.getConcreteSetting(PkiRealmSettings.TRUST_STORE_PATH).getKey() + ")");
+                exceptionMessages.add(
+                    "a trust configuration ("
+                        + config.getConcreteSetting(PkiRealmSettings.CAPATH_SETTING).getKey()
+                        + " or "
+                        + config.getConcreteSetting(PkiRealmSettings.TRUST_STORE_PATH).getKey()
+                        + ")"
+                );
             }
             if (false == TokenService.isTokenServiceEnabled(config.settings())) {
-                exceptionMessages.add("that the token service be also enabled ("
-                        + XPackSettings.TOKEN_SERVICE_ENABLED_SETTING.getKey() + ")");
+                exceptionMessages.add(
+                    "that the token service be also enabled (" + XPackSettings.TOKEN_SERVICE_ENABLED_SETTING.getKey() + ")"
+                );
             }
             if (false == exceptionMessages.isEmpty()) {
                 String message = "PKI realms with delegation enabled require " + exceptionMessages.get(0);

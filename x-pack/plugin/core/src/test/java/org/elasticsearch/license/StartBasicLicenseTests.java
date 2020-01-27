@@ -35,9 +35,10 @@ public class StartBasicLicenseTests extends AbstractLicensesIntegrationTestCase 
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
         return Settings.builder()
-                .put(super.nodeSettings(nodeOrdinal))
-                .put("node.data", true)
-                .put(LicenseService.SELF_GENERATED_LICENSE_TYPE.getKey(), "basic").build();
+            .put(super.nodeSettings(nodeOrdinal))
+            .put("node.data", true)
+            .put(LicenseService.SELF_GENERATED_LICENSE_TYPE.getKey(), "basic")
+            .build();
     }
 
     @Override
@@ -47,7 +48,7 @@ public class StartBasicLicenseTests extends AbstractLicensesIntegrationTestCase 
 
     public void testStartBasicLicense() throws Exception {
         LicensingClient licensingClient = new LicensingClient(client());
-        License license = TestUtils.generateSignedLicense("trial",  License.VERSION_CURRENT, -1, TimeValue.timeValueHours(24));
+        License license = TestUtils.generateSignedLicense("trial", License.VERSION_CURRENT, -1, TimeValue.timeValueHours(24));
         licensingClient.preparePutLicense(license).get();
 
         assertBusy(() -> {
@@ -94,8 +95,10 @@ public class StartBasicLicenseTests extends AbstractLicensesIntegrationTestCase 
         assertEquals(200, response3.getStatusLine().getStatusCode());
         assertEquals("{\"eligible_to_start_basic\":false}", body4);
 
-        ResponseException ex = expectThrows(ResponseException.class,
-                () -> restClient.performRequest(new Request("POST", "/_license/start_basic")));
+        ResponseException ex = expectThrows(
+            ResponseException.class,
+            () -> restClient.performRequest(new Request("POST", "/_license/start_basic"))
+        );
         Response response5 = ex.getResponse();
         String body5 = Streams.copyToString(new InputStreamReader(response5.getEntity().getContent(), StandardCharsets.UTF_8));
         assertEquals(403, response5.getStatusLine().getStatusCode());
@@ -106,7 +109,7 @@ public class StartBasicLicenseTests extends AbstractLicensesIntegrationTestCase 
 
     public void testUnacknowledgedStartBasicLicense() throws Exception {
         LicensingClient licensingClient = new LicensingClient(client());
-        License license = TestUtils.generateSignedLicense("trial",  License.VERSION_CURRENT, -1, TimeValue.timeValueHours(24));
+        License license = TestUtils.generateSignedLicense("trial", License.VERSION_CURRENT, -1, TimeValue.timeValueHours(24));
         licensingClient.preparePutLicense(license).get();
 
         assertBusy(() -> {
@@ -120,7 +123,11 @@ public class StartBasicLicenseTests extends AbstractLicensesIntegrationTestCase 
         assertTrue(body2.contains("\"acknowledged\":false"));
         assertTrue(body2.contains("\"basic_was_started\":false"));
         assertTrue(body2.contains("\"error_message\":\"Operation failed: Needs acknowledgement.\""));
-        assertTrue(body2.contains("\"message\":\"This license update requires acknowledgement. To acknowledge the license, " +
-                "please read the following messages and call /start_basic again, this time with the \\\"acknowledge=true\\\""));
+        assertTrue(
+            body2.contains(
+                "\"message\":\"This license update requires acknowledgement. To acknowledge the license, "
+                    + "please read the following messages and call /start_basic again, this time with the \\\"acknowledge=true\\\""
+            )
+        );
     }
 }

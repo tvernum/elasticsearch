@@ -37,8 +37,10 @@ public class LicenseSerializationTests extends ESTestCase {
     public void testLicensesFields() throws Exception {
         TestUtils.LicenseSpec randomLicenseSpec = TestUtils.generateRandomLicenseSpec(License.VERSION_START);
         String licenseSpecsSource = TestUtils.generateLicenseSpecString(randomLicenseSpec);
-        final License fromSource =
-                License.fromSource(new BytesArray(licenseSpecsSource.getBytes(StandardCharsets.UTF_8)), XContentType.JSON);
+        final License fromSource = License.fromSource(
+            new BytesArray(licenseSpecsSource.getBytes(StandardCharsets.UTF_8)),
+            XContentType.JSON
+        );
         TestUtils.assertLicenseSpec(randomLicenseSpec, fromSource);
     }
 
@@ -105,12 +107,12 @@ public class LicenseSerializationTests extends ESTestCase {
         long now = System.currentTimeMillis();
 
         License.Builder specBuilder = License.builder()
-                .uid(UUID.randomUUID().toString())
-                .issuedTo("test")
-                .maxNodes(1000)
-                .issueDate(now)
-                .type("basic")
-                .expiryDate(LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS);
+            .uid(UUID.randomUUID().toString())
+            .issuedTo("test")
+            .maxNodes(1000)
+            .issueDate(now)
+            .type("basic")
+            .expiryDate(LicenseService.BASIC_SELF_GENERATED_LICENSE_EXPIRATION_MILLIS);
         License license = SelfGeneratedLicense.create(specBuilder, License.VERSION_CURRENT);
         XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
         license.toXContent(builder, new ToXContent.MapParams(Collections.singletonMap(License.REST_VIEW_MODE, "true")));

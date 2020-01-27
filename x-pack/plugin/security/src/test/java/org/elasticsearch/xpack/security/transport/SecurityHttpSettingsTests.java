@@ -15,8 +15,7 @@ import static org.hamcrest.Matchers.is;
 public class SecurityHttpSettingsTests extends ESTestCase {
 
     public void testDisablesCompressionByDefaultForSsl() {
-        Settings settings = Settings.builder()
-            .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true).build();
+        Settings settings = Settings.builder().put(XPackSettings.HTTP_SSL_ENABLED.getKey(), true).build();
 
         Settings.Builder pluginSettingsBuilder = Settings.builder();
         SecurityHttpSettings.overrideSettings(pluginSettingsBuilder, settings);
@@ -24,8 +23,7 @@ public class SecurityHttpSettingsTests extends ESTestCase {
     }
 
     public void testLeavesCompressionOnIfNotSsl() {
-        Settings settings = Settings.builder()
-            .put(XPackSettings.HTTP_SSL_ENABLED.getKey(), false).build();
+        Settings settings = Settings.builder().put(XPackSettings.HTTP_SSL_ENABLED.getKey(), false).build();
         Settings.Builder pluginSettingsBuilder = Settings.builder();
         SecurityHttpSettings.overrideSettings(pluginSettingsBuilder, settings);
         assertThat(pluginSettingsBuilder.build().isEmpty(), is(true));

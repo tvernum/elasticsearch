@@ -34,7 +34,6 @@ public enum LicensesStatus {
         }
     }
 
-
     @Override
     public String toString() {
         return this.name().toLowerCase(Locale.ROOT);

@@ -40,33 +40,43 @@ class ActiveDirectoryGroupsResolver implements GroupsResolver {
     private final boolean ignoreReferralErrors;
 
     ActiveDirectoryGroupsResolver(RealmConfig config) {
-        this.baseDn = config.getSetting(SearchGroupsResolverSettings.BASE_DN,
-                () -> buildDnFromDomain(config.getSetting(ActiveDirectorySessionFactorySettings.AD_DOMAIN_NAME_SETTING)));
+        this.baseDn = config.getSetting(
+            SearchGroupsResolverSettings.BASE_DN,
+            () -> buildDnFromDomain(config.getSetting(ActiveDirectorySessionFactorySettings.AD_DOMAIN_NAME_SETTING))
+        );
         this.scope = config.getSetting(SearchGroupsResolverSettings.SCOPE);
         this.ignoreReferralErrors = config.getSetting(IGNORE_REFERRAL_ERRORS_SETTING);
     }
 
     @Override
-    public void resolve(LDAPInterface connection, String userDn, TimeValue timeout, Logger logger, Collection<Attribute> attributes,
-                        ActionListener<List<String>> listener) {
-        buildGroupQuery(connection, userDn, timeout,
-                ignoreReferralErrors, ActionListener.wrap((filter) -> {
-                    if (filter == null) {
-                        listener.onResponse(List.of());
-                    } else {
-                        logger.debug("group SID to DN [{}] search filter: [{}]", userDn, filter);
-                        search(connection, baseDn, scope.scope(), filter,
-                                Math.toIntExact(timeout.seconds()), ignoreReferralErrors,
-                                ActionListener.wrap((results) -> {
-                                            List<String> groups = results.stream()
-                                                    .map(SearchResultEntry::getDN)
-                                                    .collect(Collectors.toUnmodifiableList());
-                                            listener.onResponse(groups);
-                                        },
-                                        listener::onFailure),
-                                SearchRequest.NO_ATTRIBUTES);
-                    }
-                }, listener::onFailure));
+    public void resolve(
+        LDAPInterface connection,
+        String userDn,
+        TimeValue timeout,
+        Logger logger,
+        Collection<Attribute> attributes,
+        ActionListener<List<String>> listener
+    ) {
+        buildGroupQuery(connection, userDn, timeout, ignoreReferralErrors, ActionListener.wrap((filter) -> {
+            if (filter == null) {
+                listener.onResponse(List.of());
+            } else {
+                logger.debug("group SID to DN [{}] search filter: [{}]", userDn, filter);
+                search(
+                    connection,
+                    baseDn,
+                    scope.scope(),
+                    filter,
+                    Math.toIntExact(timeout.seconds()),
+                    ignoreReferralErrors,
+                    ActionListener.wrap((results) -> {
+                        List<String> groups = results.stream().map(SearchResultEntry::getDN).collect(Collectors.toUnmodifiableList());
+                        listener.onResponse(groups);
+                    }, listener::onFailure),
+                    SearchRequest.NO_ATTRIBUTES
+                );
+            }
+        }, listener::onFailure));
     }
 
     @Override
@@ -75,22 +85,33 @@ class ActiveDirectoryGroupsResolver implements GroupsResolver {
         return null;
     }
 
-    static void buildGroupQuery(LDAPInterface connection, String userDn, TimeValue timeout,
-                                boolean ignoreReferralErrors, ActionListener<Filter> listener) {
-        searchForEntry(connection, userDn, SearchScope.BASE, OBJECT_CLASS_PRESENCE_FILTER,
-                Math.toIntExact(timeout.seconds()), ignoreReferralErrors,
-                ActionListener.wrap((entry) -> {
-                    if (entry == null || entry.hasAttribute(TOKEN_GROUPS) == false) {
-                        listener.onResponse(null);
-                    } else {
-                        final byte[][] tokenGroupSIDBytes = entry.getAttributeValueByteArrays(TOKEN_GROUPS);
-                        List<Filter> orFilters = Arrays.stream(tokenGroupSIDBytes)
-                                .map((sidBytes) -> Filter.createEqualityFilter("objectSid", convertToString(sidBytes)))
-                                .collect(Collectors.toList());
-                        listener.onResponse(Filter.createORFilter(orFilters));
-                    }
-                }, listener::onFailure),
-                TOKEN_GROUPS);
+    static void buildGroupQuery(
+        LDAPInterface connection,
+        String userDn,
+        TimeValue timeout,
+        boolean ignoreReferralErrors,
+        ActionListener<Filter> listener
+    ) {
+        searchForEntry(
+            connection,
+            userDn,
+            SearchScope.BASE,
+            OBJECT_CLASS_PRESENCE_FILTER,
+            Math.toIntExact(timeout.seconds()),
+            ignoreReferralErrors,
+            ActionListener.wrap((entry) -> {
+                if (entry == null || entry.hasAttribute(TOKEN_GROUPS) == false) {
+                    listener.onResponse(null);
+                } else {
+                    final byte[][] tokenGroupSIDBytes = entry.getAttributeValueByteArrays(TOKEN_GROUPS);
+                    List<Filter> orFilters = Arrays.stream(tokenGroupSIDBytes)
+                        .map((sidBytes) -> Filter.createEqualityFilter("objectSid", convertToString(sidBytes)))
+                        .collect(Collectors.toList());
+                    listener.onResponse(Filter.createORFilter(orFilters));
+                }
+            }, listener::onFailure),
+            TOKEN_GROUPS
+        );
     }
 
 }

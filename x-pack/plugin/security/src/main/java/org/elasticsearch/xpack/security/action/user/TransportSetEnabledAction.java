@@ -32,8 +32,13 @@ public class TransportSetEnabledAction extends HandledTransportAction<SetEnabled
     private final NativeUsersStore usersStore;
 
     @Inject
-    public TransportSetEnabledAction(Settings settings, ThreadPool threadPool, TransportService transportService,
-                                     ActionFilters actionFilters, NativeUsersStore usersStore) {
+    public TransportSetEnabledAction(
+        Settings settings,
+        ThreadPool threadPool,
+        TransportService transportService,
+        ActionFilters actionFilters,
+        NativeUsersStore usersStore
+    ) {
         super(SetEnabledAction.NAME, transportService, actionFilters, SetEnabledRequest::new);
         this.settings = settings;
         this.threadPool = threadPool;

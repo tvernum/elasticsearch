@@ -33,14 +33,23 @@ public class RestAuthenticateAction extends SecurityBaseRestHandler {
     private final SecurityContext securityContext;
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestAuthenticateAction.class));
 
-    public RestAuthenticateAction(Settings settings, RestController controller, SecurityContext securityContext,
-                                  XPackLicenseState licenseState) {
+    public RestAuthenticateAction(
+        Settings settings,
+        RestController controller,
+        SecurityContext securityContext,
+        XPackLicenseState licenseState
+    ) {
         super(settings, licenseState);
         this.securityContext = securityContext;
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/_authenticate", this,
-            GET, "/_xpack/security/_authenticate", deprecationLogger);
+            GET,
+            "/_security/_authenticate",
+            this,
+            GET,
+            "/_xpack/security/_authenticate",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -56,14 +65,17 @@ public class RestAuthenticateAction extends SecurityBaseRestHandler {
         }
         final String username = user.principal();
 
-        return channel -> client.execute(AuthenticateAction.INSTANCE, new AuthenticateRequest(username),
-                new RestBuilderListener<AuthenticateResponse>(channel) {
-            @Override
-            public RestResponse buildResponse(AuthenticateResponse authenticateResponse, XContentBuilder builder) throws Exception {
-                authenticateResponse.authentication().toXContent(builder, ToXContent.EMPTY_PARAMS);
-                return new BytesRestResponse(RestStatus.OK, builder);
+        return channel -> client.execute(
+            AuthenticateAction.INSTANCE,
+            new AuthenticateRequest(username),
+            new RestBuilderListener<AuthenticateResponse>(channel) {
+                @Override
+                public RestResponse buildResponse(AuthenticateResponse authenticateResponse, XContentBuilder builder) throws Exception {
+                    authenticateResponse.authentication().toXContent(builder, ToXContent.EMPTY_PARAMS);
+                    return new BytesRestResponse(RestStatus.OK, builder);
+                }
             }
-        });
+        );
 
     }
 }

@@ -37,8 +37,7 @@ public final class SamlPrepareAuthenticationRequest extends ActionRequest {
         }
     }
 
-    public SamlPrepareAuthenticationRequest() {
-    }
+    public SamlPrepareAuthenticationRequest() {}
 
     @Override
     public ActionRequestValidationException validate() {
@@ -71,11 +70,15 @@ public final class SamlPrepareAuthenticationRequest extends ActionRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" +
-                "realmName=" + realmName +
-                ", assertionConsumerServiceURL=" + assertionConsumerServiceURL +
-                ", relayState=" + relayState +
-                '}';
+        return getClass().getSimpleName()
+            + "{"
+            + "realmName="
+            + realmName
+            + ", assertionConsumerServiceURL="
+            + assertionConsumerServiceURL
+            + ", relayState="
+            + relayState
+            + '}';
     }
 
     @Override

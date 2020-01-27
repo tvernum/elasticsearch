@@ -28,9 +28,11 @@ public class CompositeRoleMapper implements UserRoleMapper {
 
     private List<UserRoleMapper> delegates;
 
-    public CompositeRoleMapper(RealmConfig realmConfig,
-                               ResourceWatcherService watcherService,
-                               NativeRoleMappingStore nativeRoleMappingStore) {
+    public CompositeRoleMapper(
+        RealmConfig realmConfig,
+        ResourceWatcherService watcherService,
+        NativeRoleMappingStore nativeRoleMappingStore
+    ) {
         this(new DnRoleMapper(realmConfig, watcherService), nativeRoleMappingStore);
     }
 
@@ -40,9 +42,13 @@ public class CompositeRoleMapper implements UserRoleMapper {
 
     @Override
     public void resolveRoles(UserData user, ActionListener<Set<String>> listener) {
-        GroupedActionListener<Set<String>> groupListener = new GroupedActionListener<>(ActionListener.wrap(
-                composite -> listener.onResponse(composite.stream().flatMap(Set::stream).collect(Collectors.toSet())), listener::onFailure
-        ), delegates.size());
+        GroupedActionListener<Set<String>> groupListener = new GroupedActionListener<>(
+            ActionListener.wrap(
+                composite -> listener.onResponse(composite.stream().flatMap(Set::stream).collect(Collectors.toSet())),
+                listener::onFailure
+            ),
+            delegates.size()
+        );
         this.delegates.forEach(mapper -> mapper.resolveRoles(user, groupListener));
     }
 

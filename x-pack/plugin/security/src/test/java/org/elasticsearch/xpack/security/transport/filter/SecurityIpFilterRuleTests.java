@@ -62,7 +62,7 @@ public class SecurityIpFilterRuleTests extends ESTestCase {
             getRule(randomBoolean(), "127.0.0.0/24," + randomFrom("name", "127.0.0.1", "192.0.0.0/24"));
             fail("expected an exception to be thrown because only one subnet can be specified at a time");
         } catch (IllegalArgumentException e) {
-            //expected
+            // expected
         }
     }
 

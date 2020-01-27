@@ -52,7 +52,9 @@ public class RestSamlAuthenticateAction extends SamlBaseRestHandler implements R
             this.ids = ids;
         }
 
-        void setRealm(String realm) { this.realm = realm;}
+        void setRealm(String realm) {
+            this.realm = realm;
+        }
     }
 
     static final ObjectParser<Input, Void> PARSER = new ObjectParser<>("saml_authenticate", Input::new);
@@ -63,13 +65,17 @@ public class RestSamlAuthenticateAction extends SamlBaseRestHandler implements R
         PARSER.declareStringOrNull(Input::setRealm, new ParseField("realm"));
     }
 
-    public RestSamlAuthenticateAction(Settings settings, RestController controller,
-                                      XPackLicenseState licenseState) {
+    public RestSamlAuthenticateAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/saml/authenticate", this,
-            POST, "/_xpack/security/saml/authenticate", deprecationLogger);
+            POST,
+            "/_security/saml/authenticate",
+            this,
+            POST,
+            "/_xpack/security/saml/authenticate",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -84,17 +90,18 @@ public class RestSamlAuthenticateAction extends SamlBaseRestHandler implements R
             logger.trace("SAML Authenticate: [{}...] [{}]", Strings.cleanTruncate(input.content, 128), input.ids);
             return channel -> {
                 final byte[] bytes = decodeBase64(input.content);
-                final SamlAuthenticateRequestBuilder requestBuilder =
-                    new SamlAuthenticateRequestBuilder(client).saml(bytes).validRequestIds(input.ids).authenticatingRealm(input.realm);
+                final SamlAuthenticateRequestBuilder requestBuilder = new SamlAuthenticateRequestBuilder(client).saml(bytes)
+                    .validRequestIds(input.ids)
+                    .authenticatingRealm(input.realm);
                 requestBuilder.execute(new RestBuilderListener<>(channel) {
                     @Override
                     public RestResponse buildResponse(SamlAuthenticateResponse response, XContentBuilder builder) throws Exception {
                         builder.startObject()
-                                .field("username", response.getPrincipal())
-                                .field("access_token", response.getTokenString())
-                                .field("refresh_token", response.getRefreshToken())
-                                .field("expires_in", response.getExpiresIn().seconds())
-                                .endObject();
+                            .field("username", response.getPrincipal())
+                            .field("access_token", response.getTokenString())
+                            .field("refresh_token", response.getRefreshToken())
+                            .field("expires_in", response.getExpiresIn().seconds())
+                            .endObject();
                         return new BytesRestResponse(RestStatus.OK, builder);
                     }
                 });

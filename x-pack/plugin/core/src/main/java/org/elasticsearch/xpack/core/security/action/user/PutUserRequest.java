@@ -48,8 +48,7 @@ public class PutUserRequest extends ActionRequest implements UserRequest, WriteR
         enabled = in.readBoolean();
     }
 
-    public PutUserRequest() {
-    }
+    public PutUserRequest() {}
 
     @Override
     public ActionRequestValidationException validate() {
@@ -183,15 +182,26 @@ public class PutUserRequest extends ActionRequest implements UserRequest, WriteR
 
     @Override
     public String toString() {
-        return "PutUserRequest{" +
-            "username='" + username + '\'' +
-            ", roles=" + Arrays.toString(roles) +
-            ", fullName='" + fullName + '\'' +
-            ", email='" + email + '\'' +
-            ", metadata=" + metadata +
-            ", passwordHash=" + (passwordHash == null ? "<null>" : "<not-null>") +
-            ", enabled=" + enabled +
-            ", refreshPolicy=" + refreshPolicy +
-            '}';
+        return "PutUserRequest{"
+            + "username='"
+            + username
+            + '\''
+            + ", roles="
+            + Arrays.toString(roles)
+            + ", fullName='"
+            + fullName
+            + '\''
+            + ", email='"
+            + email
+            + '\''
+            + ", metadata="
+            + metadata
+            + ", passwordHash="
+            + (passwordHash == null ? "<null>" : "<not-null>")
+            + ", enabled="
+            + enabled
+            + ", refreshPolicy="
+            + refreshPolicy
+            + '}';
     }
 }

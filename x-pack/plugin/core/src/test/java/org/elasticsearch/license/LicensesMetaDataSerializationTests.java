@@ -89,12 +89,12 @@ public class LicensesMetaDataSerializationTests extends ESTestCase {
     public void testXContentSerializationOneTrial() throws Exception {
         long issueDate = System.currentTimeMillis();
         License.Builder specBuilder = License.builder()
-                .uid(UUID.randomUUID().toString())
-                .issuedTo("customer")
-                .maxNodes(5)
-                .issueDate(issueDate)
-                .type(randomBoolean() ? "trial" : "basic")
-                .expiryDate(issueDate + TimeValue.timeValueHours(2).getMillis());
+            .uid(UUID.randomUUID().toString())
+            .issuedTo("customer")
+            .maxNodes(5)
+            .issueDate(issueDate)
+            .type(randomBoolean() ? "trial" : "basic")
+            .expiryDate(issueDate + TimeValue.timeValueHours(2).getMillis());
         final License trialLicense = SelfGeneratedLicense.create(specBuilder, License.VERSION_CURRENT);
         LicensesMetaData licensesMetaData = new LicensesMetaData(trialLicense, Version.CURRENT);
         XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -143,9 +143,9 @@ public class LicensesMetaDataSerializationTests extends ESTestCase {
 
     @Override
     protected NamedXContentRegistry xContentRegistry() {
-        return new NamedXContentRegistry(Stream.concat(
-                new Licensing(Settings.EMPTY).getNamedXContent().stream(),
-                ClusterModule.getNamedXWriteables().stream()
-        ).collect(Collectors.toList()));
+        return new NamedXContentRegistry(
+            Stream.concat(new Licensing(Settings.EMPTY).getNamedXContent().stream(), ClusterModule.getNamedXWriteables().stream())
+                .collect(Collectors.toList())
+        );
     }
 }

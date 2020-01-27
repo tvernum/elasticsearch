@@ -87,15 +87,14 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
         BOOTSTRAP_PASSWORD = TEST_PASSWORD_SECURE_STRING.clone();
     }
 
-    //UnicastZen requires the number of nodes in a cluster to generate the unicast configuration.
-    //The number of nodes is randomized though, but we can predict what the maximum number of nodes will be
-    //and configure them all in unicast.hosts
+    // UnicastZen requires the number of nodes in a cluster to generate the unicast configuration.
+    // The number of nodes is randomized though, but we can predict what the maximum number of nodes will be
+    // and configure them all in unicast.hosts
     protected static int defaultMaxNumberOfNodes() {
         ClusterScope clusterScope = SecurityIntegTestCase.class.getAnnotation(ClusterScope.class);
         if (clusterScope == null) {
-            return InternalTestCluster.DEFAULT_HIGH_NUM_MASTER_NODES +
-                    InternalTestCluster.DEFAULT_MAX_NUM_DATA_NODES +
-                    InternalTestCluster.DEFAULT_MAX_NUM_CLIENT_NODES;
+            return InternalTestCluster.DEFAULT_HIGH_NUM_MASTER_NODES + InternalTestCluster.DEFAULT_MAX_NUM_DATA_NODES
+                + InternalTestCluster.DEFAULT_MAX_NUM_CLIENT_NODES;
         } else {
             int clientNodes = clusterScope.numClientNodes();
             if (clientNodes < 0) {
@@ -143,8 +142,7 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
     @BeforeClass
     public static void initDefaultSettings() {
         if (SECURITY_DEFAULT_SETTINGS == null) {
-            SECURITY_DEFAULT_SETTINGS =
-                    new SecuritySettingsSource(randomBoolean(), createTempDir(), Scope.SUITE);
+            SECURITY_DEFAULT_SETTINGS = new SecuritySettingsSource(randomBoolean(), createTempDir(), Scope.SUITE);
         }
     }
 
@@ -160,7 +158,7 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
     }
 
     @Rule
-    //Rules are the only way to have something run before the before (final) method inherited from ESIntegTestCase
+    // Rules are the only way to have something run before the before (final) method inherited from ESIntegTestCase
     public ExternalResource externalResource = new ExternalResource() {
         @Override
         protected void before() throws Throwable {
@@ -168,13 +166,19 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
             switch (currentClusterScope) {
                 case SUITE:
                     if (customSecuritySettingsSource == null) {
-                        customSecuritySettingsSource =
-                                new CustomSecuritySettingsSource(transportSSLEnabled(), createTempDir(), currentClusterScope);
+                        customSecuritySettingsSource = new CustomSecuritySettingsSource(
+                            transportSSLEnabled(),
+                            createTempDir(),
+                            currentClusterScope
+                        );
                     }
                     break;
                 case TEST:
-                    customSecuritySettingsSource =
-                            new CustomSecuritySettingsSource(transportSSLEnabled(), createTempDir(), currentClusterScope);
+                    customSecuritySettingsSource = new CustomSecuritySettingsSource(
+                        transportSSLEnabled(),
+                        createTempDir(),
+                        currentClusterScope
+                    );
                     break;
             }
         }
@@ -210,7 +214,7 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
     };
 
     @Before
-    //before methods from the superclass are run before this, which means that the current cluster is ready to go
+    // before methods from the superclass are run before this, which means that the current cluster is ready to go
     public void assertXPackIsInstalled() {
         doAssertXPackIsInstalled();
     }
@@ -219,11 +223,17 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
         NodesInfoResponse nodeInfos = client().admin().cluster().prepareNodesInfo().clear().setPlugins(true).get();
         for (NodeInfo nodeInfo : nodeInfos.getNodes()) {
             // TODO: disable this assertion for now, due to random runs with mock plugins. perhaps run without mock plugins?
-//            assertThat(nodeInfo.getPlugins().getInfos(), hasSize(2));
-            Collection<String> pluginNames =
-                nodeInfo.getPlugins().getPluginInfos().stream().map(p -> p.getClassname()).collect(Collectors.toList());
-            assertThat("plugin [" + LocalStateSecurity.class.getName() + "] not found in [" + pluginNames + "]", pluginNames,
-                hasItem(LocalStateSecurity.class.getName()));
+            // assertThat(nodeInfo.getPlugins().getInfos(), hasSize(2));
+            Collection<String> pluginNames = nodeInfo.getPlugins()
+                .getPluginInfos()
+                .stream()
+                .map(p -> p.getClassname())
+                .collect(Collectors.toList());
+            assertThat(
+                "plugin [" + LocalStateSecurity.class.getName() + "] not found in [" + pluginNames + "]",
+                pluginNames,
+                hasItem(LocalStateSecurity.class.getName())
+            );
         }
     }
 
@@ -231,14 +241,16 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
     protected Settings nodeSettings(int nodeOrdinal) {
         Settings.Builder builder = Settings.builder().put(super.nodeSettings(nodeOrdinal));
         // Disable native ML autodetect_process as the c++ controller won't be available
-//        builder.put(MachineLearningField.AUTODETECT_PROCESS.getKey(), false);
+        // builder.put(MachineLearningField.AUTODETECT_PROCESS.getKey(), false);
         Settings customSettings = customSecuritySettingsSource.nodeSettings(nodeOrdinal);
         builder.put(customSettings, false); // handle secure settings separately
         builder.put(LicenseService.SELF_GENERATED_LICENSE_TYPE.getKey(), "trial");
         Settings.Builder customBuilder = Settings.builder().put(customSettings);
         if (customBuilder.getSecureSettings() != null) {
-            SecuritySettingsSource.addSecureSettings(builder, secureSettings ->
-                    secureSettings.merge((MockSecureSettings) customBuilder.getSecureSettings()));
+            SecuritySettingsSource.addSecureSettings(
+                builder,
+                secureSettings -> secureSettings.merge((MockSecureSettings) customBuilder.getSecureSettings())
+            );
         }
         if (builder.getSecureSettings() == null) {
             builder.setSecureSettings(new MockSecureSettings());
@@ -365,7 +377,7 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
             IndicesAliasesRequestBuilder builder = client().admin().indices().prepareAliases();
             for (String index : indices) {
                 if (frequently()) {
-                    //one alias per index with prefix "alias-"
+                    // one alias per index with prefix "alias-"
                     builder.addAlias(index, "alias-" + index);
                     aliasAdded = true;
                 }
@@ -373,7 +385,7 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
             // If we get to this point and we haven't added an alias to the request we need to add one
             // or the request will fail so use noAliasAdded to force adding the alias in this case
             if (aliasAdded == false || randomBoolean()) {
-                //one alias pointing to all indices
+                // one alias pointing to all indices
                 for (String index : indices) {
                     builder.addAlias(index, "alias");
                 }
@@ -389,8 +401,10 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
 
     @Override
     protected Function<Client, Client> getClientWrapper() {
-        Map<String, String> headers = Collections.singletonMap("Authorization",
-                basicAuthHeaderValue(nodeClientUsername(), nodeClientPassword()));
+        Map<String, String> headers = Collections.singletonMap(
+            "Authorization",
+            basicAuthHeaderValue(nodeClientUsername(), nodeClientPassword())
+        );
         // we need to wrap node clients because we do not specify a user for nodes and all requests will use the system
         // user. This is ok for internal n2n stuff but the test framework does other things like wiping indices, repositories, etc
         // that the system user cannot do. so we wrap the node client with a user that can do these things since the client() calls
@@ -408,10 +422,16 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
                 ClusterState clusterState = client.admin().cluster().prepareState().setLocal(true).get().getState();
                 assertFalse(clusterState.blocks().hasGlobalBlock(GatewayService.STATE_NOT_RECOVERED_BLOCK));
                 XContentBuilder builder = JsonXContent.contentBuilder().prettyPrint().startObject();
-                assertTrue("security index mapping not sufficient to read:\n" +
-                                Strings.toString(clusterState.toXContent(builder, ToXContent.EMPTY_PARAMS).endObject()),
-                    SecurityIndexManager.checkIndexMappingVersionMatches(SECURITY_MAIN_ALIAS, clusterState, logger,
-                        Version.CURRENT.minimumIndexCompatibilityVersion()::onOrBefore));
+                assertTrue(
+                    "security index mapping not sufficient to read:\n"
+                        + Strings.toString(clusterState.toXContent(builder, ToXContent.EMPTY_PARAMS).endObject()),
+                    SecurityIndexManager.checkIndexMappingVersionMatches(
+                        SECURITY_MAIN_ALIAS,
+                        clusterState,
+                        logger,
+                        Version.CURRENT.minimumIndexCompatibilityVersion()::onOrBefore
+                    )
+                );
                 Index securityIndex = resolveSecurityIndex(clusterState.metaData());
                 if (securityIndex != null) {
                     IndexRoutingTable indexRoutingTable = clusterState.routingTable().index(securityIndex);
@@ -424,9 +444,15 @@ public abstract class SecurityIntegTestCase extends ESIntegTestCase {
     }
 
     protected void deleteSecurityIndex() {
-        final Client client = client().filterWithHeader(Collections.singletonMap("Authorization",
-                UsernamePasswordToken.basicAuthHeaderValue(SecuritySettingsSource.TEST_SUPERUSER,
-                        SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING)));
+        final Client client = client().filterWithHeader(
+            Collections.singletonMap(
+                "Authorization",
+                UsernamePasswordToken.basicAuthHeaderValue(
+                    SecuritySettingsSource.TEST_SUPERUSER,
+                    SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING
+                )
+            )
+        );
         GetIndexRequest getIndexRequest = new GetIndexRequest();
         getIndexRequest.indices(SECURITY_MAIN_ALIAS);
         getIndexRequest.indicesOptions(IndicesOptions.lenientExpandOpen());

@@ -263,7 +263,7 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
         // the only licensing one
         settings.add(Setting.groupSetting("license.", Setting.Property.NodeScope));
 
-        //TODO split these settings up
+        // TODO split these settings up
         settings.addAll(XPackSettings.getAllSettings());
 
         settings.add(LicenseService.SELF_GENERATED_LICENSE_TYPE);
@@ -278,150 +278,150 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
     @Override
     public List<ActionType<? extends ActionResponse>> getClientActions() {
         return Arrays.asList(
-                // deprecation
-                DeprecationInfoAction.INSTANCE,
-                // graph
-                GraphExploreAction.INSTANCE,
-                // ML
-                GetJobsAction.INSTANCE,
-                GetJobsStatsAction.INSTANCE,
-                MlInfoAction.INSTANCE,
-                PutJobAction.INSTANCE,
-                UpdateJobAction.INSTANCE,
-                DeleteJobAction.INSTANCE,
-                OpenJobAction.INSTANCE,
-                GetFiltersAction.INSTANCE,
-                PutFilterAction.INSTANCE,
-                UpdateFilterAction.INSTANCE,
-                DeleteFilterAction.INSTANCE,
-                KillProcessAction.INSTANCE,
-                GetBucketsAction.INSTANCE,
-                GetInfluencersAction.INSTANCE,
-                GetOverallBucketsAction.INSTANCE,
-                GetRecordsAction.INSTANCE,
-                PostDataAction.INSTANCE,
-                CloseJobAction.INSTANCE,
-                FinalizeJobExecutionAction.INSTANCE,
-                FlushJobAction.INSTANCE,
-                ValidateDetectorAction.INSTANCE,
-                ValidateJobConfigAction.INSTANCE,
-                GetCategoriesAction.INSTANCE,
-                GetModelSnapshotsAction.INSTANCE,
-                RevertModelSnapshotAction.INSTANCE,
-                UpdateModelSnapshotAction.INSTANCE,
-                GetDatafeedsAction.INSTANCE,
-                GetDatafeedsStatsAction.INSTANCE,
-                PutDatafeedAction.INSTANCE,
-                UpdateDatafeedAction.INSTANCE,
-                DeleteDatafeedAction.INSTANCE,
-                PreviewDatafeedAction.INSTANCE,
-                StartDatafeedAction.INSTANCE,
-                StopDatafeedAction.INSTANCE,
-                IsolateDatafeedAction.INSTANCE,
-                DeleteModelSnapshotAction.INSTANCE,
-                UpdateProcessAction.INSTANCE,
-                DeleteExpiredDataAction.INSTANCE,
-                ForecastJobAction.INSTANCE,
-                DeleteForecastAction.INSTANCE,
-                GetCalendarsAction.INSTANCE,
-                PutCalendarAction.INSTANCE,
-                DeleteCalendarAction.INSTANCE,
-                DeleteCalendarEventAction.INSTANCE,
-                UpdateCalendarJobAction.INSTANCE,
-                GetCalendarEventsAction.INSTANCE,
-                PostCalendarEventsAction.INSTANCE,
-                PersistJobAction.INSTANCE,
-                FindFileStructureAction.INSTANCE,
-                SetUpgradeModeAction.INSTANCE,
-                PutDataFrameAnalyticsAction.INSTANCE,
-                GetDataFrameAnalyticsAction.INSTANCE,
-                GetDataFrameAnalyticsStatsAction.INSTANCE,
-                DeleteDataFrameAnalyticsAction.INSTANCE,
-                StartDataFrameAnalyticsAction.INSTANCE,
-                EvaluateDataFrameAction.INSTANCE,
-                ExplainDataFrameAnalyticsAction.INSTANCE,
-                InternalInferModelAction.INSTANCE,
-                GetTrainedModelsAction.INSTANCE,
-                DeleteTrainedModelAction.INSTANCE,
-                GetTrainedModelsStatsAction.INSTANCE,
-                PutTrainedModelAction.INSTANCE,
-                // security
-                ClearRealmCacheAction.INSTANCE,
-                ClearRolesCacheAction.INSTANCE,
-                GetUsersAction.INSTANCE,
-                PutUserAction.INSTANCE,
-                DeleteUserAction.INSTANCE,
-                GetRolesAction.INSTANCE,
-                PutRoleAction.INSTANCE,
-                DeleteRoleAction.INSTANCE,
-                ChangePasswordAction.INSTANCE,
-                AuthenticateAction.INSTANCE,
-                SetEnabledAction.INSTANCE,
-                HasPrivilegesAction.INSTANCE,
-                GetRoleMappingsAction.INSTANCE,
-                PutRoleMappingAction.INSTANCE,
-                DeleteRoleMappingAction.INSTANCE,
-                CreateTokenAction.INSTANCE,
-                InvalidateTokenAction.INSTANCE,
-                GetCertificateInfoAction.INSTANCE,
-                RefreshTokenAction.INSTANCE,
-                CreateApiKeyAction.INSTANCE,
-                InvalidateApiKeyAction.INSTANCE,
-                GetApiKeyAction.INSTANCE,
-                // upgrade
-                IndexUpgradeInfoAction.INSTANCE,
-                IndexUpgradeAction.INSTANCE,
-                // watcher
-                PutWatchAction.INSTANCE,
-                DeleteWatchAction.INSTANCE,
-                GetWatchAction.INSTANCE,
-                WatcherStatsAction.INSTANCE,
-                AckWatchAction.INSTANCE,
-                ActivateWatchAction.INSTANCE,
-                WatcherServiceAction.INSTANCE,
-                ExecuteWatchAction.INSTANCE,
-                // license
-                PutLicenseAction.INSTANCE,
-                GetLicenseAction.INSTANCE,
-                DeleteLicenseAction.INSTANCE,
-                PostStartTrialAction.INSTANCE,
-                GetTrialStatusAction.INSTANCE,
-                PostStartBasicAction.INSTANCE,
-                GetBasicStatusAction.INSTANCE,
-                // x-pack
-                XPackInfoAction.INSTANCE,
-                XPackUsageAction.INSTANCE,
-                // rollup
-                RollupSearchAction.INSTANCE,
-                PutRollupJobAction.INSTANCE,
-                StartRollupJobAction.INSTANCE,
-                StopRollupJobAction.INSTANCE,
-                DeleteRollupJobAction.INSTANCE,
-                GetRollupJobsAction.INSTANCE,
-                GetRollupCapsAction.INSTANCE,
-                // ILM
-                DeleteLifecycleAction.INSTANCE,
-                GetLifecycleAction.INSTANCE,
-                PutLifecycleAction.INSTANCE,
-                ExplainLifecycleAction.INSTANCE,
-                RemoveIndexLifecyclePolicyAction.INSTANCE,
-                MoveToStepAction.INSTANCE,
-                RetryAction.INSTANCE,
-                PutSnapshotLifecycleAction.INSTANCE,
-                GetSnapshotLifecycleAction.INSTANCE,
-                DeleteSnapshotLifecycleAction.INSTANCE,
-                ExecuteSnapshotLifecycleAction.INSTANCE,
-                GetSnapshotLifecycleStatsAction.INSTANCE,
-                // Freeze
-                FreezeIndexAction.INSTANCE,
-                // Data Frame
-                PutTransformAction.INSTANCE,
-                StartTransformAction.INSTANCE,
-                StopTransformAction.INSTANCE,
-                DeleteTransformAction.INSTANCE,
-                GetTransformAction.INSTANCE,
-                GetTransformStatsAction.INSTANCE,
-                PreviewTransformAction.INSTANCE
+            // deprecation
+            DeprecationInfoAction.INSTANCE,
+            // graph
+            GraphExploreAction.INSTANCE,
+            // ML
+            GetJobsAction.INSTANCE,
+            GetJobsStatsAction.INSTANCE,
+            MlInfoAction.INSTANCE,
+            PutJobAction.INSTANCE,
+            UpdateJobAction.INSTANCE,
+            DeleteJobAction.INSTANCE,
+            OpenJobAction.INSTANCE,
+            GetFiltersAction.INSTANCE,
+            PutFilterAction.INSTANCE,
+            UpdateFilterAction.INSTANCE,
+            DeleteFilterAction.INSTANCE,
+            KillProcessAction.INSTANCE,
+            GetBucketsAction.INSTANCE,
+            GetInfluencersAction.INSTANCE,
+            GetOverallBucketsAction.INSTANCE,
+            GetRecordsAction.INSTANCE,
+            PostDataAction.INSTANCE,
+            CloseJobAction.INSTANCE,
+            FinalizeJobExecutionAction.INSTANCE,
+            FlushJobAction.INSTANCE,
+            ValidateDetectorAction.INSTANCE,
+            ValidateJobConfigAction.INSTANCE,
+            GetCategoriesAction.INSTANCE,
+            GetModelSnapshotsAction.INSTANCE,
+            RevertModelSnapshotAction.INSTANCE,
+            UpdateModelSnapshotAction.INSTANCE,
+            GetDatafeedsAction.INSTANCE,
+            GetDatafeedsStatsAction.INSTANCE,
+            PutDatafeedAction.INSTANCE,
+            UpdateDatafeedAction.INSTANCE,
+            DeleteDatafeedAction.INSTANCE,
+            PreviewDatafeedAction.INSTANCE,
+            StartDatafeedAction.INSTANCE,
+            StopDatafeedAction.INSTANCE,
+            IsolateDatafeedAction.INSTANCE,
+            DeleteModelSnapshotAction.INSTANCE,
+            UpdateProcessAction.INSTANCE,
+            DeleteExpiredDataAction.INSTANCE,
+            ForecastJobAction.INSTANCE,
+            DeleteForecastAction.INSTANCE,
+            GetCalendarsAction.INSTANCE,
+            PutCalendarAction.INSTANCE,
+            DeleteCalendarAction.INSTANCE,
+            DeleteCalendarEventAction.INSTANCE,
+            UpdateCalendarJobAction.INSTANCE,
+            GetCalendarEventsAction.INSTANCE,
+            PostCalendarEventsAction.INSTANCE,
+            PersistJobAction.INSTANCE,
+            FindFileStructureAction.INSTANCE,
+            SetUpgradeModeAction.INSTANCE,
+            PutDataFrameAnalyticsAction.INSTANCE,
+            GetDataFrameAnalyticsAction.INSTANCE,
+            GetDataFrameAnalyticsStatsAction.INSTANCE,
+            DeleteDataFrameAnalyticsAction.INSTANCE,
+            StartDataFrameAnalyticsAction.INSTANCE,
+            EvaluateDataFrameAction.INSTANCE,
+            ExplainDataFrameAnalyticsAction.INSTANCE,
+            InternalInferModelAction.INSTANCE,
+            GetTrainedModelsAction.INSTANCE,
+            DeleteTrainedModelAction.INSTANCE,
+            GetTrainedModelsStatsAction.INSTANCE,
+            PutTrainedModelAction.INSTANCE,
+            // security
+            ClearRealmCacheAction.INSTANCE,
+            ClearRolesCacheAction.INSTANCE,
+            GetUsersAction.INSTANCE,
+            PutUserAction.INSTANCE,
+            DeleteUserAction.INSTANCE,
+            GetRolesAction.INSTANCE,
+            PutRoleAction.INSTANCE,
+            DeleteRoleAction.INSTANCE,
+            ChangePasswordAction.INSTANCE,
+            AuthenticateAction.INSTANCE,
+            SetEnabledAction.INSTANCE,
+            HasPrivilegesAction.INSTANCE,
+            GetRoleMappingsAction.INSTANCE,
+            PutRoleMappingAction.INSTANCE,
+            DeleteRoleMappingAction.INSTANCE,
+            CreateTokenAction.INSTANCE,
+            InvalidateTokenAction.INSTANCE,
+            GetCertificateInfoAction.INSTANCE,
+            RefreshTokenAction.INSTANCE,
+            CreateApiKeyAction.INSTANCE,
+            InvalidateApiKeyAction.INSTANCE,
+            GetApiKeyAction.INSTANCE,
+            // upgrade
+            IndexUpgradeInfoAction.INSTANCE,
+            IndexUpgradeAction.INSTANCE,
+            // watcher
+            PutWatchAction.INSTANCE,
+            DeleteWatchAction.INSTANCE,
+            GetWatchAction.INSTANCE,
+            WatcherStatsAction.INSTANCE,
+            AckWatchAction.INSTANCE,
+            ActivateWatchAction.INSTANCE,
+            WatcherServiceAction.INSTANCE,
+            ExecuteWatchAction.INSTANCE,
+            // license
+            PutLicenseAction.INSTANCE,
+            GetLicenseAction.INSTANCE,
+            DeleteLicenseAction.INSTANCE,
+            PostStartTrialAction.INSTANCE,
+            GetTrialStatusAction.INSTANCE,
+            PostStartBasicAction.INSTANCE,
+            GetBasicStatusAction.INSTANCE,
+            // x-pack
+            XPackInfoAction.INSTANCE,
+            XPackUsageAction.INSTANCE,
+            // rollup
+            RollupSearchAction.INSTANCE,
+            PutRollupJobAction.INSTANCE,
+            StartRollupJobAction.INSTANCE,
+            StopRollupJobAction.INSTANCE,
+            DeleteRollupJobAction.INSTANCE,
+            GetRollupJobsAction.INSTANCE,
+            GetRollupCapsAction.INSTANCE,
+            // ILM
+            DeleteLifecycleAction.INSTANCE,
+            GetLifecycleAction.INSTANCE,
+            PutLifecycleAction.INSTANCE,
+            ExplainLifecycleAction.INSTANCE,
+            RemoveIndexLifecyclePolicyAction.INSTANCE,
+            MoveToStepAction.INSTANCE,
+            RetryAction.INSTANCE,
+            PutSnapshotLifecycleAction.INSTANCE,
+            GetSnapshotLifecycleAction.INSTANCE,
+            DeleteSnapshotLifecycleAction.INSTANCE,
+            ExecuteSnapshotLifecycleAction.INSTANCE,
+            GetSnapshotLifecycleStatsAction.INSTANCE,
+            // Freeze
+            FreezeIndexAction.INSTANCE,
+            // Data Frame
+            PutTransformAction.INSTANCE,
+            StartTransformAction.INSTANCE,
+            StopTransformAction.INSTANCE,
+            DeleteTransformAction.INSTANCE,
+            GetTransformAction.INSTANCE,
+            GetTransformStatsAction.INSTANCE,
+            PreviewTransformAction.INSTANCE
         );
     }
 
@@ -439,19 +439,30 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
                 new NamedWriteableRegistry.Entry(MetaData.Custom.class, "ml", MlMetadata::new),
                 new NamedWriteableRegistry.Entry(NamedDiff.class, "ml", MlMetadata.MlMetadataDiff::new),
                 // ML - Persistent action requests
-                new NamedWriteableRegistry.Entry(PersistentTaskParams.class, MlTasks.DATAFEED_TASK_NAME,
-                        StartDatafeedAction.DatafeedParams::new),
-                new NamedWriteableRegistry.Entry(PersistentTaskParams.class, MlTasks.JOB_TASK_NAME,
-                        OpenJobAction.JobParams::new),
-                new NamedWriteableRegistry.Entry(PersistentTaskParams.class, MlTasks.DATA_FRAME_ANALYTICS_TASK_NAME,
-                    StartDataFrameAnalyticsAction.TaskParams::new),
+                new NamedWriteableRegistry.Entry(
+                    PersistentTaskParams.class,
+                    MlTasks.DATAFEED_TASK_NAME,
+                    StartDatafeedAction.DatafeedParams::new
+                ),
+                new NamedWriteableRegistry.Entry(PersistentTaskParams.class, MlTasks.JOB_TASK_NAME, OpenJobAction.JobParams::new),
+                new NamedWriteableRegistry.Entry(
+                    PersistentTaskParams.class,
+                    MlTasks.DATA_FRAME_ANALYTICS_TASK_NAME,
+                    StartDataFrameAnalyticsAction.TaskParams::new
+                ),
                 // ML - Task states
                 new NamedWriteableRegistry.Entry(PersistentTaskState.class, JobTaskState.NAME, JobTaskState::new),
                 new NamedWriteableRegistry.Entry(PersistentTaskState.class, DatafeedState.NAME, DatafeedState::fromStream),
-                new NamedWriteableRegistry.Entry(PersistentTaskState.class, DataFrameAnalyticsTaskState.NAME,
-                    DataFrameAnalyticsTaskState::new),
-                new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.MACHINE_LEARNING,
-                        MachineLearningFeatureSetUsage::new),
+                new NamedWriteableRegistry.Entry(
+                    PersistentTaskState.class,
+                    DataFrameAnalyticsTaskState.NAME,
+                    DataFrameAnalyticsTaskState::new
+                ),
+                new NamedWriteableRegistry.Entry(
+                    XPackFeatureSet.Usage.class,
+                    XPackField.MACHINE_LEARNING,
+                    MachineLearningFeatureSetUsage::new
+                ),
                 // ML - Data frame analytics
                 new NamedWriteableRegistry.Entry(DataFrameAnalysis.class, OutlierDetection.NAME.getPreferredName(), OutlierDetection::new),
                 new NamedWriteableRegistry.Entry(DataFrameAnalysis.class, Regression.NAME.getPreferredName(), Regression::new),
@@ -464,27 +475,33 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
                 // ML - Inference models
                 new NamedWriteableRegistry.Entry(TrainedModel.class, Tree.NAME.getPreferredName(), Tree::new),
                 new NamedWriteableRegistry.Entry(TrainedModel.class, Ensemble.NAME.getPreferredName(), Ensemble::new),
-                new NamedWriteableRegistry.Entry(TrainedModel.class,
+                new NamedWriteableRegistry.Entry(
+                    TrainedModel.class,
                     LangIdentNeuralNetwork.NAME.getPreferredName(),
-                    LangIdentNeuralNetwork::new),
+                    LangIdentNeuralNetwork::new
+                ),
                 // ML - Inference aggregators
                 new NamedWriteableRegistry.Entry(OutputAggregator.class, WeightedSum.NAME.getPreferredName(), WeightedSum::new),
                 new NamedWriteableRegistry.Entry(OutputAggregator.class, WeightedMode.NAME.getPreferredName(), WeightedMode::new),
-                new NamedWriteableRegistry.Entry(OutputAggregator.class,
+                new NamedWriteableRegistry.Entry(
+                    OutputAggregator.class,
                     LogisticRegression.NAME.getPreferredName(),
-                    LogisticRegression::new),
+                    LogisticRegression::new
+                ),
                 // ML - Inference Results
-                new NamedWriteableRegistry.Entry(InferenceResults.class,
+                new NamedWriteableRegistry.Entry(
+                    InferenceResults.class,
                     ClassificationInferenceResults.NAME,
-                    ClassificationInferenceResults::new),
-                new NamedWriteableRegistry.Entry(InferenceResults.class,
-                    RegressionInferenceResults.NAME,
-                    RegressionInferenceResults::new),
+                    ClassificationInferenceResults::new
+                ),
+                new NamedWriteableRegistry.Entry(InferenceResults.class, RegressionInferenceResults.NAME, RegressionInferenceResults::new),
                 // ML - Inference Configuration
-                new NamedWriteableRegistry.Entry(InferenceConfig.class, ClassificationConfig.NAME.getPreferredName(),
-                        ClassificationConfig::new),
-                new NamedWriteableRegistry.Entry(InferenceConfig.class, RegressionConfig.NAME.getPreferredName(),
-                        RegressionConfig::new),
+                new NamedWriteableRegistry.Entry(
+                    InferenceConfig.class,
+                    ClassificationConfig.NAME.getPreferredName(),
+                    ClassificationConfig::new
+                ),
+                new NamedWriteableRegistry.Entry(InferenceConfig.class, RegressionConfig.NAME.getPreferredName(), RegressionConfig::new),
 
                 // monitoring
                 new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.MONITORING, MonitoringFeatureSetUsage::new),
@@ -493,9 +510,11 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
                 new NamedWriteableRegistry.Entry(NamedDiff.class, TokenMetaData.TYPE, TokenMetaData::readDiffFrom),
                 new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.SECURITY, SecurityFeatureSetUsage::new),
                 // security : conditional privileges
-                new NamedWriteableRegistry.Entry(ConfigurableClusterPrivilege.class,
+                new NamedWriteableRegistry.Entry(
+                    ConfigurableClusterPrivilege.class,
                     ConfigurableClusterPrivileges.ManageApplicationPrivileges.WRITEABLE_NAME,
-                    ConfigurableClusterPrivileges.ManageApplicationPrivileges::createFrom),
+                    ConfigurableClusterPrivileges.ManageApplicationPrivileges::createFrom
+                ),
                 // security : role-mappings
                 new NamedWriteableRegistry.Entry(RoleMapperExpression.class, AllExpression.NAME, AllExpression::new),
                 new NamedWriteableRegistry.Entry(RoleMapperExpression.class, AnyExpression.NAME, AnyExpression::new),
@@ -518,25 +537,39 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
                 // ccr
                 new NamedWriteableRegistry.Entry(AutoFollowMetadata.class, AutoFollowMetadata.TYPE, AutoFollowMetadata::new),
                 new NamedWriteableRegistry.Entry(MetaData.Custom.class, AutoFollowMetadata.TYPE, AutoFollowMetadata::new),
-                new NamedWriteableRegistry.Entry(NamedDiff.class, AutoFollowMetadata.TYPE,
-                    in -> AutoFollowMetadata.readDiffFrom(MetaData.Custom.class, AutoFollowMetadata.TYPE, in)),
+                new NamedWriteableRegistry.Entry(
+                    NamedDiff.class,
+                    AutoFollowMetadata.TYPE,
+                    in -> AutoFollowMetadata.readDiffFrom(MetaData.Custom.class, AutoFollowMetadata.TYPE, in)
+                ),
                 new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.CCR, CCRInfoTransportAction.Usage::new),
                 // ILM
-                new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.INDEX_LIFECYCLE,
-                    IndexLifecycleFeatureSetUsage::new),
+                new NamedWriteableRegistry.Entry(
+                    XPackFeatureSet.Usage.class,
+                    XPackField.INDEX_LIFECYCLE,
+                    IndexLifecycleFeatureSetUsage::new
+                ),
                 // SLM
-                new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.SNAPSHOT_LIFECYCLE,
-                    SLMFeatureSetUsage::new),
+                new NamedWriteableRegistry.Entry(XPackFeatureSet.Usage.class, XPackField.SNAPSHOT_LIFECYCLE, SLMFeatureSetUsage::new),
                 // ILM - Custom Metadata
                 new NamedWriteableRegistry.Entry(MetaData.Custom.class, IndexLifecycleMetadata.TYPE, IndexLifecycleMetadata::new),
-                new NamedWriteableRegistry.Entry(NamedDiff.class, IndexLifecycleMetadata.TYPE,
-                    IndexLifecycleMetadata.IndexLifecycleMetadataDiff::new),
+                new NamedWriteableRegistry.Entry(
+                    NamedDiff.class,
+                    IndexLifecycleMetadata.TYPE,
+                    IndexLifecycleMetadata.IndexLifecycleMetadataDiff::new
+                ),
                 new NamedWriteableRegistry.Entry(MetaData.Custom.class, SnapshotLifecycleMetadata.TYPE, SnapshotLifecycleMetadata::new),
-                new NamedWriteableRegistry.Entry(NamedDiff.class, SnapshotLifecycleMetadata.TYPE,
-                    SnapshotLifecycleMetadata.SnapshotLifecycleMetadataDiff::new),
+                new NamedWriteableRegistry.Entry(
+                    NamedDiff.class,
+                    SnapshotLifecycleMetadata.TYPE,
+                    SnapshotLifecycleMetadata.SnapshotLifecycleMetadataDiff::new
+                ),
                 // ILM - LifecycleTypes
-                new NamedWriteableRegistry.Entry(LifecycleType.class, TimeseriesLifecycleType.TYPE,
-                    (in) -> TimeseriesLifecycleType.INSTANCE),
+                new NamedWriteableRegistry.Entry(
+                    LifecycleType.class,
+                    TimeseriesLifecycleType.TYPE,
+                    (in) -> TimeseriesLifecycleType.INSTANCE
+                ),
                 // ILM - Lifecycle Actions
                 new NamedWriteableRegistry.Entry(LifecycleAction.class, AllocateAction.NAME, AllocateAction::new),
                 new NamedWriteableRegistry.Entry(LifecycleAction.class, ForceMergeAction.NAME, ForceMergeAction::new),
@@ -574,41 +607,56 @@ public class XPackClientPlugin extends Plugin implements ActionPlugin, NetworkPl
     @Override
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
         return Arrays.asList(
-                // ML - Custom metadata
-                new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField("ml"),
-                        parser -> MlMetadata.LENIENT_PARSER.parse(parser, null).build()),
-                // ML - Persistent action requests
-                new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(MlTasks.DATAFEED_TASK_NAME),
-                        StartDatafeedAction.DatafeedParams::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(MlTasks.JOB_TASK_NAME),
-                        OpenJobAction.JobParams::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(MlTasks.DATA_FRAME_ANALYTICS_TASK_NAME),
-                        StartDataFrameAnalyticsAction.TaskParams::fromXContent),
-                // ML - Task states
-                new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(DatafeedState.NAME), DatafeedState::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(JobTaskState.NAME), JobTaskState::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(DataFrameAnalyticsTaskState.NAME),
-                    DataFrameAnalyticsTaskState::fromXContent),
-                // watcher
-                new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(WatcherMetaData.TYPE),
-                        WatcherMetaData::fromXContent),
-                // licensing
-                new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(LicensesMetaData.TYPE),
-                        LicensesMetaData::fromXContent),
-                //rollup
-                new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(RollupField.TASK_NAME),
-                        RollupJob::fromXContent),
-                new NamedXContentRegistry.Entry(Task.Status.class, new ParseField(RollupJobStatus.NAME),
-                        RollupJobStatus::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(RollupJobStatus.NAME),
-                        RollupJobStatus::fromXContent),
-                // Transforms
-                new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(TransformField.TASK_NAME),
-                        TransformTaskParams::fromXContent),
-                new NamedXContentRegistry.Entry(Task.Status.class, new ParseField(TransformField.TASK_NAME),
-                        TransformState::fromXContent),
-                new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(TransformField.TASK_NAME),
-                        TransformState::fromXContent)
-            );
+            // ML - Custom metadata
+            new NamedXContentRegistry.Entry(
+                MetaData.Custom.class,
+                new ParseField("ml"),
+                parser -> MlMetadata.LENIENT_PARSER.parse(parser, null).build()
+            ),
+            // ML - Persistent action requests
+            new NamedXContentRegistry.Entry(
+                PersistentTaskParams.class,
+                new ParseField(MlTasks.DATAFEED_TASK_NAME),
+                StartDatafeedAction.DatafeedParams::fromXContent
+            ),
+            new NamedXContentRegistry.Entry(
+                PersistentTaskParams.class,
+                new ParseField(MlTasks.JOB_TASK_NAME),
+                OpenJobAction.JobParams::fromXContent
+            ),
+            new NamedXContentRegistry.Entry(
+                PersistentTaskParams.class,
+                new ParseField(MlTasks.DATA_FRAME_ANALYTICS_TASK_NAME),
+                StartDataFrameAnalyticsAction.TaskParams::fromXContent
+            ),
+            // ML - Task states
+            new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(DatafeedState.NAME), DatafeedState::fromXContent),
+            new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(JobTaskState.NAME), JobTaskState::fromXContent),
+            new NamedXContentRegistry.Entry(
+                PersistentTaskState.class,
+                new ParseField(DataFrameAnalyticsTaskState.NAME),
+                DataFrameAnalyticsTaskState::fromXContent
+            ),
+            // watcher
+            new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(WatcherMetaData.TYPE), WatcherMetaData::fromXContent),
+            // licensing
+            new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(LicensesMetaData.TYPE), LicensesMetaData::fromXContent),
+            // rollup
+            new NamedXContentRegistry.Entry(PersistentTaskParams.class, new ParseField(RollupField.TASK_NAME), RollupJob::fromXContent),
+            new NamedXContentRegistry.Entry(Task.Status.class, new ParseField(RollupJobStatus.NAME), RollupJobStatus::fromXContent),
+            new NamedXContentRegistry.Entry(PersistentTaskState.class, new ParseField(RollupJobStatus.NAME), RollupJobStatus::fromXContent),
+            // Transforms
+            new NamedXContentRegistry.Entry(
+                PersistentTaskParams.class,
+                new ParseField(TransformField.TASK_NAME),
+                TransformTaskParams::fromXContent
+            ),
+            new NamedXContentRegistry.Entry(Task.Status.class, new ParseField(TransformField.TASK_NAME), TransformState::fromXContent),
+            new NamedXContentRegistry.Entry(
+                PersistentTaskState.class,
+                new ParseField(TransformField.TASK_NAME),
+                TransformState::fromXContent
+            )
+        );
     }
 }

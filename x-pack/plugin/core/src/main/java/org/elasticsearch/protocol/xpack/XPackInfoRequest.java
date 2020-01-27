@@ -20,7 +20,9 @@ import java.util.Locale;
 public class XPackInfoRequest extends ActionRequest {
 
     public enum Category {
-        BUILD, LICENSE, FEATURES;
+        BUILD,
+        LICENSE,
+        FEATURES;
 
         public static EnumSet<Category> toSet(String... categories) {
             EnumSet<Category> set = EnumSet.noneOf(Category.class);

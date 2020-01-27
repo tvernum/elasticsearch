@@ -30,15 +30,21 @@ import static org.elasticsearch.rest.RestRequest.Method.DELETE;
  */
 public class RestDeleteRoleMappingAction extends SecurityBaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(RestDeleteRoleMappingAction.class));
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestDeleteRoleMappingAction.class)
+    );
 
     public RestDeleteRoleMappingAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            DELETE, "/_security/role_mapping/{name}", this,
-            DELETE, "/_xpack/security/role_mapping/{name}", deprecationLogger);
+            DELETE,
+            "/_security/role_mapping/{name}",
+            this,
+            DELETE,
+            "/_xpack/security/role_mapping/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -51,14 +57,15 @@ public class RestDeleteRoleMappingAction extends SecurityBaseRestHandler {
         final String name = request.param("name");
         final String refresh = request.param("refresh");
 
-        return channel -> new DeleteRoleMappingRequestBuilder(client)
-            .name(name)
+        return channel -> new DeleteRoleMappingRequestBuilder(client).name(name)
             .setRefreshPolicy(refresh)
             .execute(new RestBuilderListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(DeleteRoleMappingResponse response, XContentBuilder builder) throws Exception {
-                    return new BytesRestResponse(response.isFound() ? RestStatus.OK : RestStatus.NOT_FOUND,
-                            builder.startObject().field("found", response.isFound()).endObject());
+                    return new BytesRestResponse(
+                        response.isFound() ? RestStatus.OK : RestStatus.NOT_FOUND,
+                        builder.startObject().field("found", response.isFound()).endObject()
+                    );
                 }
             });
     }

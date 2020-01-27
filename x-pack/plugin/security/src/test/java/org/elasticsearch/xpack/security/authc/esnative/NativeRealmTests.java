@@ -25,11 +25,21 @@ import static org.mockito.Mockito.when;
 public class NativeRealmTests extends ESTestCase {
 
     private final String concreteSecurityIndexName = randomFrom(
-        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6, RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7);
+        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
+        RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_7
+    );
 
     private SecurityIndexManager.State dummyState(ClusterHealthStatus indexStatus) {
         return new SecurityIndexManager.State(
-            Instant.now(), true, true, true, null, concreteSecurityIndexName, indexStatus, IndexMetaData.State.OPEN);
+            Instant.now(),
+            true,
+            true,
+            true,
+            null,
+            concreteSecurityIndexName,
+            indexStatus,
+            IndexMetaData.State.OPEN
+        );
     }
 
     public void testCacheClearOnIndexHealthChange() {
@@ -74,8 +84,9 @@ public class NativeRealmTests extends ESTestCase {
 
         // green to yellow or yellow to green
         previousState = dummyState(randomFrom(ClusterHealthStatus.GREEN, ClusterHealthStatus.YELLOW));
-        currentState = dummyState(previousState.indexHealth == ClusterHealthStatus.GREEN ?
-            ClusterHealthStatus.YELLOW : ClusterHealthStatus.GREEN);
+        currentState = dummyState(
+            previousState.indexHealth == ClusterHealthStatus.GREEN ? ClusterHealthStatus.YELLOW : ClusterHealthStatus.GREEN
+        );
         nativeRealm.onSecurityIndexStateChange(previousState, currentState);
         assertEquals(expectedInvalidation, numInvalidation.get());
     }

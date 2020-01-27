@@ -57,8 +57,14 @@ class StoreKeyConfig extends KeyConfig {
      * @param keyStoreAlgorithm the algorithm for the keystore
      * @param trustStoreAlgorithm the algorithm to use when loading as a truststore
      */
-    StoreKeyConfig(String keyStorePath, String keyStoreType, SecureString keyStorePassword, SecureString keyPassword,
-                   String keyStoreAlgorithm, String trustStoreAlgorithm) {
+    StoreKeyConfig(
+        String keyStorePath,
+        String keyStoreType,
+        SecureString keyStorePassword,
+        SecureString keyPassword,
+        String keyStoreAlgorithm,
+        String trustStoreAlgorithm
+    ) {
         this.keyStorePath = keyStorePath;
         this.keyStoreType = Objects.requireNonNull(keyStoreType, "keystore type must be specified");
         // since we support reloading the keystore, we must store the passphrase in memory for the life of the node, so we
@@ -138,7 +144,7 @@ class StoreKeyConfig extends KeyConfig {
         try {
             KeyStore keyStore = getStore(environment, keyStorePath, keyStoreType, keyStorePassword);
             List<PrivateKey> privateKeys = new ArrayList<>();
-            for (Enumeration<String> e = keyStore.aliases(); e.hasMoreElements(); ) {
+            for (Enumeration<String> e = keyStore.aliases(); e.hasMoreElements();) {
                 final String alias = e.nextElement();
                 if (keyStore.isKeyEntry(alias)) {
                     Key key = keyStore.getKey(alias, keyPassword.getChars());
@@ -161,24 +167,29 @@ class StoreKeyConfig extends KeyConfig {
                 return;
             }
         }
-        final String message = null != keyStorePath ?
-            "the keystore [" + keyStorePath + "] does not contain a private key entry" :
-            "the configured PKCS#11 token does not contain a private key entry";
+        final String message = null != keyStorePath
+            ? "the keystore [" + keyStorePath + "] does not contain a private key entry"
+            : "the configured PKCS#11 token does not contain a private key entry";
         throw new IllegalArgumentException(message);
     }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         StoreKeyConfig that = (StoreKeyConfig) o;
 
-        if (keyStorePath != null ? !keyStorePath.equals(that.keyStorePath) : that.keyStorePath != null) return false;
+        if (keyStorePath != null ? !keyStorePath.equals(that.keyStorePath) : that.keyStorePath != null)
+            return false;
         if (keyStorePassword != null ? !keyStorePassword.equals(that.keyStorePassword) : that.keyStorePassword != null)
             return false;
         if (keyStoreAlgorithm != null ? !keyStoreAlgorithm.equals(that.keyStoreAlgorithm) : that.keyStoreAlgorithm != null)
             return false;
-        if (keyPassword != null ? !keyPassword.equals(that.keyPassword) : that.keyPassword != null) return false;
+        if (keyPassword != null ? !keyPassword.equals(that.keyPassword) : that.keyPassword != null)
+            return false;
         return trustStoreAlgorithm != null ? trustStoreAlgorithm.equals(that.trustStoreAlgorithm) : that.trustStoreAlgorithm == null;
     }
 
@@ -194,10 +205,14 @@ class StoreKeyConfig extends KeyConfig {
 
     @Override
     public String toString() {
-        return "keyStorePath=[" + keyStorePath +
-                "], keyStoreType=[" + keyStoreType +
-                "], keyStoreAlgorithm=[" + keyStoreAlgorithm +
-                "], trustStoreAlgorithm=[" + trustStoreAlgorithm +
-                "]";
+        return "keyStorePath=["
+            + keyStorePath
+            + "], keyStoreType=["
+            + keyStoreType
+            + "], keyStoreAlgorithm=["
+            + keyStoreAlgorithm
+            + "], trustStoreAlgorithm=["
+            + trustStoreAlgorithm
+            + "]";
     }
 }

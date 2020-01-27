@@ -34,7 +34,8 @@ public class RestDeleteLicenseAction extends BaseRestHandler {
         deleteLicenseRequest.timeout(request.paramAsTime("timeout", deleteLicenseRequest.timeout()));
         deleteLicenseRequest.masterNodeTimeout(request.paramAsTime("master_timeout", deleteLicenseRequest.masterNodeTimeout()));
 
-        return channel -> client.admin().cluster().execute(DeleteLicenseAction.INSTANCE, deleteLicenseRequest,
-                new RestToXContentListener<>(channel));
+        return channel -> client.admin()
+            .cluster()
+            .execute(DeleteLicenseAction.INSTANCE, deleteLicenseRequest, new RestToXContentListener<>(channel));
     }
 }

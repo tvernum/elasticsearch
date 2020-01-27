@@ -33,7 +33,7 @@ import java.util.Objects;
 class PEMTrustConfig extends TrustConfig {
 
     private static final String CA_FILE = "certificate_authorities";
-    
+
     private final List<String> caPaths;
 
     /**
@@ -89,8 +89,10 @@ class PEMTrustConfig extends TrustConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         PEMTrustConfig that = (PEMTrustConfig) o;
 

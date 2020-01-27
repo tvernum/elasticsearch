@@ -36,10 +36,13 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
  */
 public class RestSamlPrepareAuthenticationAction extends SamlBaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(RestSamlPrepareAuthenticationAction.class));
-    static final ObjectParser<SamlPrepareAuthenticationRequest, Void> PARSER = new ObjectParser<>("saml_prepare_authn",
-            SamlPrepareAuthenticationRequest::new);
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestSamlPrepareAuthenticationAction.class)
+    );
+    static final ObjectParser<SamlPrepareAuthenticationRequest, Void> PARSER = new ObjectParser<>(
+        "saml_prepare_authn",
+        SamlPrepareAuthenticationRequest::new
+    );
 
     static {
         PARSER.declareString(SamlPrepareAuthenticationRequest::setAssertionConsumerServiceURL, new ParseField("acs"));
@@ -51,8 +54,13 @@ public class RestSamlPrepareAuthenticationAction extends SamlBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/saml/prepare", this,
-            POST, "/_xpack/security/saml/prepare", deprecationLogger);
+            POST,
+            "/_security/saml/prepare",
+            this,
+            POST,
+            "/_xpack/security/saml/prepare",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -64,19 +72,22 @@ public class RestSamlPrepareAuthenticationAction extends SamlBaseRestHandler {
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final SamlPrepareAuthenticationRequest authenticationRequest = PARSER.parse(parser, null);
-            return channel -> client.execute(SamlPrepareAuthenticationAction.INSTANCE, authenticationRequest,
-                    new RestBuilderListener<SamlPrepareAuthenticationResponse>(channel) {
-                        @Override
-                        public RestResponse buildResponse(SamlPrepareAuthenticationResponse response, XContentBuilder builder)
-                                throws Exception {
-                            builder.startObject();
-                            builder.field("realm", response.getRealmName());
-                            builder.field("id", response.getRequestId());
-                            builder.field("redirect", response.getRedirectUrl());
-                            builder.endObject();
-                            return new BytesRestResponse(RestStatus.OK, builder);
-                        }
-                    });
+            return channel -> client.execute(
+                SamlPrepareAuthenticationAction.INSTANCE,
+                authenticationRequest,
+                new RestBuilderListener<SamlPrepareAuthenticationResponse>(channel) {
+                    @Override
+                    public RestResponse buildResponse(SamlPrepareAuthenticationResponse response, XContentBuilder builder)
+                        throws Exception {
+                        builder.startObject();
+                        builder.field("realm", response.getRealmName());
+                        builder.field("id", response.getRequestId());
+                        builder.field("redirect", response.getRedirectUrl());
+                        builder.endObject();
+                        return new BytesRestResponse(RestStatus.OK, builder);
+                    }
+                }
+            );
         }
     }
 }

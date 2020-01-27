@@ -34,9 +34,16 @@ public class SecurityNetty4HttpServerTransport extends Netty4HttpServerTransport
     private final SSLService sslService;
     private final SSLConfiguration sslConfiguration;
 
-    public SecurityNetty4HttpServerTransport(Settings settings, NetworkService networkService, BigArrays bigArrays, IPFilter ipFilter,
-                                             SSLService sslService, ThreadPool threadPool, NamedXContentRegistry xContentRegistry,
-                                             Dispatcher dispatcher) {
+    public SecurityNetty4HttpServerTransport(
+        Settings settings,
+        NetworkService networkService,
+        BigArrays bigArrays,
+        IPFilter ipFilter,
+        SSLService sslService,
+        ThreadPool threadPool,
+        NamedXContentRegistry xContentRegistry,
+        Dispatcher dispatcher
+    ) {
         super(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher);
         this.securityExceptionHandler = new SecurityHttpExceptionHandler(logger, lifecycle, (c, e) -> super.onException(c, e));
         this.ipFilter = ipFilter;
@@ -45,8 +52,10 @@ public class SecurityNetty4HttpServerTransport extends Netty4HttpServerTransport
         if (ssl) {
             this.sslConfiguration = sslService.getHttpTransportSSLConfiguration();
             if (sslService.isConfigurationValidForServerUsage(sslConfiguration) == false) {
-                throw new IllegalArgumentException("a key must be provided to run as a server. the key should be configured using the " +
-                        "[xpack.security.http.ssl.key] or [xpack.security.http.ssl.keystore.path] setting");
+                throw new IllegalArgumentException(
+                    "a key must be provided to run as a server. the key should be configured using the "
+                        + "[xpack.security.http.ssl.key] or [xpack.security.http.ssl.keystore.path] setting"
+                );
             }
         } else {
             this.sslConfiguration = null;

@@ -20,7 +20,8 @@ import java.util.Map;
  * Builder for requests to add a role to the administrative index
  */
 public class PutRoleRequestBuilder extends ActionRequestBuilder<PutRoleRequest, PutRoleResponse>
-        implements WriteRequestBuilder<PutRoleRequestBuilder> {
+    implements
+        WriteRequestBuilder<PutRoleRequestBuilder> {
 
     public PutRoleRequestBuilder(ElasticsearchClient client) {
         this(client, PutRoleAction.INSTANCE);
@@ -63,8 +64,14 @@ public class PutRoleRequestBuilder extends ActionRequestBuilder<PutRoleRequest, 
         return this;
     }
 
-    public PutRoleRequestBuilder addIndices(String[] indices, String[] privileges, String[] grantedFields, String[] deniedFields,
-                                            @Nullable BytesReference query, boolean allowRestrictedIndices) {
+    public PutRoleRequestBuilder addIndices(
+        String[] indices,
+        String[] privileges,
+        String[] grantedFields,
+        String[] deniedFields,
+        @Nullable BytesReference query,
+        boolean allowRestrictedIndices
+    ) {
         request.addIndex(indices, privileges, grantedFields, deniedFields, query, allowRestrictedIndices);
         return this;
     }

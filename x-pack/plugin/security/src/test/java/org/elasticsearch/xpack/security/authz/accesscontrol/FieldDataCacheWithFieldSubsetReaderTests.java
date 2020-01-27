@@ -60,12 +60,22 @@ public class FieldDataCacheWithFieldSubsetReaderTests extends ESTestCase {
         CircuitBreakerService circuitBreakerService = new NoneCircuitBreakerService();
         String name = "_field";
         indexFieldDataCache = new DummyAccountingFieldDataCache();
-        sortedSetDVOrdinalsIndexFieldData = new SortedSetDVOrdinalsIndexFieldData(indexSettings,indexFieldDataCache,  name,
-                circuitBreakerService, AbstractAtomicOrdinalsFieldData.DEFAULT_SCRIPT_FUNCTION);
-        pagedBytesIndexFieldData = new PagedBytesIndexFieldData(indexSettings, name, indexFieldDataCache,
-                circuitBreakerService, TextFieldMapper.Defaults.FIELDDATA_MIN_FREQUENCY,
-                TextFieldMapper.Defaults.FIELDDATA_MAX_FREQUENCY,
-                TextFieldMapper.Defaults.FIELDDATA_MIN_SEGMENT_SIZE);
+        sortedSetDVOrdinalsIndexFieldData = new SortedSetDVOrdinalsIndexFieldData(
+            indexSettings,
+            indexFieldDataCache,
+            name,
+            circuitBreakerService,
+            AbstractAtomicOrdinalsFieldData.DEFAULT_SCRIPT_FUNCTION
+        );
+        pagedBytesIndexFieldData = new PagedBytesIndexFieldData(
+            indexSettings,
+            name,
+            indexFieldDataCache,
+            circuitBreakerService,
+            TextFieldMapper.Defaults.FIELDDATA_MIN_FREQUENCY,
+            TextFieldMapper.Defaults.FIELDDATA_MAX_FREQUENCY,
+            TextFieldMapper.Defaults.FIELDDATA_MIN_SEGMENT_SIZE
+        );
 
         dir = newDirectory();
         IndexWriterConfig iwc = new IndexWriterConfig(null);
@@ -154,11 +164,11 @@ public class FieldDataCacheWithFieldSubsetReaderTests extends ESTestCase {
     private IndexSettings createIndexSettings() {
         Settings settings = Settings.EMPTY;
         IndexMetaData indexMetaData = IndexMetaData.builder("_name")
-                .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT))
-                .numberOfShards(1)
-                .numberOfReplicas(0)
-                .creationDate(System.currentTimeMillis())
-                .build();
+            .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT))
+            .numberOfShards(1)
+            .numberOfReplicas(0)
+            .creationDate(System.currentTimeMillis())
+            .build();
         return new IndexSettings(indexMetaData, settings);
     }
 
@@ -169,25 +179,23 @@ public class FieldDataCacheWithFieldSubsetReaderTests extends ESTestCase {
 
         @Override
         public <FD extends AtomicFieldData, IFD extends IndexFieldData<FD>> FD load(LeafReaderContext context, IFD indexFieldData)
-                throws Exception {
+            throws Exception {
             leafLevelBuilds++;
             return indexFieldData.loadDirect(context);
         }
 
         @Override
-        public <FD extends AtomicFieldData, IFD extends IndexFieldData.Global<FD>> IFD load(DirectoryReader indexReader,
-                                                                                            IFD indexFieldData) throws Exception {
+        public <FD extends AtomicFieldData, IFD extends IndexFieldData.Global<FD>> IFD load(DirectoryReader indexReader, IFD indexFieldData)
+            throws Exception {
             topLevelBuilds++;
             return (IFD) indexFieldData.localGlobalDirect(indexReader);
         }
 
         @Override
-        public void clear() {
-        }
+        public void clear() {}
 
         @Override
-        public void clear(String fieldName) {
-        }
+        public void clear(String fieldName) {}
 
     }
 

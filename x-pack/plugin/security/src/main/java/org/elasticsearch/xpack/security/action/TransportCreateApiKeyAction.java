@@ -39,8 +39,14 @@ public final class TransportCreateApiKeyAction extends HandledTransportAction<Cr
     private final NamedXContentRegistry xContentRegistry;
 
     @Inject
-    public TransportCreateApiKeyAction(TransportService transportService, ActionFilters actionFilters, ApiKeyService apiKeyService,
-                                       SecurityContext context, CompositeRolesStore rolesStore, NamedXContentRegistry xContentRegistry) {
+    public TransportCreateApiKeyAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        ApiKeyService apiKeyService,
+        SecurityContext context,
+        CompositeRolesStore rolesStore,
+        NamedXContentRegistry xContentRegistry
+    ) {
         super(CreateApiKeyAction.NAME, transportService, actionFilters, (Writeable.Reader<CreateApiKeyRequest>) CreateApiKeyRequest::new);
         this.apiKeyService = apiKeyService;
         this.securityContext = context;
@@ -54,19 +60,20 @@ public final class TransportCreateApiKeyAction extends HandledTransportAction<Cr
         if (authentication == null) {
             listener.onFailure(new IllegalStateException("authentication is required"));
         } else {
-            rolesStore.getRoleDescriptors(new HashSet<>(Arrays.asList(authentication.getUser().roles())),
+            rolesStore.getRoleDescriptors(
+                new HashSet<>(Arrays.asList(authentication.getUser().roles())),
                 ActionListener.wrap(roleDescriptors -> {
-                        for (RoleDescriptor rd : roleDescriptors) {
-                            try {
-                                DLSRoleQueryValidator.validateQueryField(rd.getIndicesPrivileges(), xContentRegistry);
-                            } catch (ElasticsearchException | IllegalArgumentException e) {
-                                listener.onFailure(e);
-                                return;
-                            }
+                    for (RoleDescriptor rd : roleDescriptors) {
+                        try {
+                            DLSRoleQueryValidator.validateQueryField(rd.getIndicesPrivileges(), xContentRegistry);
+                        } catch (ElasticsearchException | IllegalArgumentException e) {
+                            listener.onFailure(e);
+                            return;
                         }
-                        apiKeyService.createApiKey(authentication, request, roleDescriptors, listener);
-                    },
-                    listener::onFailure));
+                    }
+                    apiKeyService.createApiKey(authentication, request, roleDescriptors, listener);
+                }, listener::onFailure)
+            );
         }
     }
 }

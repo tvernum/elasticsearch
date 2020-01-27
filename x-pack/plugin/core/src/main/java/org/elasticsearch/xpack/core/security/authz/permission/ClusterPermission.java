@@ -27,8 +27,7 @@ public class ClusterPermission {
     private final Set<ClusterPrivilege> clusterPrivileges;
     private final List<PermissionCheck> checks;
 
-    private ClusterPermission(final Set<ClusterPrivilege> clusterPrivileges,
-                              final List<PermissionCheck> checks) {
+    private ClusterPermission(final Set<ClusterPrivilege> clusterPrivileges, final List<PermissionCheck> checks) {
         this.clusterPrivileges = Set.copyOf(clusterPrivileges);
         this.checks = List.copyOf(checks);
     }
@@ -79,16 +78,22 @@ public class ClusterPermission {
         private final List<Automaton> actionAutomatons = new ArrayList<>();
         private final List<PermissionCheck> permissionChecks = new ArrayList<>();
 
-        public Builder add(final ClusterPrivilege clusterPrivilege, final Set<String> allowedActionPatterns,
-                           final Set<String> excludeActionPatterns) {
+        public Builder add(
+            final ClusterPrivilege clusterPrivilege,
+            final Set<String> allowedActionPatterns,
+            final Set<String> excludeActionPatterns
+        ) {
             this.clusterPrivileges.add(clusterPrivilege);
             final Automaton actionAutomaton = createAutomaton(allowedActionPatterns, excludeActionPatterns);
             this.actionAutomatons.add(actionAutomaton);
             return this;
         }
 
-        public Builder add(final ClusterPrivilege clusterPrivilege, final Set<String> allowedActionPatterns,
-                           final Predicate<TransportRequest> requestPredicate) {
+        public Builder add(
+            final ClusterPrivilege clusterPrivilege,
+            final Set<String> allowedActionPatterns,
+            final Predicate<TransportRequest> requestPredicate
+        ) {
             final Automaton actionAutomaton = createAutomaton(allowedActionPatterns, Set.of());
             return add(clusterPrivilege, new ActionRequestBasedPermissionCheck(clusterPrivilege, actionAutomaton, requestPredicate));
         }
@@ -182,8 +187,8 @@ public class ClusterPermission {
         @Override
         public final boolean implies(final PermissionCheck permissionCheck) {
             if (permissionCheck instanceof ActionBasedPermissionCheck) {
-                return Operations.subsetOf(((ActionBasedPermissionCheck) permissionCheck).automaton, this.automaton) &&
-                    doImplies((ActionBasedPermissionCheck) permissionCheck);
+                return Operations.subsetOf(((ActionBasedPermissionCheck) permissionCheck).automaton, this.automaton)
+                    && doImplies((ActionBasedPermissionCheck) permissionCheck);
             }
             return false;
         }
@@ -215,8 +220,11 @@ public class ClusterPermission {
         private final ClusterPrivilege clusterPrivilege;
         private final Predicate<TransportRequest> requestPredicate;
 
-        ActionRequestBasedPermissionCheck(ClusterPrivilege clusterPrivilege, final Automaton automaton,
-                                          final Predicate<TransportRequest> requestPredicate) {
+        ActionRequestBasedPermissionCheck(
+            ClusterPrivilege clusterPrivilege,
+            final Automaton automaton,
+            final Predicate<TransportRequest> requestPredicate
+        ) {
             super(automaton);
             this.requestPredicate = requestPredicate;
             this.clusterPrivilege = clusterPrivilege;
@@ -230,8 +238,7 @@ public class ClusterPermission {
         @Override
         protected boolean doImplies(final ActionBasedPermissionCheck permissionCheck) {
             if (permissionCheck instanceof ActionRequestBasedPermissionCheck) {
-                final ActionRequestBasedPermissionCheck otherCheck =
-                    (ActionRequestBasedPermissionCheck) permissionCheck;
+                final ActionRequestBasedPermissionCheck otherCheck = (ActionRequestBasedPermissionCheck) permissionCheck;
                 return this.clusterPrivilege.equals(otherCheck.clusterPrivilege);
             }
             return false;

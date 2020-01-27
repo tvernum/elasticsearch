@@ -57,8 +57,12 @@ public class KerberosRealmCacheTests extends KerberosRealmTestCase {
         final User user2 = authenticateAndAssertResult(kerberosRealm, expectedUser, kerberosAuthenticationToken, outToken);
 
         assertThat(user1, sameInstance(user2));
-        verify(mockKerberosTicketValidator, times(2)).validateTicket(aryEq(decodedTicket), eq(keytabPath), eq(krbDebug),
-                any(ActionListener.class));
+        verify(mockKerberosTicketValidator, times(2)).validateTicket(
+            aryEq(decodedTicket),
+            eq(keytabPath),
+            eq(krbDebug),
+            any(ActionListener.class)
+        );
         verify(mockNativeRoleMappingStore).refreshRealmOnChange(kerberosRealm);
         verify(mockNativeRoleMappingStore).resolveRoles(any(UserData.class), any(ActionListener.class));
         verifyNoMoreInteractions(mockKerberosTicketValidator, mockNativeRoleMappingStore);
@@ -101,16 +105,27 @@ public class KerberosRealmCacheTests extends KerberosRealmTestCase {
             assertThat(user1, sameInstance(user2));
             verify(mockNativeRoleMappingStore).resolveRoles(any(UserData.class), any(ActionListener.class));
         }
-        verify(mockKerberosTicketValidator, times(2)).validateTicket(aryEq(decodedTicket), eq(keytabPath), eq(krbDebug),
-                any(ActionListener.class));
+        verify(mockKerberosTicketValidator, times(2)).validateTicket(
+            aryEq(decodedTicket),
+            eq(keytabPath),
+            eq(krbDebug),
+            any(ActionListener.class)
+        );
         verifyNoMoreInteractions(mockKerberosTicketValidator, mockNativeRoleMappingStore);
     }
 
-    public void testAuthenticateWithValidTicketSucessAuthnWithUserDetailsWhenCacheDisabled()
-            throws LoginException, GSSException, IOException {
+    public void testAuthenticateWithValidTicketSucessAuthnWithUserDetailsWhenCacheDisabled() throws LoginException,
+        GSSException,
+        IOException {
         // if cache.ttl <= 0 then the cache is disabled
-        settings = buildKerberosRealmSettings(REALM_NAME,
-            writeKeyTab(dir.resolve("key.keytab"), randomAlphaOfLength(4)).toString(), 100, "0m", true, randomBoolean());
+        settings = buildKerberosRealmSettings(
+            REALM_NAME,
+            writeKeyTab(dir.resolve("key.keytab"), randomAlphaOfLength(4)).toString(),
+            100,
+            "0m",
+            true,
+            randomBoolean()
+        );
         final String username = randomPrincipalName();
         final String outToken = randomAlphaOfLength(10);
         final KerberosRealm kerberosRealm = createKerberosRealm(username);
@@ -132,15 +147,23 @@ public class KerberosRealmCacheTests extends KerberosRealmTestCase {
         final User user2 = authenticateAndAssertResult(kerberosRealm, expectedUser, kerberosAuthenticationToken, outToken);
 
         assertThat(user1, not(sameInstance(user2)));
-        verify(mockKerberosTicketValidator, times(2)).validateTicket(aryEq(decodedTicket), eq(keytabPath), eq(krbDebug),
-                any(ActionListener.class));
+        verify(mockKerberosTicketValidator, times(2)).validateTicket(
+            aryEq(decodedTicket),
+            eq(keytabPath),
+            eq(krbDebug),
+            any(ActionListener.class)
+        );
         verify(mockNativeRoleMappingStore).refreshRealmOnChange(kerberosRealm);
         verify(mockNativeRoleMappingStore, times(2)).resolveRoles(any(UserData.class), any(ActionListener.class));
         verifyNoMoreInteractions(mockKerberosTicketValidator, mockNativeRoleMappingStore);
     }
 
-    private User authenticateAndAssertResult(final KerberosRealm kerberosRealm, final User expectedUser,
-            final KerberosAuthenticationToken kerberosAuthenticationToken, String outToken) {
+    private User authenticateAndAssertResult(
+        final KerberosRealm kerberosRealm,
+        final User expectedUser,
+        final KerberosAuthenticationToken kerberosAuthenticationToken,
+        String outToken
+    ) {
         final PlainActionFuture<AuthenticationResult> future = PlainActionFuture.newFuture();
         kerberosRealm.authenticate(kerberosAuthenticationToken, future);
         final AuthenticationResult result = future.actionGet();

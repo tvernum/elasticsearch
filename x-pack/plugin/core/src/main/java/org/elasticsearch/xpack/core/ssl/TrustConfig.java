@@ -71,7 +71,8 @@ abstract class TrustConfig {
      */
     @Deprecated
     KeyStore getStore(Environment environment, @Nullable String storePath, String storeType, SecureString storePassword)
-        throws GeneralSecurityException, IOException {
+        throws GeneralSecurityException,
+        IOException {
         return getStore(CertParsingUtils.resolvePath(storePath, environment), storeType, storePassword);
     }
 
@@ -110,7 +111,10 @@ abstract class TrustConfig {
      */
     protected ElasticsearchException missingTrustConfigFile(IOException cause, String fileType, Path path) {
         return new ElasticsearchException(
-            "failed to initialize SSL TrustManager - " + fileType + " file [{}] does not exist", cause, path.toAbsolutePath());
+            "failed to initialize SSL TrustManager - " + fileType + " file [{}] does not exist",
+            cause,
+            path.toAbsolutePath()
+        );
     }
 
     /**
@@ -118,7 +122,10 @@ abstract class TrustConfig {
      */
     protected ElasticsearchException unreadableTrustConfigFile(AccessDeniedException cause, String fileType, Path path) {
         return new ElasticsearchException(
-            "failed to initialize SSL TrustManager - not permitted to read " + fileType + " file [{}]", cause, path.toAbsolutePath());
+            "failed to initialize SSL TrustManager - not permitted to read " + fileType + " file [{}]",
+            cause,
+            path.toAbsolutePath()
+        );
     }
 
     /**
@@ -126,22 +133,33 @@ abstract class TrustConfig {
      * @param paths A list of possible files. Depending on the context, it may not be possible to know exactly which file caused the
      *              exception, so this method accepts multiple paths.
      */
-    protected ElasticsearchException blockedTrustConfigFile(AccessControlException cause, Environment environment,
-                                                            String fileType, List<Path> paths) {
+    protected ElasticsearchException blockedTrustConfigFile(
+        AccessControlException cause,
+        Environment environment,
+        String fileType,
+        List<Path> paths
+    ) {
         if (paths.size() == 1) {
             return new ElasticsearchException(
-                "failed to initialize SSL TrustManager - access to read {} file [{}] is blocked;" +
-                    " SSL resources should be placed in the [{}] directory",
-                cause, fileType, paths.get(0).toAbsolutePath(), environment.configFile());
+                "failed to initialize SSL TrustManager - access to read {} file [{}] is blocked;"
+                    + " SSL resources should be placed in the [{}] directory",
+                cause,
+                fileType,
+                paths.get(0).toAbsolutePath(),
+                environment.configFile()
+            );
         } else {
             final String pathString = paths.stream().map(Path::toAbsolutePath).map(Path::toString).collect(Collectors.joining(", "));
             return new ElasticsearchException(
-                "failed to initialize SSL TrustManager - access to read one or more of the {} files [{}] is blocked;" +
-                    " SSL resources should be placed in the [{}] directory",
-                cause, fileType, pathString, environment.configFile());
+                "failed to initialize SSL TrustManager - access to read one or more of the {} files [{}] is blocked;"
+                    + " SSL resources should be placed in the [{}] directory",
+                cause,
+                fileType,
+                pathString,
+                environment.configFile()
+            );
         }
     }
-
 
     /**
      * A trust configuration that is a combination of a trust configuration with the default JDK trust configuration. This trust
@@ -164,9 +182,11 @@ abstract class TrustConfig {
             }
 
             try {
-                return CertParsingUtils.trustManager(trustConfigs.stream()
-                    .flatMap((tc) -> Arrays.stream(tc.createTrustManager(environment).getAcceptedIssuers()))
-                    .toArray(X509Certificate[]::new));
+                return CertParsingUtils.trustManager(
+                    trustConfigs.stream()
+                        .flatMap((tc) -> Arrays.stream(tc.createTrustManager(environment).getAcceptedIssuers()))
+                        .toArray(X509Certificate[]::new)
+                );
             } catch (Exception e) {
                 throw new ElasticsearchException("failed to create trust manager", e);
             }

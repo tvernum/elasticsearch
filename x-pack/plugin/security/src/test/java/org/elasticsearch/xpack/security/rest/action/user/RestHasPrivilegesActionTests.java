@@ -38,11 +38,14 @@ public class RestHasPrivilegesActionTests extends ESTestCase {
      */
     public void testBodyConsumed() throws Exception {
         final XPackLicenseState licenseState = mock(XPackLicenseState.class);
-        final RestHasPrivilegesAction action =
-            new RestHasPrivilegesAction(Settings.EMPTY, mock(RestController.class), mock(SecurityContext.class), licenseState);
+        final RestHasPrivilegesAction action = new RestHasPrivilegesAction(
+            Settings.EMPTY,
+            mock(RestController.class),
+            mock(SecurityContext.class),
+            licenseState
+        );
         try (XContentBuilder bodyBuilder = JsonXContent.contentBuilder().startObject().endObject()) {
-            final RestRequest request = new FakeRestRequest.Builder(xContentRegistry())
-                .withPath("/_security/user/_has_privileges/")
+            final RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withPath("/_security/user/_has_privileges/")
                 .withContent(new BytesArray(bodyBuilder.toString()), XContentType.JSON)
                 .build();
             final RestChannel channel = new FakeRestChannel(request, true, 1);
@@ -52,12 +55,15 @@ public class RestHasPrivilegesActionTests extends ESTestCase {
 
     public void testBasicLicense() throws Exception {
         final XPackLicenseState licenseState = mock(XPackLicenseState.class);
-        final RestHasPrivilegesAction action = new RestHasPrivilegesAction(Settings.EMPTY, mock(RestController.class),
-            mock(SecurityContext.class), licenseState);
+        final RestHasPrivilegesAction action = new RestHasPrivilegesAction(
+            Settings.EMPTY,
+            mock(RestController.class),
+            mock(SecurityContext.class),
+            licenseState
+        );
         when(licenseState.isSecurityAvailable()).thenReturn(false);
         try (XContentBuilder bodyBuilder = JsonXContent.contentBuilder().startObject().endObject()) {
-            final RestRequest request = new FakeRestRequest.Builder(xContentRegistry())
-                .withPath("/_security/user/_has_privileges/")
+            final RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withPath("/_security/user/_has_privileges/")
                 .withContent(new BytesArray(bodyBuilder.toString()), XContentType.JSON)
                 .build();
             final FakeRestChannel channel = new FakeRestChannel(request, true, 1);
@@ -66,7 +72,8 @@ public class RestHasPrivilegesActionTests extends ESTestCase {
             assertThat(channel.capturedResponse().status(), equalTo(RestStatus.FORBIDDEN));
             assertThat(
                 channel.capturedResponse().content().utf8ToString(),
-                containsString("current license is non-compliant for [security]"));
+                containsString("current license is non-compliant for [security]")
+            );
         }
     }
 

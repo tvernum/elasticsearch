@@ -37,11 +37,21 @@ public class RestGetRoleMappingsAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/role_mapping/", this,
-            GET, "/_xpack/security/role_mapping/", deprecationLogger);
+            GET,
+            "/_security/role_mapping/",
+            this,
+            GET,
+            "/_xpack/security/role_mapping/",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/role_mapping/{name}", this,
-            GET, "/_xpack/security/role_mapping/{name}", deprecationLogger);
+            GET,
+            "/_security/role_mapping/{name}",
+            this,
+            GET,
+            "/_xpack/security/role_mapping/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -52,24 +62,22 @@ public class RestGetRoleMappingsAction extends SecurityBaseRestHandler {
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         final String[] names = request.paramAsStringArrayOrEmptyIfAll("name");
-        return channel -> new GetRoleMappingsRequestBuilder(client)
-            .names(names)
-            .execute(new RestBuilderListener<>(channel) {
-                @Override
-                public RestResponse buildResponse(GetRoleMappingsResponse response, XContentBuilder builder) throws Exception {
-                    builder.startObject();
-                    for (ExpressionRoleMapping mapping : response.mappings()) {
-                        builder.field(mapping.getName(), mapping);
-                    }
-                    builder.endObject();
-
-                    // if the request specified mapping names, but nothing was found then return a 404 result
-                    if (names.length != 0 && response.mappings().length == 0) {
-                        return new BytesRestResponse(RestStatus.NOT_FOUND, builder);
-                    } else {
-                        return new BytesRestResponse(RestStatus.OK, builder);
-                    }
+        return channel -> new GetRoleMappingsRequestBuilder(client).names(names).execute(new RestBuilderListener<>(channel) {
+            @Override
+            public RestResponse buildResponse(GetRoleMappingsResponse response, XContentBuilder builder) throws Exception {
+                builder.startObject();
+                for (ExpressionRoleMapping mapping : response.mappings()) {
+                    builder.field(mapping.getName(), mapping);
                 }
-            });
+                builder.endObject();
+
+                // if the request specified mapping names, but nothing was found then return a 404 result
+                if (names.length != 0 && response.mappings().length == 0) {
+                    return new BytesRestResponse(RestStatus.NOT_FOUND, builder);
+                } else {
+                    return new BytesRestResponse(RestStatus.OK, builder);
+                }
+            }
+        });
     }
 }

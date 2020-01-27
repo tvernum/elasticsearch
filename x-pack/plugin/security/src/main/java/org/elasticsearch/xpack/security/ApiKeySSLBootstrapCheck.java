@@ -23,15 +23,15 @@ public final class ApiKeySSLBootstrapCheck implements BootstrapCheck {
         final Boolean apiKeyServiceEnabled = XPackSettings.API_KEY_SERVICE_ENABLED_SETTING.get(context.settings());
         if (httpsEnabled == false && apiKeyServiceEnabled) {
             final String message = String.format(
-                    Locale.ROOT,
-                    "HTTPS is required in order to use the API key service; "
-                            + "please enable HTTPS using the [%s] setting or disable the API key service using the [%s] setting",
-                    XPackSettings.HTTP_SSL_ENABLED.getKey(),
-                    XPackSettings.API_KEY_SERVICE_ENABLED_SETTING.getKey());
+                Locale.ROOT,
+                "HTTPS is required in order to use the API key service; "
+                    + "please enable HTTPS using the [%s] setting or disable the API key service using the [%s] setting",
+                XPackSettings.HTTP_SSL_ENABLED.getKey(),
+                XPackSettings.API_KEY_SERVICE_ENABLED_SETTING.getKey()
+            );
             return BootstrapCheckResult.failure(message);
         }
         return BootstrapCheckResult.success();
     }
-
 
 }

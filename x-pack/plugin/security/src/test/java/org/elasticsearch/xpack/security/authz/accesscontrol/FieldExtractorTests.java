@@ -43,36 +43,36 @@ public class FieldExtractorTests extends ESTestCase {
         FieldExtractor.extractFields(builder.build(), fields);
         assertEquals(asSet("foo", "no"), fields);
     }
-    
+
     public void testDisjunctionMax() {
         Set<String> fields = new HashSet<>();
-        DisjunctionMaxQuery query = new DisjunctionMaxQuery(Arrays.asList(
-          new TermQuery(new Term("one", "bar")),
-          new TermQuery(new Term("two", "baz"))
-        ), 1.0F);
+        DisjunctionMaxQuery query = new DisjunctionMaxQuery(
+            Arrays.asList(new TermQuery(new Term("one", "bar")), new TermQuery(new Term("two", "baz"))),
+            1.0F
+        );
         FieldExtractor.extractFields(query, fields);
         assertEquals(asSet("one", "two"), fields);
     }
-    
+
     public void testSpanTerm() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new SpanTermQuery(new Term("foo", "bar")), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testTerm() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new TermQuery(new Term("foo", "bar")), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testSynonym() {
         Set<String> fields = new HashSet<>();
         SynonymQuery query = new SynonymQuery(new Term("foo", "bar"), new Term("foo", "baz"));
         FieldExtractor.extractFields(query, fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testPhrase() {
         Set<String> fields = new HashSet<>();
         PhraseQuery.Builder builder = new PhraseQuery.Builder();
@@ -81,7 +81,7 @@ public class FieldExtractorTests extends ESTestCase {
         FieldExtractor.extractFields(builder.build(), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testMultiPhrase() {
         Set<String> fields = new HashSet<>();
         MultiPhraseQuery.Builder builder = new MultiPhraseQuery.Builder();
@@ -90,31 +90,31 @@ public class FieldExtractorTests extends ESTestCase {
         FieldExtractor.extractFields(builder.build(), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testPointRange() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(IntPoint.newRangeQuery("foo", 3, 4), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testPointSet() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(IntPoint.newSetQuery("foo", 3, 4, 5), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testFieldValue() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new DocValuesFieldExistsQuery("foo"), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testDocValuesNumbers() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new DocValuesNumbersQuery("foo", 5L), fields);
         assertEquals(asSet("foo"), fields);
     }
-    
+
     public void testTermInSet() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new TermInSetQuery("foo", new BytesRef("baz"), new BytesRef("baz2")), fields);
@@ -126,18 +126,19 @@ public class FieldExtractorTests extends ESTestCase {
         FieldExtractor.extractFields(new MatchAllDocsQuery(), fields);
         assertEquals(Collections.emptySet(), fields);
     }
-    
+
     public void testMatchNoDocs() {
         Set<String> fields = new HashSet<>();
         FieldExtractor.extractFields(new MatchNoDocsQuery(), fields);
         assertEquals(Collections.emptySet(), fields);
     }
-    
+
     public void testUnsupported() {
         Set<String> fields = new HashSet<>();
-        expectThrows(UnsupportedOperationException.class, () -> {
-            FieldExtractor.extractFields(new AssertingQuery(random(), new MatchAllDocsQuery()), fields);
-        });
+        expectThrows(
+            UnsupportedOperationException.class,
+            () -> { FieldExtractor.extractFields(new AssertingQuery(random(), new MatchAllDocsQuery()), fields); }
+        );
     }
 
     public void testIndexOrDocValuesQuery() {

@@ -28,8 +28,7 @@ public final class SamlLogoutRequest extends ActionRequest {
         super(in);
     }
 
-    public SamlLogoutRequest() {
-    }
+    public SamlLogoutRequest() {}
 
     @Override
     public ActionRequestValidationException validate() {

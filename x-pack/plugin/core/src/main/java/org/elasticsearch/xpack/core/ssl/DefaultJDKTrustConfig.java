@@ -72,8 +72,10 @@ class DefaultJDKTrustConfig extends TrustConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         DefaultJDKTrustConfig that = (DefaultJDKTrustConfig) o;
         return Objects.equals(trustStorePassword, that.trustStorePassword);
     }
@@ -105,8 +107,7 @@ class DefaultJDKTrustConfig extends TrustConfig {
      * @return the KeyStore used as truststore for PKCS#11 initialized with the password, null otherwise
      */
     private KeyStore getSystemTrustStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
-        if (System.getProperty("javax.net.ssl.trustStoreType", "").equalsIgnoreCase("PKCS11")
-            && trustStorePassword != null) {
+        if (System.getProperty("javax.net.ssl.trustStoreType", "").equalsIgnoreCase("PKCS11") && trustStorePassword != null) {
             KeyStore keyStore = KeyStore.getInstance("PKCS11");
             keyStore.load(null, trustStorePassword.getChars());
             return keyStore;

@@ -87,7 +87,10 @@ abstract class KeyConfig extends TrustConfig {
      */
     static ElasticsearchException missingKeyConfigFile(IOException cause, String fileType, Path path) {
         return new ElasticsearchException(
-            "failed to initialize SSL KeyManager - " + fileType + " file [{}] does not exist", cause, path.toAbsolutePath());
+            "failed to initialize SSL KeyManager - " + fileType + " file [{}] does not exist",
+            cause,
+            path.toAbsolutePath()
+        );
     }
 
     /**
@@ -95,7 +98,10 @@ abstract class KeyConfig extends TrustConfig {
      */
     static ElasticsearchException unreadableKeyConfigFile(AccessDeniedException cause, String fileType, Path path) {
         return new ElasticsearchException(
-            "failed to initialize SSL KeyManager - not permitted to read " + fileType + " file [{}]", cause, path.toAbsolutePath());
+            "failed to initialize SSL KeyManager - not permitted to read " + fileType + " file [{}]",
+            cause,
+            path.toAbsolutePath()
+        );
     }
 
     /**
@@ -103,8 +109,13 @@ abstract class KeyConfig extends TrustConfig {
      */
     static ElasticsearchException blockedKeyConfigFile(AccessControlException cause, Environment environment, String fileType, Path path) {
         return new ElasticsearchException(
-            "failed to initialize SSL KeyManager - access to read {} file [{}] is blocked;" +
-                " SSL resources should be placed in the [{}] directory", cause, fileType, path, environment.configFile());
+            "failed to initialize SSL KeyManager - access to read {} file [{}] is blocked;"
+                + " SSL resources should be placed in the [{}] directory",
+            cause,
+            fileType,
+            path,
+            environment.configFile()
+        );
     }
 
     abstract List<PrivateKey> privateKeys(@Nullable Environment environment);

@@ -43,8 +43,25 @@ public class XPackInfoFeatureAction extends ActionType<XPackInfoFeatureResponse>
     public static final XPackInfoFeatureAction ENRICH = new XPackInfoFeatureAction(XPackField.ENRICH);
 
     public static final List<XPackInfoFeatureAction> ALL = Arrays.asList(
-        SECURITY, MONITORING, WATCHER, GRAPH, MACHINE_LEARNING, LOGSTASH, SQL, ROLLUP, INDEX_LIFECYCLE, SNAPSHOT_LIFECYCLE, CCR,
-        TRANSFORM, FLATTENED, VECTORS, VOTING_ONLY, FROZEN_INDICES, SPATIAL, ANALYTICS, ENRICH
+        SECURITY,
+        MONITORING,
+        WATCHER,
+        GRAPH,
+        MACHINE_LEARNING,
+        LOGSTASH,
+        SQL,
+        ROLLUP,
+        INDEX_LIFECYCLE,
+        SNAPSHOT_LIFECYCLE,
+        CCR,
+        TRANSFORM,
+        FLATTENED,
+        VECTORS,
+        VOTING_ONLY,
+        FROZEN_INDICES,
+        SPATIAL,
+        ANALYTICS,
+        ENRICH
     );
 
     private XPackInfoFeatureAction(String name) {

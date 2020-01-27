@@ -37,11 +37,21 @@ public class RestPutRoleAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/role/{name}", this,
-            POST, "/_xpack/security/role/{name}", deprecationLogger);
+            POST,
+            "/_security/role/{name}",
+            this,
+            POST,
+            "/_xpack/security/role/{name}",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/role/{name}", this,
-            PUT, "/_xpack/security/role/{name}", deprecationLogger);
+            PUT,
+            "/_security/role/{name}",
+            this,
+            PUT,
+            "/_xpack/security/role/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -51,9 +61,11 @@ public class RestPutRoleAction extends SecurityBaseRestHandler {
 
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
-        PutRoleRequestBuilder requestBuilder = new PutRoleRequestBuilder(client)
-            .source(request.param("name"), request.requiredContent(), request.getXContentType())
-            .setRefreshPolicy(request.param("refresh"));
+        PutRoleRequestBuilder requestBuilder = new PutRoleRequestBuilder(client).source(
+            request.param("name"),
+            request.requiredContent(),
+            request.getXContentType()
+        ).setRefreshPolicy(request.param("refresh"));
         return channel -> requestBuilder.execute(new RestBuilderListener<>(channel) {
             @Override
             public RestResponse buildResponse(PutRoleResponse putRoleResponse, XContentBuilder builder) throws Exception {

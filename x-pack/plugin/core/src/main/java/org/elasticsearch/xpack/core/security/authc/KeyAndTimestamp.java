@@ -32,8 +32,13 @@ public final class KeyAndTimestamp implements Writeable {
         key = new SecureString(Arrays.copyOfRange(ref, 0, len));
     }
 
-    public long getTimestamp() { return timestamp; }
-    public SecureString getKey() { return key; }
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public SecureString getKey() {
+        return key;
+    }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
@@ -45,12 +50,15 @@ public final class KeyAndTimestamp implements Writeable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         KeyAndTimestamp that = (KeyAndTimestamp) o;
 
-        if (timestamp != that.timestamp) return false;
+        if (timestamp != that.timestamp)
+            return false;
         return key.equals(that.key);
     }
 

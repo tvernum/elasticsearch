@@ -24,10 +24,22 @@ import java.io.IOException;
 public class TransportGetTrialStatusAction extends TransportMasterNodeReadAction<GetTrialStatusRequest, GetTrialStatusResponse> {
 
     @Inject
-    public TransportGetTrialStatusAction(TransportService transportService, ClusterService clusterService, ThreadPool threadPool,
-                                         ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver) {
-        super(GetTrialStatusAction.NAME, transportService, clusterService, threadPool, actionFilters,
-                GetTrialStatusRequest::new, indexNameExpressionResolver);
+    public TransportGetTrialStatusAction(
+        TransportService transportService,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver
+    ) {
+        super(
+            GetTrialStatusAction.NAME,
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            GetTrialStatusRequest::new,
+            indexNameExpressionResolver
+        );
     }
 
     @Override
@@ -41,8 +53,12 @@ public class TransportGetTrialStatusAction extends TransportMasterNodeReadAction
     }
 
     @Override
-    protected void masterOperation(Task task, GetTrialStatusRequest request, ClusterState state,
-                                   ActionListener<GetTrialStatusResponse> listener) throws Exception {
+    protected void masterOperation(
+        Task task,
+        GetTrialStatusRequest request,
+        ClusterState state,
+        ActionListener<GetTrialStatusResponse> listener
+    ) throws Exception {
         LicensesMetaData licensesMetaData = state.metaData().custom(LicensesMetaData.TYPE);
         listener.onResponse(new GetTrialStatusResponse(licensesMetaData == null || licensesMetaData.isEligibleForTrial()));
 

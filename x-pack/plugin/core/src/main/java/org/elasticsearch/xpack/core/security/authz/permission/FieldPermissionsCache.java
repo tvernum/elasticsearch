@@ -32,14 +32,18 @@ import static org.elasticsearch.xpack.core.security.SecurityField.setting;
 public final class FieldPermissionsCache {
 
     public static final Setting<Long> CACHE_SIZE_SETTING = Setting.longSetting(
-            setting("authz.store.roles.field_permissions.cache.max_size_in_bytes"), 100 * 1024 * 1024, -1L, Property.NodeScope);
+        setting("authz.store.roles.field_permissions.cache.max_size_in_bytes"),
+        100 * 1024 * 1024,
+        -1L,
+        Property.NodeScope
+    );
     private final Cache<FieldPermissionsDefinition, FieldPermissions> cache;
 
     public FieldPermissionsCache(Settings settings) {
         this.cache = CacheBuilder.<FieldPermissionsDefinition, FieldPermissions>builder()
-                .setMaximumWeight(CACHE_SIZE_SETTING.get(settings))
-                .weigher((key, fieldPermissions) -> fieldPermissions.ramBytesUsed())
-                .build();
+            .setMaximumWeight(CACHE_SIZE_SETTING.get(settings))
+            .weigher((key, fieldPermissions) -> fieldPermissions.ramBytesUsed())
+            .build();
     }
 
     /**
@@ -56,8 +60,10 @@ public final class FieldPermissionsCache {
      */
     public FieldPermissions getFieldPermissions(FieldPermissionsDefinition fieldPermissionsDefinition) {
         try {
-            return cache.computeIfAbsent(fieldPermissionsDefinition,
-                    (key) -> new FieldPermissions(key, FieldPermissions.initializePermittedFieldsAutomaton(key)));
+            return cache.computeIfAbsent(
+                fieldPermissionsDefinition,
+                (key) -> new FieldPermissions(key, FieldPermissions.initializePermittedFieldsAutomaton(key))
+            );
         } catch (ExecutionException e) {
             throw new ElasticsearchException("unable to compute field permissions", e);
         }
@@ -69,18 +75,18 @@ public final class FieldPermissionsCache {
      */
     FieldPermissions getFieldPermissions(Collection<FieldPermissions> fieldPermissionsCollection) {
         Optional<FieldPermissions> allowAllFieldPermissions = fieldPermissionsCollection.stream()
-                .filter(((Predicate<FieldPermissions>) (FieldPermissions::hasFieldLevelSecurity)).negate())
-                .findFirst();
+            .filter(((Predicate<FieldPermissions>) (FieldPermissions::hasFieldLevelSecurity)).negate())
+            .findFirst();
         return allowAllFieldPermissions.orElseGet(() -> {
             final Set<FieldGrantExcludeGroup> fieldGrantExcludeGroups = fieldPermissionsCollection.stream()
-                    .flatMap(fieldPermission -> fieldPermission.getFieldPermissionsDefinition().getFieldGrantExcludeGroups().stream())
-                    .collect(Collectors.toSet());
+                .flatMap(fieldPermission -> fieldPermission.getFieldPermissionsDefinition().getFieldGrantExcludeGroups().stream())
+                .collect(Collectors.toSet());
             final FieldPermissionsDefinition combined = new FieldPermissionsDefinition(fieldGrantExcludeGroups);
             try {
                 return cache.computeIfAbsent(combined, (key) -> {
                     List<Automaton> automatonList = fieldPermissionsCollection.stream()
-                                    .map(FieldPermissions::getIncludeAutomaton)
-                                    .collect(Collectors.toList());
+                        .map(FieldPermissions::getIncludeAutomaton)
+                        .collect(Collectors.toList());
                     return new FieldPermissions(key, Automatons.unionAndMinimize(automatonList));
                 });
             } catch (ExecutionException e) {

@@ -12,7 +12,6 @@ import org.elasticsearch.common.SuppressForbidden;
 import org.elasticsearch.common.network.InetAddresses;
 import org.elasticsearch.common.network.NetworkAddress;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.xpack.security.cli.CertGenUtils;
 import org.junit.BeforeClass;
 
 import java.math.BigInteger;
@@ -35,7 +34,7 @@ import static org.mockito.Mockito.when;
 public class CertGenUtilsTests extends ESTestCase {
 
     @BeforeClass
-    public static void muteInFips(){
+    public static void muteInFips() {
         assumeFalse("Can't run in a FIPS JVM", inFipsJvm());
     }
 

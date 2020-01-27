@@ -49,7 +49,7 @@ import java.util.function.IntFunction;
  */
 public class SSLDriver implements AutoCloseable {
 
-    private static final ByteBuffer[] EMPTY_BUFFERS = {ByteBuffer.allocate(0)};
+    private static final ByteBuffer[] EMPTY_BUFFERS = { ByteBuffer.allocate(0) };
     private static final FlushOperation EMPTY_FLUSH_OPERATION = new FlushOperation(EMPTY_BUFFERS, (r, t) -> {});
 
     private final SSLEngine engine;

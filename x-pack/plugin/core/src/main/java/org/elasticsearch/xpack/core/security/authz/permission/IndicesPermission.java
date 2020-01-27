@@ -134,8 +134,11 @@ public final class IndicesPermission {
      * @param checkForPrivileges check permission grants for the set of index privileges
      * @return an instance of {@link ResourcePrivilegesMap}
      */
-    public ResourcePrivilegesMap checkResourcePrivileges(Set<String> checkForIndexPatterns, boolean allowRestrictedIndices,
-                                                         Set<String> checkForPrivileges) {
+    public ResourcePrivilegesMap checkResourcePrivileges(
+        Set<String> checkForIndexPatterns,
+        boolean allowRestrictedIndices,
+        Set<String> checkForPrivileges
+    ) {
         final ResourcePrivilegesMap.Builder resourcePrivilegesMapBuilder = ResourcePrivilegesMap.builder();
         final Map<IndicesPermission.Group, Automaton> predicateCache = new HashMap<>();
         for (String forIndexPattern : checkForIndexPatterns) {
@@ -146,12 +149,15 @@ public final class IndicesPermission {
             if (false == Operations.isEmpty(checkIndexAutomaton)) {
                 Automaton allowedIndexPrivilegesAutomaton = null;
                 for (Group group : groups) {
-                    final Automaton groupIndexAutomaton = predicateCache.computeIfAbsent(group,
-                            g -> IndicesPermission.Group.buildIndexMatcherAutomaton(g.allowRestrictedIndices(), g.indices()));
+                    final Automaton groupIndexAutomaton = predicateCache.computeIfAbsent(
+                        group,
+                        g -> IndicesPermission.Group.buildIndexMatcherAutomaton(g.allowRestrictedIndices(), g.indices())
+                    );
                     if (Operations.subsetOf(checkIndexAutomaton, groupIndexAutomaton)) {
                         if (allowedIndexPrivilegesAutomaton != null) {
-                            allowedIndexPrivilegesAutomaton = Automatons
-                                    .unionAndMinimize(Arrays.asList(allowedIndexPrivilegesAutomaton, group.privilege().getAutomaton()));
+                            allowedIndexPrivilegesAutomaton = Automatons.unionAndMinimize(
+                                Arrays.asList(allowedIndexPrivilegesAutomaton, group.privilege().getAutomaton())
+                            );
                         } else {
                             allowedIndexPrivilegesAutomaton = group.privilege().getAutomaton();
                         }
@@ -160,7 +166,7 @@ public final class IndicesPermission {
                 for (String privilege : checkForPrivileges) {
                     IndexPrivilege indexPrivilege = IndexPrivilege.get(Collections.singleton(privilege));
                     if (allowedIndexPrivilegesAutomaton != null
-                            && Operations.subsetOf(indexPrivilege.getAutomaton(), allowedIndexPrivilegesAutomaton)) {
+                        && Operations.subsetOf(indexPrivilege.getAutomaton(), allowedIndexPrivilegesAutomaton)) {
                         resourcePrivilegesMapBuilder.addResourcePrivilege(forIndexPattern, privilege, Boolean.TRUE);
                     } else {
                         resourcePrivilegesMapBuilder.addResourcePrivilege(forIndexPattern, privilege, Boolean.FALSE);
@@ -193,9 +199,12 @@ public final class IndicesPermission {
     /**
      * Authorizes the provided action against the provided indices, given the current cluster metadata
      */
-    public Map<String, IndicesAccessControl.IndexAccessControl> authorize(String action, Set<String> requestedIndicesOrAliases,
-                                                                          Map<String, AliasOrIndex> allAliasesAndIndices,
-                                                                          FieldPermissionsCache fieldPermissionsCache) {
+    public Map<String, IndicesAccessControl.IndexAccessControl> authorize(
+        String action,
+        Set<String> requestedIndicesOrAliases,
+        Map<String, AliasOrIndex> allAliasesAndIndices,
+        FieldPermissionsCache fieldPermissionsCache
+    ) {
         // now... every index that is associated with the request, must be granted
         // by at least one indices permission group
         Map<String, Set<FieldPermissions>> fieldPermissionsByIndex = new HashMap<>();
@@ -219,8 +228,10 @@ public final class IndicesPermission {
                         Set<FieldPermissions> fieldPermissions = fieldPermissionsByIndex.computeIfAbsent(index, (k) -> new HashSet<>());
                         fieldPermissionsByIndex.put(indexOrAlias, fieldPermissions);
                         fieldPermissions.add(group.getFieldPermissions());
-                        DocumentLevelPermissions permissions =
-                                roleQueriesByIndex.computeIfAbsent(index, (k) -> new DocumentLevelPermissions());
+                        DocumentLevelPermissions permissions = roleQueriesByIndex.computeIfAbsent(
+                            index,
+                            (k) -> new DocumentLevelPermissions()
+                        );
                         roleQueriesByIndex.putIfAbsent(indexOrAlias, permissions);
                         if (group.hasQuery()) {
                             permissions.addAll(group.getQuery());
@@ -258,13 +269,20 @@ public final class IndicesPermission {
             final FieldPermissions fieldPermissions;
             final Set<FieldPermissions> indexFieldPermissions = fieldPermissionsByIndex.get(index);
             if (indexFieldPermissions != null && indexFieldPermissions.isEmpty() == false) {
-                fieldPermissions = indexFieldPermissions.size() == 1 ? indexFieldPermissions.iterator().next() :
-                        fieldPermissionsCache.getFieldPermissions(indexFieldPermissions);
+                fieldPermissions = indexFieldPermissions.size() == 1
+                    ? indexFieldPermissions.iterator().next()
+                    : fieldPermissionsCache.getFieldPermissions(indexFieldPermissions);
             } else {
                 fieldPermissions = FieldPermissions.DEFAULT;
             }
-            indexPermissions.put(index, new IndicesAccessControl.IndexAccessControl(entry.getValue(), fieldPermissions,
-                    (roleQueries != null) ? DocumentPermissions.filteredBy(roleQueries) : DocumentPermissions.allowAll()));
+            indexPermissions.put(
+                index,
+                new IndicesAccessControl.IndexAccessControl(
+                    entry.getValue(),
+                    fieldPermissions,
+                    (roleQueries != null) ? DocumentPermissions.filteredBy(roleQueries) : DocumentPermissions.allowAll()
+                )
+            );
         }
         return unmodifiableMap(indexPermissions);
     }
@@ -288,8 +306,13 @@ public final class IndicesPermission {
         // to be covered by the "indices"
         private final boolean allowRestrictedIndices;
 
-        public Group(IndexPrivilege privilege, FieldPermissions fieldPermissions, @Nullable Set<BytesReference> query,
-                boolean allowRestrictedIndices, String... indices) {
+        public Group(
+            IndexPrivilege privilege,
+            FieldPermissions fieldPermissions,
+            @Nullable Set<BytesReference> query,
+            boolean allowRestrictedIndices,
+            String... indices
+        ) {
             assert indices.length != 0;
             this.privilege = privilege;
             this.actionMatcher = privilege.predicate();
@@ -323,8 +346,9 @@ public final class IndicesPermission {
 
         private boolean check(String action, String index) {
             assert index != null;
-            return check(action) && indexNameMatcher.test(index)
-                    && (allowRestrictedIndices || (false == RestrictedIndicesNames.isRestricted(index)));
+            return check(action)
+                && indexNameMatcher.test(index)
+                && (allowRestrictedIndices || (false == RestrictedIndicesNames.isRestricted(index)));
         }
 
         boolean hasQuery() {
@@ -358,14 +382,13 @@ public final class IndicesPermission {
             }
             final Predicate<String> predicate;
             if (restrictedIndices.isEmpty()) {
-                predicate = indexMatcher(ordinaryIndices)
-                    .and(index -> false == RestrictedIndicesNames.isRestricted(index));
+                predicate = indexMatcher(ordinaryIndices).and(index -> false == RestrictedIndicesNames.isRestricted(index));
             } else if (ordinaryIndices.isEmpty()) {
                 predicate = indexMatcher(restrictedIndices);
             } else {
-                predicate = indexMatcher(restrictedIndices)
-                    .or(indexMatcher(ordinaryIndices)
-                         .and(index -> false == RestrictedIndicesNames.isRestricted(index)));
+                predicate = indexMatcher(restrictedIndices).or(
+                    indexMatcher(ordinaryIndices).and(index -> false == RestrictedIndicesNames.isRestricted(index))
+                );
             }
             return predicate;
         }

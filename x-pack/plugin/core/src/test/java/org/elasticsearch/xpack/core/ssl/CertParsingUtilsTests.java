@@ -39,8 +39,10 @@ public class CertParsingUtilsTests extends ESTestCase {
         assertThat(key, notNullValue());
         assertThat(key, instanceOf(PrivateKey.class));
 
-        PrivateKey privateKey = PemUtils.readPrivateKey(getDataPath
-                ("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.pem"), "testnode"::toCharArray);
+        PrivateKey privateKey = PemUtils.readPrivateKey(
+            getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.pem"),
+            "testnode"::toCharArray
+        );
 
         assertThat(privateKey, notNullValue());
         assertThat(privateKey, equalTo(key));
@@ -59,8 +61,11 @@ public class CertParsingUtilsTests extends ESTestCase {
         assertThat(certificate, instanceOf(X509Certificate.class));
 
         Certificate pemCert;
-        try (InputStream input =
-                     Files.newInputStream(getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt"))) {
+        try (
+            InputStream input = Files.newInputStream(
+                getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt")
+            )
+        ) {
             List<Certificate> certificateList = CertParsingUtils.readCertificates(input);
             assertThat(certificateList.size(), is(1));
             pemCert = certificateList.get(0);

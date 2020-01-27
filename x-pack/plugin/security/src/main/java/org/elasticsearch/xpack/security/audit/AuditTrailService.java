@@ -130,8 +130,13 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void accessGranted(String requestId, Authentication authentication, String action, TransportMessage msg,
-                              AuthorizationInfo authorizationInfo) {
+    public void accessGranted(
+        String requestId,
+        Authentication authentication,
+        String action,
+        TransportMessage msg,
+        AuthorizationInfo authorizationInfo
+    ) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
                 auditTrail.accessGranted(requestId, authentication, action, msg, authorizationInfo);
@@ -140,8 +145,13 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void accessDenied(String requestId, Authentication authentication, String action, TransportMessage message,
-                             AuthorizationInfo authorizationInfo) {
+    public void accessDenied(
+        String requestId,
+        Authentication authentication,
+        String action,
+        TransportMessage message,
+        AuthorizationInfo authorizationInfo
+    ) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
                 auditTrail.accessDenied(requestId, authentication, action, message, authorizationInfo);
@@ -195,8 +205,13 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void runAsGranted(String requestId, Authentication authentication, String action, TransportMessage message,
-                             AuthorizationInfo authorizationInfo) {
+    public void runAsGranted(
+        String requestId,
+        Authentication authentication,
+        String action,
+        TransportMessage message,
+        AuthorizationInfo authorizationInfo
+    ) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
                 auditTrail.runAsGranted(requestId, authentication, action, message, authorizationInfo);
@@ -205,8 +220,13 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void runAsDenied(String requestId, Authentication authentication, String action, TransportMessage message,
-                            AuthorizationInfo authorizationInfo) {
+    public void runAsDenied(
+        String requestId,
+        Authentication authentication,
+        String action,
+        TransportMessage message,
+        AuthorizationInfo authorizationInfo
+    ) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
                 auditTrail.runAsDenied(requestId, authentication, action, message, authorizationInfo);
@@ -215,8 +235,7 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void runAsDenied(String requestId, Authentication authentication, RestRequest request,
-                            AuthorizationInfo authorizationInfo) {
+    public void runAsDenied(String requestId, Authentication authentication, RestRequest request, AuthorizationInfo authorizationInfo) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
                 auditTrail.runAsDenied(requestId, authentication, request, authorizationInfo);
@@ -225,13 +244,28 @@ public class AuditTrailService implements AuditTrail {
     }
 
     @Override
-    public void explicitIndexAccessEvent(String requestId, AuditLevel eventType, Authentication authentication, String action,
-                                         String indices, String requestName, TransportAddress remoteAddress,
-                                         AuthorizationInfo authorizationInfo) {
+    public void explicitIndexAccessEvent(
+        String requestId,
+        AuditLevel eventType,
+        Authentication authentication,
+        String action,
+        String indices,
+        String requestName,
+        TransportAddress remoteAddress,
+        AuthorizationInfo authorizationInfo
+    ) {
         if (licenseState.isAuditingAllowed()) {
             for (AuditTrail auditTrail : auditTrails) {
-                auditTrail.explicitIndexAccessEvent(requestId, eventType, authentication, action, indices, requestName, remoteAddress,
-                        authorizationInfo);
+                auditTrail.explicitIndexAccessEvent(
+                    requestId,
+                    eventType,
+                    authentication,
+                    action,
+                    indices,
+                    requestName,
+                    remoteAddress,
+                    authorizationInfo
+                );
             }
         }
     }

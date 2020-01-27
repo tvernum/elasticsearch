@@ -34,8 +34,10 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 public class RestOpenIdConnectAuthenticateAction extends OpenIdConnectBaseRestHandler {
     private static final Logger logger = LogManager.getLogger();
 
-    static final ObjectParser<OpenIdConnectAuthenticateRequest, Void> PARSER = new ObjectParser<>("oidc_authn",
-        OpenIdConnectAuthenticateRequest::new);
+    static final ObjectParser<OpenIdConnectAuthenticateRequest, Void> PARSER = new ObjectParser<>(
+        "oidc_authn",
+        OpenIdConnectAuthenticateRequest::new
+    );
 
     static {
         PARSER.declareString(OpenIdConnectAuthenticateRequest::setRedirectUri, new ParseField("redirect_uri"));
@@ -54,7 +56,9 @@ public class RestOpenIdConnectAuthenticateAction extends OpenIdConnectBaseRestHa
         try (XContentParser parser = request.contentParser()) {
             final OpenIdConnectAuthenticateRequest authenticateRequest = PARSER.parse(parser, null);
             logger.trace("OIDC Authenticate: " + authenticateRequest);
-            return channel -> client.execute(OpenIdConnectAuthenticateAction.INSTANCE, authenticateRequest,
+            return channel -> client.execute(
+                OpenIdConnectAuthenticateAction.INSTANCE,
+                authenticateRequest,
                 new RestBuilderListener<OpenIdConnectAuthenticateResponse>(channel) {
                     @Override
                     public RestResponse buildResponse(OpenIdConnectAuthenticateResponse response, XContentBuilder builder)
@@ -67,7 +71,8 @@ public class RestOpenIdConnectAuthenticateAction extends OpenIdConnectBaseRestHa
                             .endObject();
                         return new BytesRestResponse(RestStatus.OK, builder);
                     }
-                });
+                }
+            );
         }
     }
 

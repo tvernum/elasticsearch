@@ -18,9 +18,12 @@ import static org.hamcrest.Matchers.equalTo;
 public class DistinguishedNamePredicateTests extends ESTestCase {
 
     public void testMatching() throws Exception {
-        String randomDn = "CN=" + randomAlphaOfLengthBetween(3, 12)
-                + ",OU=" + randomAlphaOfLength(4)
-                + ", O=" + randomAlphaOfLengthBetween(2, 6);
+        String randomDn = "CN="
+            + randomAlphaOfLengthBetween(3, 12)
+            + ",OU="
+            + randomAlphaOfLength(4)
+            + ", O="
+            + randomAlphaOfLengthBetween(2, 6);
 
         // Randomly enter the DN in mixed case, lower case or upper case;
         final String inputDn;

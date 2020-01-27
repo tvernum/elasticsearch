@@ -117,10 +117,9 @@ public final class FieldPermissions implements Accountable {
     public static Automaton initializePermittedFieldsAutomaton(FieldPermissionsDefinition fieldPermissionsDefinition) {
         Set<FieldGrantExcludeGroup> groups = fieldPermissionsDefinition.getFieldGrantExcludeGroups();
         assert groups.size() > 0 : "there must always be a single group for field inclusion/exclusion";
-        List<Automaton> automatonList =
-                groups.stream()
-                        .map(g -> FieldPermissions.buildPermittedFieldsAutomaton(g.getGrantedFields(), g.getExcludedFields()))
-                        .collect(Collectors.toList());
+        List<Automaton> automatonList = groups.stream()
+            .map(g -> FieldPermissions.buildPermittedFieldsAutomaton(g.getGrantedFields(), g.getExcludedFields()))
+            .collect(Collectors.toList());
         return Automatons.unionAndMinimize(automatonList);
     }
 
@@ -150,9 +149,13 @@ public final class FieldPermissions implements Accountable {
         deniedFieldsAutomaton = MinimizationOperations.minimize(deniedFieldsAutomaton, Operations.DEFAULT_MAX_DETERMINIZED_STATES);
 
         if (subsetOf(deniedFieldsAutomaton, grantedFieldsAutomaton) == false) {
-            throw new ElasticsearchSecurityException("Exceptions for field permissions must be a subset of the " +
-                    "granted fields but " + Strings.arrayToCommaDelimitedString(deniedFields) + " is not a subset of " +
-                    Strings.arrayToCommaDelimitedString(grantedFields));
+            throw new ElasticsearchSecurityException(
+                "Exceptions for field permissions must be a subset of the "
+                    + "granted fields but "
+                    + Strings.arrayToCommaDelimitedString(deniedFields)
+                    + " is not a subset of "
+                    + Strings.arrayToCommaDelimitedString(grantedFields)
+            );
         }
 
         grantedFieldsAutomaton = Automatons.minusAndMinimize(grantedFieldsAutomaton, deniedFieldsAutomaton);
@@ -212,14 +215,18 @@ public final class FieldPermissions implements Accountable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         FieldPermissions that = (FieldPermissions) o;
 
-        if (permittedFieldsAutomatonIsTotal != that.permittedFieldsAutomatonIsTotal) return false;
-        return fieldPermissionsDefinition != null ?
-                fieldPermissionsDefinition.equals(that.fieldPermissionsDefinition) : that.fieldPermissionsDefinition == null;
+        if (permittedFieldsAutomatonIsTotal != that.permittedFieldsAutomatonIsTotal)
+            return false;
+        return fieldPermissionsDefinition != null
+            ? fieldPermissionsDefinition.equals(that.fieldPermissionsDefinition)
+            : that.fieldPermissionsDefinition == null;
     }
 
     @Override

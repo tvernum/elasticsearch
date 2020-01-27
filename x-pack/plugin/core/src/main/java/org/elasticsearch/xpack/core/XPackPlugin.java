@@ -125,16 +125,14 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
     }
 
     protected final Settings settings;
-    //private final Environment env;
+    // private final Environment env;
     protected final Licensing licensing;
     // These should not be directly accessed as they cannot be overridden in tests. Please use the getters so they can be overridden.
     private static final SetOnce<XPackLicenseState> licenseState = new SetOnce<>();
     private static final SetOnce<SSLService> sslService = new SetOnce<>();
     private static final SetOnce<LicenseService> licenseService = new SetOnce<>();
 
-    public XPackPlugin(
-            final Settings settings,
-            final Path configPath) {
+    public XPackPlugin(final Settings settings, final Path configPath) {
         super(settings);
         // FIXME: The settings might be changed after this (e.g. from "additionalSettings" method in other plugins)
         // We should only depend on the settings from the Environment object passed to createComponents
@@ -150,12 +148,29 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
         return Clock.systemUTC();
     }
 
-    protected SSLService getSslService() { return getSharedSslService(); }
-    protected LicenseService getLicenseService() { return getSharedLicenseService(); }
-    protected XPackLicenseState getLicenseState() { return getSharedLicenseState(); }
-    protected void setSslService(SSLService sslService) { XPackPlugin.sslService.set(sslService); }
-    protected void setLicenseService(LicenseService licenseService) { XPackPlugin.licenseService.set(licenseService); }
-    protected void setLicenseState(XPackLicenseState licenseState) { XPackPlugin.licenseState.set(licenseState); }
+    protected SSLService getSslService() {
+        return getSharedSslService();
+    }
+
+    protected LicenseService getLicenseService() {
+        return getSharedLicenseService();
+    }
+
+    protected XPackLicenseState getLicenseState() {
+        return getSharedLicenseState();
+    }
+
+    protected void setSslService(SSLService sslService) {
+        XPackPlugin.sslService.set(sslService);
+    }
+
+    protected void setLicenseService(LicenseService licenseService) {
+        XPackPlugin.licenseService.set(licenseService);
+    }
+
+    protected void setLicenseState(XPackLicenseState licenseState) {
+        XPackPlugin.licenseState.set(licenseState);
+    }
 
     public static SSLService getSharedSslService() {
         final SSLService ssl = XPackPlugin.sslService.get();
@@ -164,8 +179,14 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
         }
         return ssl;
     }
-    public static LicenseService getSharedLicenseService() { return licenseService.get(); }
-    public static XPackLicenseState getSharedLicenseState() { return licenseState.get(); }
+
+    public static LicenseService getSharedLicenseService() {
+        return licenseService.get();
+    }
+
+    public static XPackLicenseState getSharedLicenseState() {
+        return licenseState.get();
+    }
 
     /**
      * Checks if the cluster state allows this node to add x-pack metadata to the cluster state,
@@ -211,10 +232,10 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
 
     private static boolean alreadyContainsXPackCustomMetadata(ClusterState clusterState) {
         final MetaData metaData = clusterState.metaData();
-        return metaData.custom(LicensesMetaData.TYPE) != null ||
-            metaData.custom(MlMetadata.TYPE) != null ||
-            metaData.custom(WatcherMetaData.TYPE) != null ||
-            clusterState.custom(TokenMetaData.TYPE) != null;
+        return metaData.custom(LicensesMetaData.TYPE) != null
+            || metaData.custom(MlMetadata.TYPE) != null
+            || metaData.custom(WatcherMetaData.TYPE) != null
+            || clusterState.custom(TokenMetaData.TYPE) != null;
     }
 
     @Override
@@ -228,10 +249,17 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
     }
 
     @Override
-    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-                                               ResourceWatcherService resourceWatcherService, ScriptService scriptService,
-                                               NamedXContentRegistry xContentRegistry, Environment environment,
-                                               NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry) {
+    public Collection<Object> createComponents(
+        Client client,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        ResourceWatcherService resourceWatcherService,
+        ScriptService scriptService,
+        NamedXContentRegistry xContentRegistry,
+        Environment environment,
+        NodeEnvironment nodeEnvironment,
+        NamedWriteableRegistry namedWriteableRegistry
+    ) {
         List<Object> components = new ArrayList<>();
 
         final SSLService sslService = new SSLService(environment);
@@ -239,8 +267,7 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
         // just create the reloader as it will pull all of the loaded ssl configurations and start watching them
         new SSLConfigurationReloader(environment, sslService, resourceWatcherService);
 
-        setLicenseService(new LicenseService(settings, clusterService, getClock(),
-                environment, resourceWatcherService, getLicenseState()));
+        setLicenseService(new LicenseService(settings, clusterService, getClock(), environment, resourceWatcherService, getLicenseState()));
 
         // It is useful to override these as they are what guice is injecting into actions
         components.add(sslService);
@@ -287,15 +314,30 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
     }
 
     @Override
-    public List<RestHandler> getRestHandlers(Settings settings, RestController restController, ClusterSettings clusterSettings,
-            IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(
+        Settings settings,
+        RestController restController,
+        ClusterSettings clusterSettings,
+        IndexScopedSettings indexScopedSettings,
+        SettingsFilter settingsFilter,
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        Supplier<DiscoveryNodes> nodesInCluster
+    ) {
         List<RestHandler> handlers = new ArrayList<>();
         handlers.add(new RestXPackInfoAction(restController));
         handlers.add(new RestXPackUsageAction(restController));
         handlers.add(new RestReloadAnalyzersAction(restController));
-        handlers.addAll(licensing.getRestHandlers(settings, restController, clusterSettings, indexScopedSettings, settingsFilter,
-                indexNameExpressionResolver, nodesInCluster));
+        handlers.addAll(
+            licensing.getRestHandlers(
+                settings,
+                restController,
+                clusterSettings,
+                indexScopedSettings,
+                settingsFilter,
+                indexNameExpressionResolver,
+                nodesInCluster
+            )
+        );
         return handlers;
     }
 
@@ -310,12 +352,18 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
     }
 
     public static Path resolveConfigFile(Environment env, String name) {
-        Path config =  env.configFile().resolve(name);
+        Path config = env.configFile().resolve(name);
         if (Files.exists(config) == false) {
             Path legacyConfig = env.configFile().resolve("x-pack").resolve(name);
             if (Files.exists(legacyConfig)) {
-                deprecationLogger.deprecated("Config file [" + name + "] is in a deprecated location. Move from " +
-                    legacyConfig.toString() + " to " + config.toString());
+                deprecationLogger.deprecated(
+                    "Config file ["
+                        + name
+                        + "] is in a deprecated location. Move from "
+                        + legacyConfig.toString()
+                        + " to "
+                        + config.toString()
+                );
                 return legacyConfig;
             }
         }
@@ -323,8 +371,11 @@ public class XPackPlugin extends XPackClientPlugin implements ExtensiblePlugin, 
     }
 
     @Override
-    public Map<String, Repository.Factory> getRepositories(Environment env, NamedXContentRegistry namedXContentRegistry,
-                                                           ClusterService clusterService) {
+    public Map<String, Repository.Factory> getRepositories(
+        Environment env,
+        NamedXContentRegistry namedXContentRegistry,
+        ClusterService clusterService
+    ) {
         return Collections.singletonMap("source", SourceOnlySnapshotRepository.newRepositoryFactory());
     }
 

@@ -45,46 +45,54 @@ public class RestrictedTrustManagerTests extends ESTestCase {
     @Before
     public void readCertificates() throws GeneralSecurityException, IOException {
 
-        Certificate[] caCert
-                = CertParsingUtils.readCertificates(Collections.singletonList(getDataPath
-                ("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/ca.crt")));
+        Certificate[] caCert = CertParsingUtils.readCertificates(
+            Collections.singletonList(getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/ca.crt"))
+        );
         baseTrustManager = CertParsingUtils.trustManager(caCert);
         certificates = new HashMap<>();
-        Files.walkFileTree(getDataPath
-                ("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/self-signed"), new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(
+            getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/self-signed"),
+            new SimpleFileVisitor<Path>() {
 
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                try {
-                    String fileName = file.getFileName().toString();
-                    if (fileName.endsWith(".crt")) {
-                        certificates.put(fileName.replace(".crt", "/self"), CertParsingUtils
-                                .readX509Certificates(Collections.singletonList(file)));
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    try {
+                        String fileName = file.getFileName().toString();
+                        if (fileName.endsWith(".crt")) {
+                            certificates.put(
+                                fileName.replace(".crt", "/self"),
+                                CertParsingUtils.readX509Certificates(Collections.singletonList(file))
+                            );
+                        }
+                        return FileVisitResult.CONTINUE;
+                    } catch (CertificateException e) {
+                        throw new IOException("Failed to read X.509 Certificate from: " + file.toAbsolutePath().toString());
                     }
-                    return FileVisitResult.CONTINUE;
-                } catch (CertificateException e) {
-                    throw new IOException("Failed to read X.509 Certificate from: " + file.toAbsolutePath().toString());
                 }
             }
-        });
+        );
 
-        Files.walkFileTree(getDataPath
-                ("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/ca-signed"), new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(
+            getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/nodes/ca-signed"),
+            new SimpleFileVisitor<Path>() {
 
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                try {
-                    String fileName = file.getFileName().toString();
-                    if (fileName.endsWith(".crt")) {
-                        certificates.put(fileName.replace(".crt", "/ca"), CertParsingUtils
-                                .readX509Certificates(Collections.singletonList(file)));
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    try {
+                        String fileName = file.getFileName().toString();
+                        if (fileName.endsWith(".crt")) {
+                            certificates.put(
+                                fileName.replace(".crt", "/ca"),
+                                CertParsingUtils.readX509Certificates(Collections.singletonList(file))
+                            );
+                        }
+                        return FileVisitResult.CONTINUE;
+                    } catch (CertificateException e) {
+                        throw new IOException("Failed to read X.509 Certificate from: " + file.toAbsolutePath().toString());
                     }
-                    return FileVisitResult.CONTINUE;
-                } catch (CertificateException e) {
-                    throw new IOException("Failed to read X.509 Certificate from: " + file.toAbsolutePath().toString());
                 }
             }
-        });
+        );
 
         numberOfClusters = scaledRandomIntBetween(2, 8);
         numberOfNodes = scaledRandomIntBetween(2, 8);
@@ -112,9 +120,7 @@ public class RestrictedTrustManagerTests extends ESTestCase {
     public void testTrustWithRegexCertificateName() throws Exception {
         final int trustedNode = randomIntBetween(1, numberOfNodes);
         final List<String> trustedNames = Collections.singletonList("/node" + trustedNode + ".cluster[0-9].elasticsearch/");
-        final CertificateTrustRestrictions restrictions = new CertificateTrustRestrictions(
-                trustedNames
-        );
+        final CertificateTrustRestrictions restrictions = new CertificateTrustRestrictions(trustedNames);
         final RestrictedTrustManager trustManager = new RestrictedTrustManager(baseTrustManager, restrictions);
         for (int cluster = 1; cluster <= numberOfClusters; cluster++) {
             for (int node = 1; node <= numberOfNodes; node++) {
@@ -134,14 +140,17 @@ public class RestrictedTrustManagerTests extends ESTestCase {
             if (cert.endsWith("/ca")) {
                 assertTrusted(trustManager, cert);
             } else {
-                assertNotValid(trustManager, cert, inFipsJvm() ? "unable to process certificates: Unable to find certificate chain.":
-                    "PKIX path building failed.*");
+                assertNotValid(
+                    trustManager,
+                    cert,
+                    inFipsJvm() ? "unable to process certificates: Unable to find certificate chain." : "PKIX path building failed.*"
+                );
             }
         }
     }
 
     private void assertSingleClusterIsTrusted(int trustedCluster, RestrictedTrustManager trustManager, List<String> trustedNames)
-            throws Exception {
+        throws Exception {
         for (int cluster = 1; cluster <= numberOfClusters; cluster++) {
             for (int node = 1; node <= numberOfNodes; node++) {
                 final String certAlias = "n" + node + ".c" + cluster + "/ca";

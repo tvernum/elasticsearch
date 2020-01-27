@@ -64,8 +64,7 @@ public final class SecurityMocks {
     }
 
     public static void mockGetRequest(Client client, String documentId, BytesReference source) {
-        GetResult result = new GetResult(SECURITY_MAIN_ALIAS, documentId, 0, 1, 1, true, source,
-            emptyMap(), emptyMap());
+        GetResult result = new GetResult(SECURITY_MAIN_ALIAS, documentId, 0, 1, 1, true, source, emptyMap(), emptyMap());
         mockGetRequest(client, documentId, result);
     }
 

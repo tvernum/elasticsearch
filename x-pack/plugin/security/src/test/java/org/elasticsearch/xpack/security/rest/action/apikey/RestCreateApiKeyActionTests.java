@@ -50,10 +50,10 @@ public class RestCreateApiKeyActionTests extends ESTestCase {
     public void setUp() throws Exception {
         super.setUp();
         settings = Settings.builder()
-                .put("path.home", createTempDir().toString())
-                .put("node.name", "test-" + getTestName())
-                .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
-                .build();
+            .put("path.home", createTempDir().toString())
+            .put("node.name", "test-" + getTestName())
+            .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
+            .build();
         threadPool = new ThreadPool(settings);
         when(mockLicenseState.isSecurityAvailable()).thenReturn(true);
         when(mockLicenseState.isApiKeyServiceAllowed()).thenReturn(true);
@@ -65,13 +65,13 @@ public class RestCreateApiKeyActionTests extends ESTestCase {
         terminate(threadPool);
     }
 
-    @SuppressWarnings({ "unchecked"})
+    @SuppressWarnings({ "unchecked" })
     public void testCreateApiKeyApi() throws Exception {
         final String json = "{ \"name\" : \"my-api-key\", \"role_descriptors\": { \"role-a\": {\"cluster\":[\"a-1\", \"a-2\"]} } }";
-        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
-                .withContent(new BytesArray(json), XContentType.JSON)
-                .withParams(Collections.singletonMap("refresh", randomFrom("false", "true", "wait_for")))
-                .build();
+        final FakeRestRequest restRequest = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY).withContent(
+            new BytesArray(json),
+            XContentType.JSON
+        ).withParams(Collections.singletonMap("refresh", randomFrom("false", "true", "wait_for"))).build();
 
         final SetOnce<RestResponse> responseSetOnce = new SetOnce<>();
         final RestChannel restChannel = new AbstractRestChannel(restRequest, randomBoolean()) {
@@ -81,13 +81,20 @@ public class RestCreateApiKeyActionTests extends ESTestCase {
             }
         };
 
-        final CreateApiKeyResponse expected = new CreateApiKeyResponse("my-api-key", UUID.randomUUID().toString(),
-                new SecureString(randomAlphaOfLength(5)), Instant.now().plus(Duration.ofHours(5)));
+        final CreateApiKeyResponse expected = new CreateApiKeyResponse(
+            "my-api-key",
+            UUID.randomUUID().toString(),
+            new SecureString(randomAlphaOfLength(5)),
+            Instant.now().plus(Duration.ofHours(5))
+        );
 
         try (NodeClient client = new NodeClient(Settings.EMPTY, threadPool) {
             @Override
-            public <Request extends ActionRequest, Response extends ActionResponse>
-            void doExecute(ActionType<Response> action, Request request, ActionListener<Response> listener) {
+            public <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                ActionType<Response> action,
+                Request request,
+                ActionListener<Response> listener
+            ) {
                 CreateApiKeyRequest createApiKeyRequest = (CreateApiKeyRequest) request;
                 @SuppressWarnings("unchecked")
                 RestToXContentListener<CreateApiKeyResponse> actionListener = (RestToXContentListener<CreateApiKeyResponse>) listener;
@@ -98,14 +105,19 @@ public class RestCreateApiKeyActionTests extends ESTestCase {
                 }
             }
         }) {
-            final RestCreateApiKeyAction restCreateApiKeyAction = new RestCreateApiKeyAction(Settings.EMPTY, mockRestController,
-                    mockLicenseState);
+            final RestCreateApiKeyAction restCreateApiKeyAction = new RestCreateApiKeyAction(
+                Settings.EMPTY,
+                mockRestController,
+                mockLicenseState
+            );
             restCreateApiKeyAction.handleRequest(restRequest, restChannel, client);
 
             final RestResponse restResponse = responseSetOnce.get();
             assertNotNull(restResponse);
-            assertThat(CreateApiKeyResponse.fromXContent(createParser(XContentType.JSON.xContent(), restResponse.content())),
-                    equalTo(expected));
+            assertThat(
+                CreateApiKeyResponse.fromXContent(createParser(XContentType.JSON.xContent(), restResponse.content())),
+                equalTo(expected)
+            );
         }
     }
 

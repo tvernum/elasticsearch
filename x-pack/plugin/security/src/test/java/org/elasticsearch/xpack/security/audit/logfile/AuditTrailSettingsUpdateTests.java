@@ -81,24 +81,27 @@ public class AuditTrailSettingsUpdateTests extends SecurityIntegTestCase {
         // update settings on internal cluster
         updateSettings(updateFilterSettings, randomBoolean());
         final String actual = ((LoggingAuditTrail) internalCluster().getInstances(AuditTrailService.class)
-                .iterator()
-                .next()
-                .getAuditTrails()
-                .iterator()
-                .next()).eventFilterPolicyRegistry.toString();
+            .iterator()
+            .next()
+            .getAuditTrails()
+            .iterator()
+            .next()).eventFilterPolicyRegistry.toString();
         assertEquals(expected, actual);
     }
 
     public void testInvalidFilterSettings() throws Exception {
         final String invalidLuceneRegex = "/invalid";
         final Settings.Builder settingsBuilder = Settings.builder();
-        final String[] allSettingsKeys = new String[] { "xpack.security.audit.logfile.events.ignore_filters.invalid.users",
-                "xpack.security.audit.logfile.events.ignore_filters.invalid.realms",
-                "xpack.security.audit.logfile.events.ignore_filters.invalid.roles",
-                "xpack.security.audit.logfile.events.ignore_filters.invalid.indices" };
+        final String[] allSettingsKeys = new String[] {
+            "xpack.security.audit.logfile.events.ignore_filters.invalid.users",
+            "xpack.security.audit.logfile.events.ignore_filters.invalid.realms",
+            "xpack.security.audit.logfile.events.ignore_filters.invalid.roles",
+            "xpack.security.audit.logfile.events.ignore_filters.invalid.indices" };
         settingsBuilder.put(randomFrom(allSettingsKeys), invalidLuceneRegex);
-        final IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
-                () -> client().admin().cluster().prepareUpdateSettings().setTransientSettings(settingsBuilder.build()).get());
+        final IllegalArgumentException e = expectThrows(
+            IllegalArgumentException.class,
+            () -> client().admin().cluster().prepareUpdateSettings().setTransientSettings(settingsBuilder.build()).get()
+        );
         assertThat(e.getMessage(), containsString("illegal value can't update"));
     }
 
@@ -111,11 +114,11 @@ public class AuditTrailSettingsUpdateTests extends SecurityIntegTestCase {
         settingsBuilder.put(LoggingAuditTrail.EMIT_NODE_ID_SETTING.getKey(), true);
         updateSettings(settingsBuilder.build(), persistent);
         final LoggingAuditTrail loggingAuditTrail = (LoggingAuditTrail) internalCluster().getInstances(AuditTrailService.class)
-                .iterator()
-                .next()
-                .getAuditTrails()
-                .iterator()
-                .next();
+            .iterator()
+            .next()
+            .getAuditTrails()
+            .iterator()
+            .next();
         assertThat(loggingAuditTrail.entryCommonFields.commonFields.get(LoggingAuditTrail.NODE_NAME_FIELD_NAME), startsWith("node_"));
         assertThat(loggingAuditTrail.entryCommonFields.commonFields.containsKey(LoggingAuditTrail.NODE_ID_FIELD_NAME), is(true));
         assertThat(loggingAuditTrail.entryCommonFields.commonFields.get(LoggingAuditTrail.HOST_ADDRESS_FIELD_NAME), is("127.0.0.1"));
@@ -153,11 +156,11 @@ public class AuditTrailSettingsUpdateTests extends SecurityIntegTestCase {
         settingsBuilder.put(LoggingAuditTrail.INCLUDE_REQUEST_BODY.getKey(), enableRequestBody);
         updateSettings(settingsBuilder.build(), persistent);
         final LoggingAuditTrail loggingAuditTrail = (LoggingAuditTrail) internalCluster().getInstances(AuditTrailService.class)
-                .iterator()
-                .next()
-                .getAuditTrails()
-                .iterator()
-                .next();
+            .iterator()
+            .next()
+            .getAuditTrails()
+            .iterator()
+            .next();
         assertEquals(enableRequestBody, loggingAuditTrail.includeRequestBody);
         settingsBuilder.put(LoggingAuditTrail.INCLUDE_REQUEST_BODY.getKey(), !enableRequestBody);
         updateSettings(settingsBuilder.build(), persistent);
@@ -165,9 +168,20 @@ public class AuditTrailSettingsUpdateTests extends SecurityIntegTestCase {
     }
 
     public void testDynamicEventsSettings() {
-        final List<String> allEventTypes = Arrays.asList("anonymous_access_denied", "authentication_failed", "realm_authentication_failed",
-                "access_granted", "access_denied", "tampered_request", "connection_granted", "connection_denied", "system_access_granted",
-                "authentication_success", "run_as_granted", "run_as_denied");
+        final List<String> allEventTypes = Arrays.asList(
+            "anonymous_access_denied",
+            "authentication_failed",
+            "realm_authentication_failed",
+            "access_granted",
+            "access_denied",
+            "tampered_request",
+            "connection_granted",
+            "connection_denied",
+            "system_access_granted",
+            "authentication_success",
+            "run_as_granted",
+            "run_as_denied"
+        );
         final List<String> includedEvents = randomSubsetOf(allEventTypes);
         final List<String> excludedEvents = randomSubsetOf(allEventTypes);
         final Settings.Builder settingsBuilder = Settings.builder();
@@ -175,11 +189,11 @@ public class AuditTrailSettingsUpdateTests extends SecurityIntegTestCase {
         settingsBuilder.putList(LoggingAuditTrail.EXCLUDE_EVENT_SETTINGS.getKey(), excludedEvents);
         updateSettings(settingsBuilder.build(), randomBoolean());
         final LoggingAuditTrail loggingAuditTrail = (LoggingAuditTrail) internalCluster().getInstances(AuditTrailService.class)
-                .iterator()
-                .next()
-                .getAuditTrails()
-                .iterator()
-                .next();
+            .iterator()
+            .next()
+            .getAuditTrails()
+            .iterator()
+            .next();
         assertEquals(AuditLevel.parse(includedEvents, excludedEvents), loggingAuditTrail.events);
     }
 

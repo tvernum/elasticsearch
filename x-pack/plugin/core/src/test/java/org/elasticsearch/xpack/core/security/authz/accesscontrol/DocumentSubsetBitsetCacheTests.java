@@ -179,7 +179,7 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         final long expectedBytesPerBitSet = 56;
 
         // Enough to hold less than 1 bit-sets in the cache
-        final long maxCacheBytes = expectedBytesPerBitSet - expectedBytesPerBitSet/3;
+        final long maxCacheBytes = expectedBytesPerBitSet - expectedBytesPerBitSet / 3;
         final Settings settings = Settings.builder()
             .put(DocumentSubsetBitsetCache.CACHE_SIZE_SETTING.getKey(), maxCacheBytes + "b")
             .build();
@@ -192,14 +192,19 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         mockAppender.start();
         try {
             Loggers.addAppender(cacheLogger, mockAppender);
-            mockAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-                "[bitset too big]",
-                cache.getClass().getName(),
-                Level.WARN,
-                "built a DLS BitSet that uses [" + expectedBytesPerBitSet + "] bytes; the DLS BitSet cache has a maximum size of [" +
-                    maxCacheBytes + "] bytes; this object cannot be cached and will need to be rebuilt for each use;" +
-                    " consider increasing the value of [xpack.security.dls.bitset.cache.size]"
-            ));
+            mockAppender.addExpectation(
+                new MockLogAppender.SeenEventExpectation(
+                    "[bitset too big]",
+                    cache.getClass().getName(),
+                    Level.WARN,
+                    "built a DLS BitSet that uses ["
+                        + expectedBytesPerBitSet
+                        + "] bytes; the DLS BitSet cache has a maximum size of ["
+                        + maxCacheBytes
+                        + "] bytes; this object cannot be cached and will need to be rebuilt for each use;"
+                        + " consider increasing the value of [xpack.security.dls.bitset.cache.size]"
+                )
+            );
 
             runTestOnIndex((shardContext, leafContext) -> {
                 final TermQueryBuilder queryBuilder = QueryBuilders.termQuery("field-1", "value-1");
@@ -222,7 +227,7 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         final long expectedBytesPerBitSet = 56;
 
         // Enough to hold slightly more than 1 bit-sets in the cache
-        final long maxCacheBytes = expectedBytesPerBitSet + expectedBytesPerBitSet/3;
+        final long maxCacheBytes = expectedBytesPerBitSet + expectedBytesPerBitSet / 3;
         final Settings settings = Settings.builder()
             .put(DocumentSubsetBitsetCache.CACHE_SIZE_SETTING.getKey(), maxCacheBytes + "b")
             .build();
@@ -235,13 +240,15 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         mockAppender.start();
         try {
             Loggers.addAppender(cacheLogger, mockAppender);
-            mockAppender.addExpectation(new MockLogAppender.SeenEventExpectation(
-                "[cache full]",
-                cache.getClass().getName(),
-                Level.INFO,
-                "the Document Level Security BitSet cache is full which may impact performance;" +
-                    " consider increasing the value of [xpack.security.dls.bitset.cache.size]"
-            ));
+            mockAppender.addExpectation(
+                new MockLogAppender.SeenEventExpectation(
+                    "[cache full]",
+                    cache.getClass().getName(),
+                    Level.INFO,
+                    "the Document Level Security BitSet cache is full which may impact performance;"
+                        + " consider increasing the value of [xpack.security.dls.bitset.cache.size]"
+                )
+            );
 
             runTestOnIndex((shardContext, leafContext) -> {
                 for (int i = 1; i <= 3; i++) {
@@ -261,9 +268,7 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
     }
 
     public void testCacheRespectsAccessTimeExpiry() throws Exception {
-        final Settings settings = Settings.builder()
-            .put(DocumentSubsetBitsetCache.CACHE_TTL_SETTING.getKey(), "10ms")
-            .build();
+        final Settings settings = Settings.builder().put(DocumentSubsetBitsetCache.CACHE_TTL_SETTING.getKey(), "10ms").build();
         final DocumentSubsetBitsetCache cache = newCache(settings);
         assertThat(cache.entryCount(), equalTo(0));
         assertThat(cache.ramBytesUsed(), equalTo(0L));
@@ -295,7 +300,7 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         final long expectedBytesPerBitSet = 56;
 
         // Enough to hold slightly more than 1 bit-set in the cache
-        final long maxCacheBytes = expectedBytesPerBitSet + expectedBytesPerBitSet/2;
+        final long maxCacheBytes = expectedBytesPerBitSet + expectedBytesPerBitSet / 2;
         final Settings settings = Settings.builder()
             .put(DocumentSubsetBitsetCache.CACHE_SIZE_SETTING.getKey(), maxCacheBytes + "b")
             .build();
@@ -337,6 +342,7 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
             cache.verifyInternalConsistency();
         });
     }
+
     public void testCacheUnderConcurrentAccess() throws Exception {
         // This value is based on the internal implementation details of lucene's FixedBitSet
         // If the implementation changes, this can be safely updated to match the new ram usage for a single bitset
@@ -473,8 +479,13 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
         private final QueryShardContext queryShardContext;
         private final LeafReaderContext leafReaderContext;
 
-        private TestIndexContext(Directory directory, IndexWriter indexWriter, DirectoryReader directoryReader,
-                                 QueryShardContext queryShardContext, LeafReaderContext leafReaderContext) {
+        private TestIndexContext(
+            Directory directory,
+            IndexWriter indexWriter,
+            DirectoryReader directoryReader,
+            QueryShardContext queryShardContext,
+            LeafReaderContext leafReaderContext
+        ) {
             this.directory = directory;
             this.indexWriter = indexWriter;
             this.directoryReader = directoryReader;
@@ -517,9 +528,23 @@ public class DocumentSubsetBitsetCacheTests extends ESTestCase {
             directoryReader = DirectoryReader.open(directory);
             final LeafReaderContext leaf = directoryReader.leaves().get(0);
 
-            final QueryShardContext shardContext = new QueryShardContext(shardId.id(), indexSettings, BigArrays.NON_RECYCLING_INSTANCE,
-                null, null, mapperService, null, null, xContentRegistry(), writableRegistry(),
-                client, new IndexSearcher(directoryReader), () -> nowInMillis, null, null);
+            final QueryShardContext shardContext = new QueryShardContext(
+                shardId.id(),
+                indexSettings,
+                BigArrays.NON_RECYCLING_INSTANCE,
+                null,
+                null,
+                mapperService,
+                null,
+                null,
+                xContentRegistry(),
+                writableRegistry(),
+                client,
+                new IndexSearcher(directoryReader),
+                () -> nowInMillis,
+                null,
+                null
+            );
 
             context = new TestIndexContext(directory, iw, directoryReader, shardContext, leaf);
             return context;

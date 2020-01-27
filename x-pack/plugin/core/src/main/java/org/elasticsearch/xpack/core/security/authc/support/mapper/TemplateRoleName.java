@@ -47,7 +47,10 @@ import static org.elasticsearch.common.xcontent.ConstructingObjectParser.optiona
 public class TemplateRoleName implements ToXContentObject, Writeable {
 
     private static final ConstructingObjectParser<TemplateRoleName, Void> PARSER = new ConstructingObjectParser<>(
-        "role-mapping-template", false, arr -> new TemplateRoleName((BytesReference) arr[0], (Format) arr[1]));
+        "role-mapping-template",
+        false,
+        arr -> new TemplateRoleName((BytesReference) arr[0], (Format) arr[1])
+    );
 
     static {
         PARSER.declareField(constructorArg(), TemplateRoleName::extractTemplate, Fields.TEMPLATE, ObjectParser.ValueType.OBJECT_OR_STRING);
@@ -98,8 +101,8 @@ public class TemplateRoleName implements ToXContentObject, Writeable {
     }
 
     private List<String> convertJsonToList(String evaluation) throws IOException {
-        final XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE, evaluation);
+        final XContentParser parser = XContentFactory.xContent(XContentType.JSON)
+            .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, evaluation);
         XContentParser.Token token = parser.currentToken();
         if (token == null) {
             token = parser.nextToken();
@@ -107,25 +110,27 @@ public class TemplateRoleName implements ToXContentObject, Writeable {
         if (token == XContentParser.Token.VALUE_STRING) {
             return Collections.singletonList(parser.text());
         } else if (token == XContentParser.Token.START_ARRAY) {
-            return parser.list().stream()
-                .filter(Objects::nonNull)
-                .map(o -> {
-                    if (o instanceof String) {
-                        return (String) o;
-                    } else {
-                        throw new XContentParseException(
-                            "Roles array may only contain strings but found [" + o.getClass().getName() + "] [" + o + "]");
-                    }
-                }).collect(Collectors.toList());
+            return parser.list().stream().filter(Objects::nonNull).map(o -> {
+                if (o instanceof String) {
+                    return (String) o;
+                } else {
+                    throw new XContentParseException(
+                        "Roles array may only contain strings but found [" + o.getClass().getName() + "] [" + o + "]"
+                    );
+                }
+            }).collect(Collectors.toList());
         } else {
-            throw new XContentParseException(
-                "Roles template must generate a string or an array of strings, but found [" + token + "]");
+            throw new XContentParseException("Roles template must generate a string or an array of strings, but found [" + token + "]");
         }
     }
 
     private String parseTemplate(ScriptService scriptService, Map<String, Object> parameters) throws IOException {
         final XContentParser parser = XContentHelper.createParser(
-            NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, template, XContentType.JSON);
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            template,
+            XContentType.JSON
+        );
         return MustacheTemplateEvaluator.evaluate(scriptService, parser, parameters);
     }
 
@@ -170,8 +175,7 @@ public class TemplateRoleName implements ToXContentObject, Writeable {
             return false;
         }
         final TemplateRoleName that = (TemplateRoleName) o;
-        return Objects.equals(this.template, that.template) &&
-            this.format == that.format;
+        return Objects.equals(this.template, that.template) && this.format == that.format;
     }
 
     @Override
@@ -185,21 +189,26 @@ public class TemplateRoleName implements ToXContentObject, Writeable {
     }
 
     public enum Format {
-        JSON, STRING;
+        JSON,
+        STRING;
 
         private static Format fromXContent(XContentParser parser) throws IOException {
             final XContentParser.Token token = parser.currentToken();
             if (token != XContentParser.Token.VALUE_STRING) {
-                throw new XContentParseException(parser.getTokenLocation(),
-                    "Expected [" + XContentParser.Token.VALUE_STRING + "] but found [" + token + "]");
+                throw new XContentParseException(
+                    parser.getTokenLocation(),
+                    "Expected [" + XContentParser.Token.VALUE_STRING + "] but found [" + token + "]"
+                );
             }
             final String text = parser.text();
             try {
                 return Format.valueOf(text.toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException e) {
                 String valueNames = Stream.of(values()).map(Format::formatName).collect(Collectors.joining(","));
-                throw new XContentParseException(parser.getTokenLocation(),
-                    "Invalid format [" + text + "] expected one of [" + valueNames + "]");
+                throw new XContentParseException(
+                    parser.getTokenLocation(),
+                    "Invalid format [" + text + "] expected one of [" + valueNames + "]"
+                );
             }
 
         }

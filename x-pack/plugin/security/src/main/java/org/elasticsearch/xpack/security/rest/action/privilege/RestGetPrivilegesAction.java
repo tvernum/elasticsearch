@@ -43,15 +43,23 @@ public class RestGetPrivilegesAction extends SecurityBaseRestHandler {
     public RestGetPrivilegesAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
+        controller.registerWithDeprecatedHandler(GET, "/_security/privilege/", this, GET, "/_xpack/security/privilege/", deprecationLogger);
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/privilege/", this,
-            GET, "/_xpack/security/privilege/", deprecationLogger);
+            GET,
+            "/_security/privilege/{application}",
+            this,
+            GET,
+            "/_xpack/security/privilege/{application}",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/privilege/{application}", this,
-            GET, "/_xpack/security/privilege/{application}", deprecationLogger);
-        controller.registerWithDeprecatedHandler(
-            GET, "/_security/privilege/{application}/{privilege}", this,
-            GET, "/_xpack/security/privilege/{application}/{privilege}", deprecationLogger);
+            GET,
+            "/_security/privilege/{application}/{privilege}",
+            this,
+            GET,
+            "/_xpack/security/privilege/{application}/{privilege}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -99,10 +107,7 @@ public class RestGetPrivilegesAction extends SecurityBaseRestHandler {
     }
 
     static Map<String, Set<ApplicationPrivilegeDescriptor>> groupByApplicationName(ApplicationPrivilegeDescriptor[] privileges) {
-        return Arrays.stream(privileges).collect(Collectors.toMap(
-                ApplicationPrivilegeDescriptor::getApplication,
-                Collections::singleton,
-                Sets::union
-        ));
+        return Arrays.stream(privileges)
+            .collect(Collectors.toMap(ApplicationPrivilegeDescriptor::getApplication, Collections::singleton, Sets::union));
     }
 }

@@ -60,8 +60,15 @@ public class Realms implements Iterable<Realm> {
     // a list of realms that are considered native, that is they only interact with x-pack and no 3rd party auth sources
     List<Realm> nativeRealmsOnly;
 
-    public Realms(Settings settings, Environment env, Map<String, Realm.Factory> factories, XPackLicenseState licenseState,
-                  ThreadContext threadContext, ReservedRealm reservedRealm) throws Exception {
+    public Realms(
+        Settings settings,
+        Environment env,
+        Map<String, Realm.Factory> factories,
+        XPackLicenseState licenseState,
+        ThreadContext threadContext,
+        ReservedRealm reservedRealm
+    )
+        throws Exception {
         this.settings = settings;
         this.env = env;
         this.factories = factories;
@@ -186,7 +193,7 @@ public class Realms implements Iterable<Realm> {
         List<Realm> realms = new ArrayList<>();
         List<String> kerberosRealmNames = new ArrayList<>();
         Map<String, Set<String>> nameToRealmIdentifier = new HashMap<>();
-        for (RealmConfig.RealmIdentifier identifier: realmsSettings.keySet()) {
+        for (RealmConfig.RealmIdentifier identifier : realmsSettings.keySet()) {
             Realm.Factory factory = factories.get(identifier.getType());
             if (factory == null) {
                 throw new IllegalArgumentException("unknown realm type [" + identifier.getType() + "] for realm [" + identifier + "]");
@@ -202,22 +209,34 @@ public class Realms implements Iterable<Realm> {
                 // this is an internal realm factory, let's make sure we didn't already registered one
                 // (there can only be one instance of an internal realm)
                 if (internalTypes.contains(identifier.getType())) {
-                    throw new IllegalArgumentException("multiple [" + identifier.getType() + "] realms are configured. ["
-                            + identifier.getType() + "] is an internal realm and therefore there can only be one such realm configured");
+                    throw new IllegalArgumentException(
+                        "multiple ["
+                            + identifier.getType()
+                            + "] realms are configured. ["
+                            + identifier.getType()
+                            + "] is an internal realm and therefore there can only be one such realm configured"
+                    );
                 }
                 internalTypes.add(identifier.getType());
             }
             if (KerberosRealmSettings.TYPE.equals(identifier.getType())) {
                 kerberosRealmNames.add(identifier.getName());
                 if (kerberosRealmNames.size() > 1) {
-                    throw new IllegalArgumentException("multiple realms " + kerberosRealmNames.toString() + " configured of type ["
-                        + identifier.getType() + "], [" + identifier.getType() + "] can only have one such realm " +
-                        "configured");
+                    throw new IllegalArgumentException(
+                        "multiple realms "
+                            + kerberosRealmNames.toString()
+                            + " configured of type ["
+                            + identifier.getType()
+                            + "], ["
+                            + identifier.getType()
+                            + "] can only have one such realm "
+                            + "configured"
+                    );
                 }
             }
             Realm realm = factory.create(config);
-            nameToRealmIdentifier.computeIfAbsent(realm.name(), k ->
-                new HashSet<>()).add(RealmSettings.realmSettingPrefix(realm.type()) + realm.name());
+            nameToRealmIdentifier.computeIfAbsent(realm.name(), k -> new HashSet<>())
+                .add(RealmSettings.realmSettingPrefix(realm.type()) + realm.name());
             realms.add(realm);
         }
 
@@ -229,7 +248,8 @@ public class Realms implements Iterable<Realm> {
         }
         // always add built in first!
         realms.add(0, reservedRealm);
-        String duplicateRealms = nameToRealmIdentifier.entrySet().stream()
+        String duplicateRealms = nameToRealmIdentifier.entrySet()
+            .stream()
             .filter(entry -> entry.getValue().size() > 1)
             .map(entry -> entry.getKey() + ": " + entry.getValue())
             .collect(Collectors.joining("; "));
@@ -278,26 +298,25 @@ public class Realms implements Iterable<Realm> {
         } else {
             for (Realm realm : realmList) {
                 realm.usageStats(ActionListener.wrap(stats -> {
-                        if (failed.get() == false) {
-                            synchronized (realmMap) {
-                                realmMap.compute(realm.type(), (key, value) -> {
-                                    if (value == null) {
-                                        Object realmTypeUsage = convertToMapOfLists(stats);
-                                        return realmTypeUsage;
-                                    }
-                                    assert value instanceof Map;
-                                    combineMaps((Map<String, Object>) value, stats);
-                                    return value;
-                                });
-                            }
-                            doCountDown.run();
+                    if (failed.get() == false) {
+                        synchronized (realmMap) {
+                            realmMap.compute(realm.type(), (key, value) -> {
+                                if (value == null) {
+                                    Object realmTypeUsage = convertToMapOfLists(stats);
+                                    return realmTypeUsage;
+                                }
+                                assert value instanceof Map;
+                                combineMaps((Map<String, Object>) value, stats);
+                                return value;
+                            });
                         }
-                    },
-                    e -> {
-                        if (failed.compareAndSet(false, true)) {
-                            listener.onFailure(e);
-                        }
-                    }));
+                        doCountDown.run();
+                    }
+                }, e -> {
+                    if (failed.compareAndSet(false, true)) {
+                        listener.onFailure(e);
+                    }
+                }));
             }
         }
     }
@@ -305,15 +324,29 @@ public class Realms implements Iterable<Realm> {
     private void addNativeRealms(List<Realm> realms) throws Exception {
         Realm.Factory fileRealm = factories.get(FileRealmSettings.TYPE);
         if (fileRealm != null) {
-            realms.add(fileRealm.create(new RealmConfig(
-                    new RealmConfig.RealmIdentifier(FileRealmSettings.TYPE, "default_" + FileRealmSettings.TYPE),
-                    settings, env, threadContext)));
+            realms.add(
+                fileRealm.create(
+                    new RealmConfig(
+                        new RealmConfig.RealmIdentifier(FileRealmSettings.TYPE, "default_" + FileRealmSettings.TYPE),
+                        settings,
+                        env,
+                        threadContext
+                    )
+                )
+            );
         }
         Realm.Factory indexRealmFactory = factories.get(NativeRealmSettings.TYPE);
         if (indexRealmFactory != null) {
-            realms.add(indexRealmFactory.create(new RealmConfig(
-                    new RealmConfig.RealmIdentifier(NativeRealmSettings.TYPE, "default_" + NativeRealmSettings.TYPE),
-                    settings, env, threadContext)));
+            realms.add(
+                indexRealmFactory.create(
+                    new RealmConfig(
+                        new RealmConfig.RealmIdentifier(NativeRealmSettings.TYPE, "default_" + NativeRealmSettings.TYPE),
+                        settings,
+                        env,
+                        threadContext
+                    )
+                )
+            );
         }
     }
 

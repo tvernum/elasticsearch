@@ -33,15 +33,21 @@ import static org.elasticsearch.rest.RestRequest.Method.DELETE;
  */
 public class RestDeletePrivilegesAction extends SecurityBaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(RestDeletePrivilegesAction.class));
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestDeletePrivilegesAction.class)
+    );
 
     public RestDeletePrivilegesAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            DELETE, "/_security/privilege/{application}/{privilege}", this,
-            DELETE, "/_xpack/security/privilege/{application}/{privilege}", deprecationLogger);
+            DELETE,
+            "/_security/privilege/{application}/{privilege}",
+            this,
+            DELETE,
+            "/_xpack/security/privilege/{application}/{privilege}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -54,8 +60,7 @@ public class RestDeletePrivilegesAction extends SecurityBaseRestHandler {
         final String application = request.param("application");
         final String[] privileges = request.paramAsStringArray("privilege", null);
         final String refresh = request.param("refresh");
-        return channel -> new DeletePrivilegesRequestBuilder(client)
-            .application(application)
+        return channel -> new DeletePrivilegesRequestBuilder(client).application(application)
             .privileges(privileges)
             .setRefreshPolicy(refresh)
             .execute(new RestBuilderListener<>(channel) {

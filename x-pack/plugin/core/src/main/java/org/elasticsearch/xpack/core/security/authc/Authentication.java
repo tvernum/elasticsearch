@@ -41,8 +41,14 @@ public class Authentication implements ToXContentObject {
         this(user, authenticatedBy, lookedUpBy, version, AuthenticationType.REALM, Collections.emptyMap());
     }
 
-    public Authentication(User user, RealmRef authenticatedBy, RealmRef lookedUpBy, Version version,
-                          AuthenticationType type, Map<String, Object> metadata) {
+    public Authentication(
+        User user,
+        RealmRef authenticatedBy,
+        RealmRef lookedUpBy,
+        Version version,
+        AuthenticationType type,
+        Map<String, Object> metadata
+    ) {
         this.user = Objects.requireNonNull(user);
         this.authenticatedBy = Objects.requireNonNull(authenticatedBy);
         this.lookedUpBy = lookedUpBy;
@@ -106,8 +112,7 @@ public class Authentication implements ToXContentObject {
         return context.getTransient(AuthenticationField.AUTHENTICATION_KEY);
     }
 
-    static Authentication deserializeHeaderAndPutInContext(String header, ThreadContext ctx)
-            throws IOException, IllegalArgumentException {
+    static Authentication deserializeHeaderAndPutInContext(String header, ThreadContext ctx) throws IOException, IllegalArgumentException {
         assert ctx.getTransient(AuthenticationField.AUTHENTICATION_KEY) == null;
 
         Authentication authentication = decode(header);
@@ -166,15 +171,17 @@ public class Authentication implements ToXContentObject {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Authentication that = (Authentication) o;
-        return user.equals(that.user) &&
-            authenticatedBy.equals(that.authenticatedBy) &&
-            Objects.equals(lookedUpBy, that.lookedUpBy) &&
-            version.equals(that.version) &&
-            type == that.type &&
-            metadata.equals(that.metadata);
+        return user.equals(that.user)
+            && authenticatedBy.equals(that.authenticatedBy)
+            && Objects.equals(lookedUpBy, that.lookedUpBy)
+            && version.equals(that.version)
+            && type == that.type
+            && metadata.equals(that.metadata);
     }
 
     @Override
@@ -209,10 +216,11 @@ public class Authentication implements ToXContentObject {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("Authentication[")
-            .append(user)
-            .append(",type=").append(type)
-            .append(",by=").append(authenticatedBy);
+        StringBuilder builder = new StringBuilder("Authentication[").append(user)
+            .append(",type=")
+            .append(type)
+            .append(",by=")
+            .append(authenticatedBy);
         if (lookedUpBy != null) {
             builder.append(",lookup=").append(lookedUpBy);
         }
@@ -258,13 +266,17 @@ public class Authentication implements ToXContentObject {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
 
             RealmRef realmRef = (RealmRef) o;
 
-            if (!nodeName.equals(realmRef.nodeName)) return false;
-            if (!name.equals(realmRef.name)) return false;
+            if (!nodeName.equals(realmRef.nodeName))
+                return false;
+            if (!name.equals(realmRef.name))
+                return false;
             return type.equals(realmRef.type);
         }
 
@@ -290,4 +302,3 @@ public class Authentication implements ToXContentObject {
         INTERNAL
     }
 }
-

@@ -55,8 +55,7 @@ public class DLSRoleQueryValidatorTests extends ESTestCase {
         e = expectThrows(IllegalArgumentException.class, () -> DLSRoleQueryValidator.verifyRoleQuery(queryBuilder8));
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
 
-        QueryBuilder queryBuilder9 = new BoostingQueryBuilder(new GeoShapeQueryBuilder("field", "_id"),
-            new MatchAllQueryBuilder());
+        QueryBuilder queryBuilder9 = new BoostingQueryBuilder(new GeoShapeQueryBuilder("field", "_id"), new MatchAllQueryBuilder());
         e = expectThrows(IllegalArgumentException.class, () -> DLSRoleQueryValidator.verifyRoleQuery(queryBuilder9));
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
     }

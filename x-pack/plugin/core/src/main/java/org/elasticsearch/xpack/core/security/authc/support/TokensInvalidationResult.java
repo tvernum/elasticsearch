@@ -34,8 +34,11 @@ public class TokensInvalidationResult implements ToXContentObject, Writeable {
     private final List<String> previouslyInvalidatedTokens;
     private final List<ElasticsearchException> errors;
 
-    public TokensInvalidationResult(List<String> invalidatedTokens, List<String> previouslyInvalidatedTokens,
-                                    @Nullable List<ElasticsearchException> errors) {
+    public TokensInvalidationResult(
+        List<String> invalidatedTokens,
+        List<String> previouslyInvalidatedTokens,
+        @Nullable List<ElasticsearchException> errors
+    ) {
         Objects.requireNonNull(invalidatedTokens, "invalidated_tokens must be provided");
         this.invalidatedTokens = invalidatedTokens;
         Objects.requireNonNull(previouslyInvalidatedTokens, "previously_invalidated_tokens must be provided");
@@ -59,7 +62,6 @@ public class TokensInvalidationResult implements ToXContentObject, Writeable {
     public static TokensInvalidationResult emptyResult() {
         return new TokensInvalidationResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
-
 
     public List<String> getInvalidatedTokens() {
         return invalidatedTokens;

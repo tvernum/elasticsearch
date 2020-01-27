@@ -21,6 +21,7 @@ public class SetEnabledResponse extends ActionResponse {
     public SetEnabledResponse(StreamInput in) throws IOException {
         super(in);
     }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {}
 }

@@ -73,7 +73,8 @@ public class SecurityContext {
             lookedUpBy = null;
         }
         setAuthentication(
-            new Authentication(user, authenticatedBy, lookedUpBy, version, AuthenticationType.INTERNAL, Collections.emptyMap()));
+            new Authentication(user, authenticatedBy, lookedUpBy, version, AuthenticationType.INTERNAL, Collections.emptyMap())
+        );
     }
 
     /** Writes the authentication to the thread context */
@@ -105,8 +106,16 @@ public class SecurityContext {
         final StoredContext original = threadContext.newStoredContext(true);
         final Authentication authentication = Objects.requireNonNull(userSettings.getAuthentication());
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
-            setAuthentication(new Authentication(authentication.getUser(), authentication.getAuthenticatedBy(),
-                authentication.getLookedUpBy(), version, authentication.getAuthenticationType(), authentication.getMetadata()));
+            setAuthentication(
+                new Authentication(
+                    authentication.getUser(),
+                    authentication.getAuthenticatedBy(),
+                    authentication.getLookedUpBy(),
+                    version,
+                    authentication.getAuthenticationType(),
+                    authentication.getMetadata()
+                )
+            );
             consumer.accept(original);
         }
     }

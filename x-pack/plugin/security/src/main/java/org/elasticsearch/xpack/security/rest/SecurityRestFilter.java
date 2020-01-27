@@ -35,8 +35,13 @@ public class SecurityRestFilter implements RestHandler {
     private final ThreadContext threadContext;
     private final boolean extractClientCertificate;
 
-    public SecurityRestFilter(XPackLicenseState licenseState, ThreadContext threadContext, AuthenticationService service,
-                              RestHandler restHandler, boolean extractClientCertificate) {
+    public SecurityRestFilter(
+        XPackLicenseState licenseState,
+        ThreadContext threadContext,
+        AuthenticationService service,
+        RestHandler restHandler,
+        boolean extractClientCertificate
+    ) {
         this.restHandler = restHandler;
         this.service = service;
         this.licenseState = licenseState;
@@ -52,24 +57,25 @@ public class SecurityRestFilter implements RestHandler {
                 HttpChannel httpChannel = request.getHttpChannel();
                 SSLEngineUtils.extractClientCertificates(logger, threadContext, httpChannel);
             }
-            service.authenticate(maybeWrapRestRequest(request), ActionListener.wrap(
-                authentication -> {
-                    if (authentication == null) {
-                        logger.trace("No authentication available for REST request [{}]", request.uri());
-                    } else {
-                        logger.trace("Authenticated REST request [{}] as {}", request.uri(), authentication);
-                    }
-                    RemoteHostHeader.process(request, threadContext);
-                    restHandler.handleRequest(request, channel, client);
-                }, e -> {
-                    logger.debug(new ParameterizedMessage("Authentication failed for REST request [{}]", request.uri()), e);
-                    try {
-                        channel.sendResponse(new BytesRestResponse(channel, e));
-                    } catch (Exception inner) {
-                        inner.addSuppressed(e);
-                        logger.error((Supplier<?>) () ->
-                            new ParameterizedMessage("failed to send failure response for uri [{}]", request.uri()), inner);
-                    }
+            service.authenticate(maybeWrapRestRequest(request), ActionListener.wrap(authentication -> {
+                if (authentication == null) {
+                    logger.trace("No authentication available for REST request [{}]", request.uri());
+                } else {
+                    logger.trace("Authenticated REST request [{}] as {}", request.uri(), authentication);
+                }
+                RemoteHostHeader.process(request, threadContext);
+                restHandler.handleRequest(request, channel, client);
+            }, e -> {
+                logger.debug(new ParameterizedMessage("Authentication failed for REST request [{}]", request.uri()), e);
+                try {
+                    channel.sendResponse(new BytesRestResponse(channel, e));
+                } catch (Exception inner) {
+                    inner.addSuppressed(e);
+                    logger.error(
+                        (Supplier<?>) () -> new ParameterizedMessage("failed to send failure response for uri [{}]", request.uri()),
+                        inner
+                    );
+                }
             }));
         } else {
             restHandler.handleRequest(request, channel, client);
@@ -93,7 +99,7 @@ public class SecurityRestFilter implements RestHandler {
 
     private RestRequest maybeWrapRestRequest(RestRequest restRequest) throws IOException {
         if (restHandler instanceof RestRequestFilter) {
-            return ((RestRequestFilter)restHandler).getFilteredRequest(restRequest);
+            return ((RestRequestFilter) restHandler).getFilteredRequest(restRequest);
         }
         return restRequest;
     }

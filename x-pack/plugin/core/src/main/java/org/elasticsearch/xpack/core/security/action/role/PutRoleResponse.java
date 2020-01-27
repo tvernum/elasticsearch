@@ -25,7 +25,7 @@ public class PutRoleResponse extends ActionResponse implements ToXContentObject 
         super(in);
         this.created = in.readBoolean();
     }
-    
+
     public PutRoleResponse(boolean created) {
         this.created = created;
     }
@@ -45,4 +45,4 @@ public class PutRoleResponse extends ActionResponse implements ToXContentObject 
         out.writeBoolean(created);
     }
 
-    }
+}

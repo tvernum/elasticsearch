@@ -36,8 +36,13 @@ public class RestDeleteUserAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            DELETE, "/_security/user/{username}", this,
-            DELETE, "/_xpack/security/user/{username}", deprecationLogger);
+            DELETE,
+            "/_security/user/{username}",
+            this,
+            DELETE,
+            "/_xpack/security/user/{username}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -49,16 +54,15 @@ public class RestDeleteUserAction extends SecurityBaseRestHandler {
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         final String username = request.param("username");
         final String refresh = request.param("refresh");
-        return channel -> new DeleteUserRequestBuilder(client)
-            .username(username)
+        return channel -> new DeleteUserRequestBuilder(client).username(username)
             .setRefreshPolicy(refresh)
             .execute(new RestBuilderListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(DeleteUserResponse response, XContentBuilder builder) throws Exception {
-                    return new BytesRestResponse(response.found() ? RestStatus.OK : RestStatus.NOT_FOUND,
-                            builder.startObject()
-                                    .field("found", response.found())
-                                    .endObject());
+                    return new BytesRestResponse(
+                        response.found() ? RestStatus.OK : RestStatus.NOT_FOUND,
+                        builder.startObject().field("found", response.found()).endObject()
+                    );
                 }
             });
     }

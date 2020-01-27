@@ -62,4 +62,4 @@ public final class SamlAuthenticateResponse extends ActionResponse {
         out.writeTimeValue(expiresIn);
     }
 
-    }
+}

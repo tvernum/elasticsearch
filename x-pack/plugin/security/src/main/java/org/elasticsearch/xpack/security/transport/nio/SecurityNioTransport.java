@@ -71,12 +71,28 @@ public class SecurityNioTransport extends NioTransport {
     private final Map<String, SSLConfiguration> profileConfiguration;
     private final boolean sslEnabled;
 
-    public SecurityNioTransport(Settings settings, Version version, ThreadPool threadPool, NetworkService networkService,
-                                PageCacheRecycler pageCacheRecycler, NamedWriteableRegistry namedWriteableRegistry,
-                                CircuitBreakerService circuitBreakerService, @Nullable final IPFilter ipFilter,
-                                SSLService sslService, NioGroupFactory groupFactory) {
-        super(settings, version, threadPool, networkService, pageCacheRecycler, namedWriteableRegistry, circuitBreakerService,
-            groupFactory);
+    public SecurityNioTransport(
+        Settings settings,
+        Version version,
+        ThreadPool threadPool,
+        NetworkService networkService,
+        PageCacheRecycler pageCacheRecycler,
+        NamedWriteableRegistry namedWriteableRegistry,
+        CircuitBreakerService circuitBreakerService,
+        @Nullable final IPFilter ipFilter,
+        SSLService sslService,
+        NioGroupFactory groupFactory
+    ) {
+        super(
+            settings,
+            version,
+            threadPool,
+            networkService,
+            pageCacheRecycler,
+            namedWriteableRegistry,
+            circuitBreakerService,
+            groupFactory
+        );
         this.exceptionHandler = new SecurityTransportExceptionHandler(logger, lifecycle, (c, e) -> super.onException(c, e));
         this.ipFilter = ipFilter;
         this.sslService = sslService;
@@ -154,8 +170,16 @@ public class SecurityNioTransport extends NioTransport {
             if (sslEnabled) {
                 SSLDriver sslDriver = new SSLDriver(createSSLEngine(socketConfig), pageAllocator, isClient);
                 InboundChannelBuffer applicationBuffer = new InboundChannelBuffer(pageAllocator);
-                context = new SSLChannelContext(nioChannel, selector, socketConfig, exceptionHandler, sslDriver, handler, networkBuffer,
-                    applicationBuffer);
+                context = new SSLChannelContext(
+                    nioChannel,
+                    selector,
+                    socketConfig,
+                    exceptionHandler,
+                    sslDriver,
+                    handler,
+                    networkBuffer,
+                    applicationBuffer
+                );
             } else {
                 context = new BytesChannelContext(nioChannel, selector, socketConfig, exceptionHandler, handler, networkBuffer);
             }
@@ -165,8 +189,11 @@ public class SecurityNioTransport extends NioTransport {
         }
 
         @Override
-        public NioTcpServerChannel createServerChannel(NioSelector selector, ServerSocketChannel channel,
-                                                       Config.ServerSocket socketConfig) {
+        public NioTcpServerChannel createServerChannel(
+            NioSelector selector,
+            ServerSocketChannel channel,
+            Config.ServerSocket socketConfig
+        ) {
             NioTcpServerChannel nioChannel = new NioTcpServerChannel(channel);
             Consumer<Exception> exceptionHandler = (e) -> onServerException(nioChannel, e);
             Consumer<NioSocketChannel> acceptor = SecurityNioTransport.this::acceptChannel;
@@ -201,8 +228,11 @@ public class SecurityNioTransport extends NioTransport {
         }
 
         @Override
-        public NioTcpServerChannel createServerChannel(NioSelector selector, ServerSocketChannel channel,
-                                                       Config.ServerSocket socketConfig) {
+        public NioTcpServerChannel createServerChannel(
+            NioSelector selector,
+            ServerSocketChannel channel,
+            Config.ServerSocket socketConfig
+        ) {
             throw new AssertionError("Cannot create TcpServerChannel with client factory");
         }
 

@@ -43,10 +43,15 @@ public class TransportHasPrivilegesAction extends HandledTransportAction<HasPriv
     private final NamedXContentRegistry xContentRegistry;
 
     @Inject
-    public TransportHasPrivilegesAction(ThreadPool threadPool, TransportService transportService,
-                                        ActionFilters actionFilters, AuthorizationService authorizationService,
-                                        NativePrivilegeStore privilegeStore, SecurityContext context,
-                                        NamedXContentRegistry xContentRegistry) {
+    public TransportHasPrivilegesAction(
+        ThreadPool threadPool,
+        TransportService transportService,
+        ActionFilters actionFilters,
+        AuthorizationService authorizationService,
+        NativePrivilegeStore privilegeStore,
+        SecurityContext context,
+        NamedXContentRegistry xContentRegistry
+    ) {
         super(HasPrivilegesAction.NAME, transportService, actionFilters, HasPrivilegesRequest::new);
         this.threadPool = threadPool;
         this.authorizationService = authorizationService;
@@ -72,19 +77,31 @@ public class TransportHasPrivilegesAction extends HandledTransportAction<HasPriv
                 BytesReference query = indicesPrivileges[i].getQuery();
                 if (query != null) {
                     listener.onFailure(
-                        new IllegalArgumentException("users may only check the index privileges without any DLS role query"));
+                        new IllegalArgumentException("users may only check the index privileges without any DLS role query")
+                    );
                     return;
                 }
             }
         }
 
-        resolveApplicationPrivileges(request, ActionListener.wrap(applicationPrivilegeDescriptors ->
-                authorizationService.checkPrivileges(authentication, request, applicationPrivilegeDescriptors, listener),
-            listener::onFailure));
+        resolveApplicationPrivileges(
+            request,
+            ActionListener.wrap(
+                applicationPrivilegeDescriptors -> authorizationService.checkPrivileges(
+                    authentication,
+                    request,
+                    applicationPrivilegeDescriptors,
+                    listener
+                ),
+                listener::onFailure
+            )
+        );
     }
 
-    private void resolveApplicationPrivileges(HasPrivilegesRequest request,
-                                              ActionListener<Collection<ApplicationPrivilegeDescriptor>> listener) {
+    private void resolveApplicationPrivileges(
+        HasPrivilegesRequest request,
+        ActionListener<Collection<ApplicationPrivilegeDescriptor>> listener
+    ) {
         final Set<String> applications = getApplicationNames(request);
         privilegeStore.getPrivileges(applications, null, listener);
     }

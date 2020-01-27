@@ -36,4 +36,4 @@ public final class SamlLogoutResponse extends ActionResponse {
         out.writeString(redirectUrl);
     }
 
-    }
+}

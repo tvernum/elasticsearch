@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
-
 public class Licensing implements ActionPlugin {
 
     public static final String NAME = "license";
@@ -49,8 +48,9 @@ public class Licensing implements ActionPlugin {
     public List<NamedXContentRegistry.Entry> getNamedXContent() {
         List<NamedXContentRegistry.Entry> entries = new ArrayList<>();
         // Metadata
-        entries.add(new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(LicensesMetaData.TYPE),
-                LicensesMetaData::fromXContent));
+        entries.add(
+            new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(LicensesMetaData.TYPE), LicensesMetaData::fromXContent)
+        );
         return entries;
     }
 
@@ -60,19 +60,27 @@ public class Licensing implements ActionPlugin {
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
-        return Arrays.asList(new ActionHandler<>(PutLicenseAction.INSTANCE, TransportPutLicenseAction.class),
-                new ActionHandler<>(GetLicenseAction.INSTANCE, TransportGetLicenseAction.class),
-                new ActionHandler<>(DeleteLicenseAction.INSTANCE, TransportDeleteLicenseAction.class),
-                new ActionHandler<>(PostStartTrialAction.INSTANCE, TransportPostStartTrialAction.class),
-                new ActionHandler<>(GetTrialStatusAction.INSTANCE, TransportGetTrialStatusAction.class),
-                new ActionHandler<>(PostStartBasicAction.INSTANCE, TransportPostStartBasicAction.class),
-                new ActionHandler<>(GetBasicStatusAction.INSTANCE, TransportGetBasicStatusAction.class));
+        return Arrays.asList(
+            new ActionHandler<>(PutLicenseAction.INSTANCE, TransportPutLicenseAction.class),
+            new ActionHandler<>(GetLicenseAction.INSTANCE, TransportGetLicenseAction.class),
+            new ActionHandler<>(DeleteLicenseAction.INSTANCE, TransportDeleteLicenseAction.class),
+            new ActionHandler<>(PostStartTrialAction.INSTANCE, TransportPostStartTrialAction.class),
+            new ActionHandler<>(GetTrialStatusAction.INSTANCE, TransportGetTrialStatusAction.class),
+            new ActionHandler<>(PostStartBasicAction.INSTANCE, TransportPostStartBasicAction.class),
+            new ActionHandler<>(GetBasicStatusAction.INSTANCE, TransportGetBasicStatusAction.class)
+        );
     }
 
     @Override
-    public List<RestHandler> getRestHandlers(Settings settings, RestController restController, ClusterSettings clusterSettings,
-            IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(
+        Settings settings,
+        RestController restController,
+        ClusterSettings clusterSettings,
+        IndexScopedSettings indexScopedSettings,
+        SettingsFilter settingsFilter,
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        Supplier<DiscoveryNodes> nodesInCluster
+    ) {
         List<RestHandler> handlers = new ArrayList<>();
         handlers.add(new RestGetLicenseAction(restController));
         handlers.add(new RestPutLicenseAction(restController));

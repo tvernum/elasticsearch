@@ -30,22 +30,20 @@ public class LicenseScheduleTests extends ESTestCase {
     }
 
     public void testGraceLicenseSchedule() throws Exception {
-        long triggeredTime = license.expiryDate() + between(1,
-                ((int) LicenseService.GRACE_PERIOD_DURATION.getMillis()));
-        assertThat(schedule.nextScheduledTimeAfter(license.issueDate(), triggeredTime),
-                equalTo(license.expiryDate() + LicenseService.GRACE_PERIOD_DURATION.getMillis()));
+        long triggeredTime = license.expiryDate() + between(1, ((int) LicenseService.GRACE_PERIOD_DURATION.getMillis()));
+        assertThat(
+            schedule.nextScheduledTimeAfter(license.issueDate(), triggeredTime),
+            equalTo(license.expiryDate() + LicenseService.GRACE_PERIOD_DURATION.getMillis())
+        );
     }
 
     public void testExpiredLicenseSchedule() throws Exception {
-        long triggeredTime = license.expiryDate() + LicenseService.GRACE_PERIOD_DURATION.getMillis() +
-                randomIntBetween(1, 1000);
-        assertThat(schedule.nextScheduledTimeAfter(license.issueDate(), triggeredTime),
-                equalTo(-1L));
+        long triggeredTime = license.expiryDate() + LicenseService.GRACE_PERIOD_DURATION.getMillis() + randomIntBetween(1, 1000);
+        assertThat(schedule.nextScheduledTimeAfter(license.issueDate(), triggeredTime), equalTo(-1L));
     }
 
     public void testInvalidLicenseSchedule() throws Exception {
         long triggeredTime = license.issueDate() - randomIntBetween(1, 1000);
-        assertThat(schedule.nextScheduledTimeAfter(triggeredTime, triggeredTime),
-                equalTo(license.issueDate()));
+        assertThat(schedule.nextScheduledTimeAfter(triggeredTime, triggeredTime), equalTo(license.issueDate()));
     }
 }

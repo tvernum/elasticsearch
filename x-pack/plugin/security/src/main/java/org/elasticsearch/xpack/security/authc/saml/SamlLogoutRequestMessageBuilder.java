@@ -23,8 +23,13 @@ class SamlLogoutRequestMessageBuilder extends SamlMessageBuilder {
     private final NameID nameId;
     private final String session;
 
-    SamlLogoutRequestMessageBuilder(Clock clock, SpConfiguration serviceProvider, EntityDescriptor identityProvider,
-                                    NameID nameId, String session) {
+    SamlLogoutRequestMessageBuilder(
+        Clock clock,
+        SpConfiguration serviceProvider,
+        EntityDescriptor identityProvider,
+        NameID nameId,
+        String session
+    ) {
         super(identityProvider, serviceProvider, clock);
         this.nameId = nameId;
         this.session = session;

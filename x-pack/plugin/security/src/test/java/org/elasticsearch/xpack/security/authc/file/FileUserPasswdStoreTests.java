@@ -55,8 +55,10 @@ public class FileUserPasswdStoreTests extends ESTestCase {
         settings = Settings.builder()
             .put("resource.reload.interval.high", "100ms")
             .put("path.home", createTempDir())
-            .put("xpack.security.authc.password_hashing.algorithm", randomFrom("bcrypt", "bcrypt11", "pbkdf2", "pbkdf2_1000",
-                "pbkdf2_50000"))
+            .put(
+                "xpack.security.authc.password_hashing.algorithm",
+                randomFrom("bcrypt", "bcrypt11", "pbkdf2", "pbkdf2_1000", "pbkdf2_50000")
+            )
             .build();
         env = TestEnvironment.newEnvironment(settings);
         threadPool = new TestThreadPool("test");
@@ -93,7 +95,7 @@ public class FileUserPasswdStoreTests extends ESTestCase {
         final CountDownLatch latch = new CountDownLatch(1);
 
         FileUserPasswdStore store = new FileUserPasswdStore(config, watcherService, latch::countDown);
-        //Test users share the hashing algorithm name for convenience
+        // Test users share the hashing algorithm name for convenience
         String username = settings.get("xpack.security.authc.password_hashing.algorithm");
         User user = new User(username);
         assertThat(store.userExists(username), is(true));
@@ -149,7 +151,7 @@ public class FileUserPasswdStoreTests extends ESTestCase {
         final CountDownLatch latch = new CountDownLatch(1);
 
         FileUserPasswdStore store = new FileUserPasswdStore(config, watcherService, latch::countDown);
-        //Test users share the hashing algorithm name for convenience
+        // Test users share the hashing algorithm name for convenience
         String username = settings.get("xpack.security.authc.password_hashing.algorithm");
         User user = new User(username);
         final AuthenticationResult result = store.verifyPassword(username, new SecureString("test123"), () -> user);
@@ -186,14 +188,20 @@ public class FileUserPasswdStoreTests extends ESTestCase {
         assertThat(users.get("sha"), notNullValue());
         assertThat(new String(users.get("sha")), equalTo("{SHA}cojt0Pw//L6ToM8G41aOKFIWh7w="));
         assertThat(users.get("pbkdf2"), notNullValue());
-        assertThat(new String(users.get("pbkdf2")),
-            equalTo("{PBKDF2}10000$ekcItXk4jtK2bBjbVk0rZuWRjT0DoQqQJOIfyMeLIxg=$RA2/Nn1jRi8QskRS5IVotCV0FBO6M8DlNXC37GKa/8c="));
+        assertThat(
+            new String(users.get("pbkdf2")),
+            equalTo("{PBKDF2}10000$ekcItXk4jtK2bBjbVk0rZuWRjT0DoQqQJOIfyMeLIxg=$RA2/Nn1jRi8QskRS5IVotCV0FBO6M8DlNXC37GKa/8c=")
+        );
         assertThat(users.get("pbkdf2_1000"), notNullValue());
-        assertThat(new String(users.get("pbkdf2_1000")),
-            equalTo("{PBKDF2}1000$32yPZSShxuKYAl47ip0g6VwbFrD8tvFJuQCoRPGhXC8=$cXAE1BkBXRmkv7pQA7fw4TZ1+rFWS2/nZGeA3kL1Eu8="));
+        assertThat(
+            new String(users.get("pbkdf2_1000")),
+            equalTo("{PBKDF2}1000$32yPZSShxuKYAl47ip0g6VwbFrD8tvFJuQCoRPGhXC8=$cXAE1BkBXRmkv7pQA7fw4TZ1+rFWS2/nZGeA3kL1Eu8=")
+        );
         assertThat(users.get("pbkdf2_50000"), notNullValue());
-        assertThat(new String(users.get("pbkdf2_50000")),
-            equalTo("{PBKDF2}50000$z1CLJt0MEFjkIK5iEfgvfnA6xq7lF25uasspsTKSo5Q=$XxCVLbaKDimOdyWgLCLJiyoiWpA/XDMe/xtVgn1r5Sg="));
+        assertThat(
+            new String(users.get("pbkdf2_50000")),
+            equalTo("{PBKDF2}50000$z1CLJt0MEFjkIK5iEfgvfnA6xq7lF25uasspsTKSo5Q=$XxCVLbaKDimOdyWgLCLJiyoiWpA/XDMe/xtVgn1r5Sg=")
+        );
     }
 
     public void testParseFile_Empty() throws Exception {

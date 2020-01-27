@@ -43,8 +43,13 @@ public final class TransportCreateTokenAction extends HandledTransportAction<Cre
     private final AuthenticationService authenticationService;
 
     @Inject
-    public TransportCreateTokenAction(ThreadPool threadPool, TransportService transportService, ActionFilters actionFilters,
-                                      TokenService tokenService, AuthenticationService authenticationService) {
+    public TransportCreateTokenAction(
+        ThreadPool threadPool,
+        TransportService transportService,
+        ActionFilters actionFilters,
+        TokenService tokenService,
+        AuthenticationService authenticationService
+    ) {
         super(CreateTokenAction.NAME, transportService, actionFilters, CreateTokenRequest::new);
         this.threadPool = threadPool;
         this.tokenService = tokenService;
@@ -65,8 +70,9 @@ public final class TransportCreateTokenAction extends HandledTransportAction<Cre
                 createToken(type, request, authentication, authentication, false, listener);
                 break;
             default:
-                listener.onFailure(new IllegalStateException("grant_type [" + request.getGrantType() +
-                    "] is not supported by the create token action"));
+                listener.onFailure(
+                    new IllegalStateException("grant_type [" + request.getGrantType() + "] is not supported by the create token action")
+                );
                 break;
         }
     }
@@ -76,29 +82,32 @@ public final class TransportCreateTokenAction extends HandledTransportAction<Cre
         try (ThreadContext.StoredContext ignore = threadPool.getThreadContext().stashContext()) {
             final AuthenticationToken authToken = extractAuthenticationToken(grantType, request, listener);
             if (authToken == null) {
-                listener.onFailure(new IllegalStateException(
-                        "grant_type [" + request.getGrantType() + "] is not supported by the create token action"));
+                listener.onFailure(
+                    new IllegalStateException("grant_type [" + request.getGrantType() + "] is not supported by the create token action")
+                );
                 return;
             }
 
-            authenticationService.authenticate(CreateTokenAction.NAME, request, authToken,
-                ActionListener.wrap(authentication -> {
-                    clearCredentialsFromRequest(grantType, request);
+            authenticationService.authenticate(CreateTokenAction.NAME, request, authToken, ActionListener.wrap(authentication -> {
+                clearCredentialsFromRequest(grantType, request);
 
-                    if (authentication != null) {
-                        createToken(grantType, request, authentication, originatingAuthentication, true, listener);
-                    } else {
-                        listener.onFailure(new UnsupportedOperationException("cannot create token if authentication is not allowed"));
-                    }
-                }, e -> {
-                    clearCredentialsFromRequest(grantType, request);
-                    listener.onFailure(e);
-                }));
+                if (authentication != null) {
+                    createToken(grantType, request, authentication, originatingAuthentication, true, listener);
+                } else {
+                    listener.onFailure(new UnsupportedOperationException("cannot create token if authentication is not allowed"));
+                }
+            }, e -> {
+                clearCredentialsFromRequest(grantType, request);
+                listener.onFailure(e);
+            }));
         }
     }
 
-    private AuthenticationToken extractAuthenticationToken(GrantType grantType, CreateTokenRequest request,
-            ActionListener<CreateTokenResponse> listener) {
+    private AuthenticationToken extractAuthenticationToken(
+        GrantType grantType,
+        CreateTokenRequest request,
+        ActionListener<CreateTokenResponse> listener
+    ) {
         AuthenticationToken authToken = null;
         if (grantType == GrantType.PASSWORD) {
             authToken = new UsernamePasswordToken(request.getUsername(), request.getPassword());
@@ -124,16 +133,32 @@ public final class TransportCreateTokenAction extends HandledTransportAction<Cre
         }
     }
 
-    private void createToken(GrantType grantType, CreateTokenRequest request, Authentication authentication, Authentication originatingAuth,
-            boolean includeRefreshToken, ActionListener<CreateTokenResponse> listener) {
-        tokenService.createOAuth2Tokens(authentication, originatingAuth, Collections.emptyMap(), includeRefreshToken,
-                ActionListener.wrap(tuple -> {
-                    final String scope = getResponseScopeValue(request.getScope());
-                    final String base64AuthenticateResponse = (grantType == GrantType.KERBEROS) ? extractOutToken() : null;
-                    final CreateTokenResponse response = new CreateTokenResponse(tuple.v1(), tokenService.getExpirationDelay(), scope,
-                            tuple.v2(), base64AuthenticateResponse);
-                    listener.onResponse(response);
-                }, listener::onFailure));
+    private void createToken(
+        GrantType grantType,
+        CreateTokenRequest request,
+        Authentication authentication,
+        Authentication originatingAuth,
+        boolean includeRefreshToken,
+        ActionListener<CreateTokenResponse> listener
+    ) {
+        tokenService.createOAuth2Tokens(
+            authentication,
+            originatingAuth,
+            Collections.emptyMap(),
+            includeRefreshToken,
+            ActionListener.wrap(tuple -> {
+                final String scope = getResponseScopeValue(request.getScope());
+                final String base64AuthenticateResponse = (grantType == GrantType.KERBEROS) ? extractOutToken() : null;
+                final CreateTokenResponse response = new CreateTokenResponse(
+                    tuple.v1(),
+                    tokenService.getExpirationDelay(),
+                    scope,
+                    tuple.v2(),
+                    base64AuthenticateResponse
+                );
+                listener.onResponse(response);
+            }, listener::onFailure)
+        );
     }
 
     private String extractOutToken() {
@@ -142,8 +167,9 @@ public final class TransportCreateTokenAction extends HandledTransportAction<Cre
             final String wwwAuthenticateHeaderValue = values.get(0);
             // it may contain base64 encoded token that needs to be sent to client if mutual auth was requested
             if (wwwAuthenticateHeaderValue.startsWith(KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX)) {
-                final String base64EncodedToken = wwwAuthenticateHeaderValue
-                        .substring(KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX.length()).trim();
+                final String base64EncodedToken = wwwAuthenticateHeaderValue.substring(
+                    KerberosAuthenticationToken.NEGOTIATE_AUTH_HEADER_PREFIX.length()
+                ).trim();
                 return base64EncodedToken;
             }
         }

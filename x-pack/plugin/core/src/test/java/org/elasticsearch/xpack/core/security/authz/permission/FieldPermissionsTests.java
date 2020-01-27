@@ -23,9 +23,11 @@ public class FieldPermissionsTests extends ESTestCase {
 
         final FieldPermissions fieldPermissions = FieldPermissions.DEFAULT;
         final FieldPermissions fieldPermissions1 = new FieldPermissions(
-                fieldPermissionDef(new String[] { "f1", "f2", "f3*" }, new String[] { "f3" }));
+            fieldPermissionDef(new String[] { "f1", "f2", "f3*" }, new String[] { "f3" })
+        );
         final FieldPermissions fieldPermissions2 = new FieldPermissions(
-                fieldPermissionDef(new String[] { "f1", "f3*", "f4" }, new String[] { "f3" }));
+            fieldPermissionDef(new String[] { "f1", "f3*", "f4" }, new String[] { "f3" })
+        );
 
         {
             FieldPermissions result = fieldPermissions.limitFieldPermissions(randomFrom(new FieldPermissions(), null));

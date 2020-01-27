@@ -32,9 +32,12 @@ public enum LdapSearchScope {
         }
         switch (scope.toLowerCase(Locale.ENGLISH)) {
             case "base":
-            case "object": return BASE;
-            case "one_level" : return ONE_LEVEL;
-            case "sub_tree" : return SUB_TREE;
+            case "object":
+                return BASE;
+            case "one_level":
+                return ONE_LEVEL;
+            case "sub_tree":
+                return SUB_TREE;
             default:
                 throw new IllegalArgumentException("unknown search scope [" + scope + "]");
         }

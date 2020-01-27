@@ -45,11 +45,21 @@ public class RestPutUserAction extends SecurityBaseRestHandler implements RestRe
         passwordHasher = Hasher.resolve(XPackSettings.PASSWORD_HASHING_ALGORITHM.get(settings));
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/user/{username}", this,
-            POST, "/_xpack/security/user/{username}", deprecationLogger);
+            POST,
+            "/_security/user/{username}",
+            this,
+            POST,
+            "/_xpack/security/user/{username}",
+            deprecationLogger
+        );
         controller.registerWithDeprecatedHandler(
-            PUT, "/_security/user/{username}", this,
-            PUT, "/_xpack/security/user/{username}", deprecationLogger);
+            PUT,
+            "/_security/user/{username}",
+            this,
+            PUT,
+            "/_xpack/security/user/{username}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -59,9 +69,12 @@ public class RestPutUserAction extends SecurityBaseRestHandler implements RestRe
 
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
-        PutUserRequestBuilder requestBuilder = new PutUserRequestBuilder(client)
-            .source(request.param("username"), request.requiredContent(), request.getXContentType(), passwordHasher)
-            .setRefreshPolicy(request.param("refresh"));
+        PutUserRequestBuilder requestBuilder = new PutUserRequestBuilder(client).source(
+            request.param("username"),
+            request.requiredContent(),
+            request.getXContentType(),
+            passwordHasher
+        ).setRefreshPolicy(request.param("refresh"));
 
         return channel -> requestBuilder.execute(new RestBuilderListener<>(channel) {
             @Override

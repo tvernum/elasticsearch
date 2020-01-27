@@ -21,7 +21,7 @@ public class AuthenticateResponse extends ActionResponse {
         authentication = new Authentication(in);
     }
 
-    public AuthenticateResponse(Authentication authentication){
+    public AuthenticateResponse(Authentication authentication) {
         this.authentication = authentication;
     }
 
@@ -34,4 +34,4 @@ public class AuthenticateResponse extends ActionResponse {
         authentication.writeTo(out);
     }
 
-    }
+}

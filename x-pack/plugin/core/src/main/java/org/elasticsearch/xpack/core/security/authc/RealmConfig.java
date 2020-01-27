@@ -198,8 +198,7 @@ public class RealmConfig {
                 return false;
             }
             final RealmIdentifier other = (RealmIdentifier) o;
-            return Objects.equals(this.type, other.type) &&
-                    Objects.equals(this.name, other.name);
+            return Objects.equals(this.type, other.type) && Objects.equals(this.name, other.name);
         }
 
         @Override

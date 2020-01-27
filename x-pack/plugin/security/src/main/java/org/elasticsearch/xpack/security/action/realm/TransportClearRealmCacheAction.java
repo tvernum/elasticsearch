@@ -26,25 +26,45 @@ import org.elasticsearch.xpack.core.security.authc.support.CachingRealm;
 import java.io.IOException;
 import java.util.List;
 
-public class TransportClearRealmCacheAction extends TransportNodesAction<ClearRealmCacheRequest, ClearRealmCacheResponse,
-        ClearRealmCacheRequest.Node, ClearRealmCacheResponse.Node> {
+public class TransportClearRealmCacheAction extends TransportNodesAction<
+    ClearRealmCacheRequest,
+    ClearRealmCacheResponse,
+    ClearRealmCacheRequest.Node,
+    ClearRealmCacheResponse.Node> {
 
     private final Realms realms;
     private final AuthenticationService authenticationService;
 
     @Inject
-    public TransportClearRealmCacheAction(ThreadPool threadPool, ClusterService clusterService, TransportService transportService,
-                                          ActionFilters actionFilters, Realms realms, AuthenticationService authenticationService) {
-        super(ClearRealmCacheAction.NAME, threadPool, clusterService, transportService, actionFilters,
-            ClearRealmCacheRequest::new, ClearRealmCacheRequest.Node::new, ThreadPool.Names.MANAGEMENT,
-              ClearRealmCacheResponse.Node.class);
+    public TransportClearRealmCacheAction(
+        ThreadPool threadPool,
+        ClusterService clusterService,
+        TransportService transportService,
+        ActionFilters actionFilters,
+        Realms realms,
+        AuthenticationService authenticationService
+    ) {
+        super(
+            ClearRealmCacheAction.NAME,
+            threadPool,
+            clusterService,
+            transportService,
+            actionFilters,
+            ClearRealmCacheRequest::new,
+            ClearRealmCacheRequest.Node::new,
+            ThreadPool.Names.MANAGEMENT,
+            ClearRealmCacheResponse.Node.class
+        );
         this.realms = realms;
         this.authenticationService = authenticationService;
     }
 
     @Override
-    protected ClearRealmCacheResponse newResponse(ClearRealmCacheRequest request,
-                                                  List<ClearRealmCacheResponse.Node> responses, List<FailedNodeException> failures) {
+    protected ClearRealmCacheResponse newResponse(
+        ClearRealmCacheRequest request,
+        List<ClearRealmCacheResponse.Node> responses,
+        List<FailedNodeException> failures
+    ) {
         return new ClearRealmCacheResponse(clusterService.getClusterName(), responses, failures);
     }
 

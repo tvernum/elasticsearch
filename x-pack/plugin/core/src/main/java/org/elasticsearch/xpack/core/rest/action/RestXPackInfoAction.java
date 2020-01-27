@@ -36,12 +36,11 @@ public class RestXPackInfoAction extends BaseRestHandler {
         // we piggyback verbosity on "human" output
         boolean verbose = request.paramAsBoolean("human", true);
 
-        EnumSet<XPackInfoRequest.Category> categories = XPackInfoRequest.Category
-                .toSet(request.paramAsStringArray("categories", new String[] { "_all" }));
-        return channel ->
-                new XPackInfoRequestBuilder(client)
-                        .setVerbose(verbose)
-                        .setCategories(categories)
-                        .execute(new RestToXContentListener<>(channel));
+        EnumSet<XPackInfoRequest.Category> categories = XPackInfoRequest.Category.toSet(
+            request.paramAsStringArray("categories", new String[] { "_all" })
+        );
+        return channel -> new XPackInfoRequestBuilder(client).setVerbose(verbose)
+            .setCategories(categories)
+            .execute(new RestToXContentListener<>(channel));
     }
 }

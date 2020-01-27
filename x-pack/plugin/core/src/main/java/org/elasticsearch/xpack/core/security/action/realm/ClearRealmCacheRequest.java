@@ -17,7 +17,6 @@ public class ClearRealmCacheRequest extends BaseNodesRequest<ClearRealmCacheRequ
     String[] realms;
     String[] usernames;
 
-
     public ClearRealmCacheRequest() {
         super((String[]) null);
     }
@@ -100,8 +99,14 @@ public class ClearRealmCacheRequest extends BaseNodesRequest<ClearRealmCacheRequ
             this.realms = request.realms;
             this.usernames = request.usernames;
         }
-        public String[] getRealms() { return realms; }
-        public String[] getUsernames() { return usernames; }
+
+        public String[] getRealms() {
+            return realms;
+        }
+
+        public String[] getUsernames() {
+            return usernames;
+        }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {

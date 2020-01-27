@@ -30,58 +30,54 @@ import java.util.function.BiFunction;
  */
 public class XPackLicenseState {
 
-    public static final Set<OperationMode> FIPS_ALLOWED_LICENSE_OPERATION_MODES =
-        EnumSet.of(License.OperationMode.PLATINUM, License.OperationMode.TRIAL);
+    public static final Set<OperationMode> FIPS_ALLOWED_LICENSE_OPERATION_MODES = EnumSet.of(
+        License.OperationMode.PLATINUM,
+        License.OperationMode.TRIAL
+    );
 
     /** Messages for each feature which are printed when the license expires. */
     static final Map<String, String[]> EXPIRATION_MESSAGES;
     static {
         Map<String, String[]> messages = new LinkedHashMap<>();
-        messages.put(XPackField.SECURITY, new String[] {
-            "Cluster health, cluster stats and indices stats operations are blocked",
-            "All data operations (read and write) continue to work"
-        });
-        messages.put(XPackField.WATCHER, new String[] {
-            "PUT / GET watch APIs are disabled, DELETE watch API continues to work",
-            "Watches execute and write to the history",
-            "The actions of the watches don't execute"
-        });
-        messages.put(XPackField.MONITORING, new String[] {
-            "The agent will stop collecting cluster and indices metrics",
-            "The agent will stop automatically cleaning indices older than [xpack.monitoring.history.duration]"
-        });
-        messages.put(XPackField.GRAPH, new String[] {
-            "Graph explore APIs are disabled"
-        });
-        messages.put(XPackField.MACHINE_LEARNING, new String[] {
-            "Machine learning APIs are disabled"
-        });
-        messages.put(XPackField.LOGSTASH, new String[] {
-            "Logstash will continue to poll centrally-managed pipelines"
-        });
-        messages.put(XPackField.BEATS, new String[] {
-            "Beats will continue to poll centrally-managed configuration"
-        });
-        messages.put(XPackField.DEPRECATION, new String[] {
-            "Deprecation APIs are disabled"
-        });
-        messages.put(XPackField.UPGRADE, new String[] {
-            "Upgrade API is disabled"
-        });
-        messages.put(XPackField.SQL, new String[] {
-            "SQL support is disabled"
-        });
-        messages.put(XPackField.ROLLUP, new String[] {
-            "Creating and Starting rollup jobs will no longer be allowed.",
-            "Stopping/Deleting existing jobs, RollupCaps API and RollupSearch continue to function."
-        });
-        messages.put(XPackField.TRANSFORM, new String[] {
-            "Creating, starting, updating transforms will no longer be allowed.",
-            "Stopping/Deleting existing transforms continue to function."
-        });
-        messages.put(XPackField.ANALYTICS, new String[] {
-            "Aggregations provided by Data Science plugin are no longer usable."
-        });
+        messages.put(
+            XPackField.SECURITY,
+            new String[] {
+                "Cluster health, cluster stats and indices stats operations are blocked",
+                "All data operations (read and write) continue to work" }
+        );
+        messages.put(
+            XPackField.WATCHER,
+            new String[] {
+                "PUT / GET watch APIs are disabled, DELETE watch API continues to work",
+                "Watches execute and write to the history",
+                "The actions of the watches don't execute" }
+        );
+        messages.put(
+            XPackField.MONITORING,
+            new String[] {
+                "The agent will stop collecting cluster and indices metrics",
+                "The agent will stop automatically cleaning indices older than [xpack.monitoring.history.duration]" }
+        );
+        messages.put(XPackField.GRAPH, new String[] { "Graph explore APIs are disabled" });
+        messages.put(XPackField.MACHINE_LEARNING, new String[] { "Machine learning APIs are disabled" });
+        messages.put(XPackField.LOGSTASH, new String[] { "Logstash will continue to poll centrally-managed pipelines" });
+        messages.put(XPackField.BEATS, new String[] { "Beats will continue to poll centrally-managed configuration" });
+        messages.put(XPackField.DEPRECATION, new String[] { "Deprecation APIs are disabled" });
+        messages.put(XPackField.UPGRADE, new String[] { "Upgrade API is disabled" });
+        messages.put(XPackField.SQL, new String[] { "SQL support is disabled" });
+        messages.put(
+            XPackField.ROLLUP,
+            new String[] {
+                "Creating and Starting rollup jobs will no longer be allowed.",
+                "Stopping/Deleting existing jobs, RollupCaps API and RollupSearch continue to function." }
+        );
+        messages.put(
+            XPackField.TRANSFORM,
+            new String[] {
+                "Creating, starting, updating transforms will no longer be allowed.",
+                "Stopping/Deleting existing transforms continue to function." }
+        );
+        messages.put(XPackField.ANALYTICS, new String[] { "Aggregations provided by Data Science plugin are no longer usable." });
         EXPIRATION_MESSAGES = Collections.unmodifiableMap(messages);
     }
 
@@ -109,8 +105,9 @@ public class XPackLicenseState {
                 switch (currentMode) {
                     case STANDARD:
                         return new String[] {
-                            "Security will default to disabled (set " + XPackSettings.SECURITY_ENABLED.getKey() + " to enable security).",
-                        };
+                            "Security will default to disabled (set "
+                                + XPackSettings.SECURITY_ENABLED.getKey()
+                                + " to enable security).", };
                     case TRIAL:
                     case GOLD:
                     case PLATINUM:
@@ -121,8 +118,7 @@ public class XPackLicenseState {
                             "IP filtering and auditing will be disabled.",
                             "Field and document level access control will be disabled.",
                             "Custom realms will be ignored.",
-                            "A custom authorization engine will be ignored."
-                        };
+                            "A custom authorization engine will be ignored." };
                 }
                 break;
             case GOLD:
@@ -135,8 +131,7 @@ public class XPackLicenseState {
                         return new String[] {
                             "Field and document level access control will be disabled.",
                             "Custom realms will be ignored.",
-                            "A custom authorization engine will be ignored."
-                        };
+                            "A custom authorization engine will be ignored." };
                 }
                 break;
             case STANDARD:
@@ -151,8 +146,7 @@ public class XPackLicenseState {
                             "IP filtering and auditing will be disabled.",
                             "Field and document level access control will be disabled.",
                             "Custom realms will be ignored.",
-                            "A custom authorization engine will be ignored."
-                        };
+                            "A custom authorization engine will be ignored." };
                 }
         }
         return Strings.EMPTY_ARRAY;
@@ -183,15 +177,19 @@ public class XPackLicenseState {
                     case PLATINUM:
                         return new String[] {
                             LoggerMessageFormat.format(
-                                "Multi-cluster support is disabled for clusters with [{}] license. If you are\n" +
-                                    "running multiple clusters, users won't be able to access the clusters with\n" +
-                                    "[{}] licenses from within a single X-Pack Kibana instance. You will have to deploy a\n" +
-                                    "separate and dedicated X-pack Kibana instance for each [{}] cluster you wish to monitor.",
-                                newMode, newMode, newMode),
+                                "Multi-cluster support is disabled for clusters with [{}] license. If you are\n"
+                                    + "running multiple clusters, users won't be able to access the clusters with\n"
+                                    + "[{}] licenses from within a single X-Pack Kibana instance. You will have to deploy a\n"
+                                    + "separate and dedicated X-pack Kibana instance for each [{}] cluster you wish to monitor.",
+                                newMode,
+                                newMode,
+                                newMode
+                            ),
                             LoggerMessageFormat.format(
                                 "Automatic index cleanup is locked to {} days for clusters with [{}] license.",
-                                MonitoringField.HISTORY_DURATION.getDefault(Settings.EMPTY).days(), newMode)
-                        };
+                                MonitoringField.HISTORY_DURATION.getDefault(Settings.EMPTY).days(),
+                                newMode
+                            ) };
                 }
                 break;
         }
@@ -259,7 +257,7 @@ public class XPackLicenseState {
                     case TRIAL:
                     case PLATINUM:
                         return new String[] {
-                                "JDBC and ODBC support will be disabled, but you can continue to use SQL CLI and REST endpoint" };
+                            "JDBC and ODBC support will be disabled, but you can continue to use SQL CLI and REST endpoint" };
                 }
                 break;
         }
@@ -350,8 +348,7 @@ public class XPackLicenseState {
      */
     public synchronized boolean isAuthAllowed() {
         OperationMode mode = status.mode;
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
         if (isSecurityCurrentlyEnabled) {
             switch (mode) {
                 case BASIC:
@@ -370,8 +367,7 @@ public class XPackLicenseState {
      */
     public synchronized boolean isIpFilteringAllowed() {
         OperationMode mode = status.mode;
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
         return isSecurityCurrentlyEnabled && (mode == OperationMode.GOLD || mode == OperationMode.PLATINUM || mode == OperationMode.TRIAL);
     }
 
@@ -380,8 +376,7 @@ public class XPackLicenseState {
      */
     public synchronized boolean isAuditingAllowed() {
         OperationMode mode = status.mode;
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
         return isSecurityCurrentlyEnabled && (mode == OperationMode.GOLD || mode == OperationMode.PLATINUM || mode == OperationMode.TRIAL);
     }
 
@@ -409,8 +404,7 @@ public class XPackLicenseState {
      */
     public synchronized boolean isDocumentAndFieldLevelSecurityAllowed() {
         OperationMode mode = status.mode;
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
         return isSecurityCurrentlyEnabled && (mode == OperationMode.TRIAL || mode == OperationMode.PLATINUM);
     }
 
@@ -426,8 +420,7 @@ public class XPackLicenseState {
      * @return the type of realms that are enabled based on the license {@link OperationMode}
      */
     public synchronized AllowedRealmType allowedRealmType() {
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
         if (isSecurityCurrentlyEnabled) {
             switch (status.mode) {
                 case PLATINUM:
@@ -450,10 +443,8 @@ public class XPackLicenseState {
      * @return whether custom role providers are allowed based on the license {@link OperationMode}
      */
     public synchronized boolean isCustomRoleProvidersAllowed() {
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
-        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL)
-                && status.active;
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL) && status.active;
     }
 
     /**
@@ -479,10 +470,8 @@ public class XPackLicenseState {
      * @see org.elasticsearch.xpack.core.security.authc.support.DelegatedAuthorizationSettings
      */
     public synchronized boolean isAuthorizationRealmAllowed() {
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
-        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL)
-            && status.active;
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL) && status.active;
     }
 
     /**
@@ -490,10 +479,8 @@ public class XPackLicenseState {
      * @see org.elasticsearch.xpack.core.security.authc.support.DelegatedAuthorizationSettings
      */
     public synchronized boolean isAuthorizationEngineAllowed() {
-        final boolean isSecurityCurrentlyEnabled =
-            isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
-        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL)
-            && status.active;
+        final boolean isSecurityCurrentlyEnabled = isSecurityEnabled(status.mode, isSecurityExplicitlyEnabled, isSecurityEnabled);
+        return isSecurityCurrentlyEnabled && (status.mode == OperationMode.PLATINUM || status.mode == OperationMode.TRIAL) && status.active;
     }
 
     /**
@@ -795,8 +782,11 @@ public class XPackLicenseState {
      */
     public synchronized boolean isSecurityAvailable() {
         OperationMode mode = status.mode;
-        return mode == OperationMode.GOLD || mode == OperationMode.PLATINUM || mode == OperationMode.STANDARD ||
-                mode == OperationMode.TRIAL || mode == OperationMode.BASIC;
+        return mode == OperationMode.GOLD
+            || mode == OperationMode.PLATINUM
+            || mode == OperationMode.STANDARD
+            || mode == OperationMode.TRIAL
+            || mode == OperationMode.BASIC;
     }
 
     /**
@@ -835,8 +825,11 @@ public class XPackLicenseState {
         }
     }
 
-    private static boolean isSecurityEnabled(final OperationMode mode, final boolean isSecurityExplicitlyEnabled,
-                                             final boolean isSecurityEnabled) {
+    private static boolean isSecurityEnabled(
+        final OperationMode mode,
+        final boolean isSecurityExplicitlyEnabled,
+        final boolean isSecurityEnabled
+    ) {
         switch (mode) {
             case TRIAL:
             case BASIC:

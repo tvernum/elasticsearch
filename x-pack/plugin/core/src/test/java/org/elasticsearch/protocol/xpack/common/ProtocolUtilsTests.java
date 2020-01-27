@@ -10,7 +10,7 @@ import org.elasticsearch.test.ESTestCase;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ProtocolUtilsTests  extends ESTestCase {
+public class ProtocolUtilsTests extends ESTestCase {
 
     public void testMapStringEqualsAndHash() {
         assertTrue(ProtocolUtils.equals(null, null));

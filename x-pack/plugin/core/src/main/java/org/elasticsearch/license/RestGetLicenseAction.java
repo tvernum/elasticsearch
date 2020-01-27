@@ -55,9 +55,11 @@ public class RestGetLicenseAction extends BaseRestHandler {
         // In 7.x, there was an opt-in flag to show "enterprise" licenses. In 8.0 the flag is deprecated and can only be true
         // TODO Remove this from 9.0
         if (request.hasParam("accept_enterprise")) {
-            deprecationLogger.deprecatedAndMaybeLog("get_license_accept_enterprise",
-                "Including [accept_enterprise] in get license requests is deprecated." +
-                    " The parameter will be removed in the next major version");
+            deprecationLogger.deprecatedAndMaybeLog(
+                "get_license_accept_enterprise",
+                "Including [accept_enterprise] in get license requests is deprecated."
+                    + " The parameter will be removed in the next major version"
+            );
             if (request.paramAsBoolean("accept_enterprise", true) == false) {
                 throw new IllegalArgumentException("The [accept_enterprise] parameters may not be false");
             }
@@ -66,25 +68,26 @@ public class RestGetLicenseAction extends BaseRestHandler {
         final ToXContent.Params params = new ToXContent.DelegatingMapParams(overrideParams, request);
         GetLicenseRequest getLicenseRequest = new GetLicenseRequest();
         getLicenseRequest.local(request.paramAsBoolean("local", getLicenseRequest.local()));
-        return channel -> client.admin().cluster().execute(GetLicenseAction.INSTANCE, getLicenseRequest,
-                new RestBuilderListener<>(channel) {
-                    @Override
-                    public RestResponse buildResponse(GetLicenseResponse response, XContentBuilder builder) throws Exception {
-                        // Default to pretty printing, but allow ?pretty=false to disable
-                        if (!request.hasParam("pretty")) {
-                            builder.prettyPrint().lfAtEnd();
-                        }
-                        boolean hasLicense = response.license() != null;
-                        builder.startObject();
-                        if (hasLicense) {
-                            builder.startObject("license");
-                            response.license().toInnerXContent(builder, params);
-                            builder.endObject();
-                        }
-                        builder.endObject();
-                        return new BytesRestResponse(hasLicense ? OK : NOT_FOUND, builder);
+        return channel -> client.admin()
+            .cluster()
+            .execute(GetLicenseAction.INSTANCE, getLicenseRequest, new RestBuilderListener<>(channel) {
+                @Override
+                public RestResponse buildResponse(GetLicenseResponse response, XContentBuilder builder) throws Exception {
+                    // Default to pretty printing, but allow ?pretty=false to disable
+                    if (!request.hasParam("pretty")) {
+                        builder.prettyPrint().lfAtEnd();
                     }
-                });
+                    boolean hasLicense = response.license() != null;
+                    builder.startObject();
+                    if (hasLicense) {
+                        builder.startObject("license");
+                        response.license().toInnerXContent(builder, params);
+                        builder.endObject();
+                    }
+                    builder.endObject();
+                    return new BytesRestResponse(hasLicense ? OK : NOT_FOUND, builder);
+                }
+            });
     }
 
 }

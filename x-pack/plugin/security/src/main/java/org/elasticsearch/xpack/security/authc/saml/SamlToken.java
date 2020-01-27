@@ -62,7 +62,6 @@ public class SamlToken implements AuthenticationToken {
         return authenticatingRealm;
     }
 
-
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" + Strings.cleanTruncate(Hex.encodeHexString(content), 128) + "...}";

@@ -47,8 +47,13 @@ public final class InvalidateApiKeyRequest extends ActionRequest {
         }
     }
 
-    public InvalidateApiKeyRequest(@Nullable String realmName, @Nullable String userName, @Nullable String id,
-                                   @Nullable String name, boolean ownedByAuthenticatedUser) {
+    public InvalidateApiKeyRequest(
+        @Nullable String realmName,
+        @Nullable String userName,
+        @Nullable String id,
+        @Nullable String name,
+        boolean ownedByAuthenticatedUser
+    ) {
         this.realmName = realmName;
         this.userName = userName;
         this.id = id;
@@ -141,23 +146,30 @@ public final class InvalidateApiKeyRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (Strings.hasText(realmName) == false && Strings.hasText(userName) == false && Strings.hasText(id) == false
-            && Strings.hasText(name) == false && ownedByAuthenticatedUser == false) {
-            validationException = addValidationError("One of [api key id, api key name, username, realm name] must be specified if " +
-                "[owner] flag is false", validationException);
+        if (Strings.hasText(realmName) == false
+            && Strings.hasText(userName) == false
+            && Strings.hasText(id) == false
+            && Strings.hasText(name) == false
+            && ownedByAuthenticatedUser == false) {
+            validationException = addValidationError(
+                "One of [api key id, api key name, username, realm name] must be specified if " + "[owner] flag is false",
+                validationException
+            );
         }
         if (Strings.hasText(id) || Strings.hasText(name)) {
             if (Strings.hasText(realmName) || Strings.hasText(userName)) {
                 validationException = addValidationError(
                     "username or realm name must not be specified when the api key id or api key name is specified",
-                    validationException);
+                    validationException
+                );
             }
         }
         if (ownedByAuthenticatedUser) {
             if (Strings.hasText(realmName) || Strings.hasText(userName)) {
                 validationException = addValidationError(
                     "neither username nor realm-name may be specified when invalidating owned API keys",
-                    validationException);
+                    validationException
+                );
             }
         }
         if (Strings.hasText(id) && Strings.hasText(name)) {
@@ -187,11 +199,11 @@ public final class InvalidateApiKeyRequest extends ActionRequest {
             return false;
         }
         InvalidateApiKeyRequest that = (InvalidateApiKeyRequest) o;
-        return ownedByAuthenticatedUser == that.ownedByAuthenticatedUser &&
-            Objects.equals(realmName, that.realmName) &&
-            Objects.equals(userName, that.userName) &&
-            Objects.equals(id, that.id) &&
-            Objects.equals(name, that.name);
+        return ownedByAuthenticatedUser == that.ownedByAuthenticatedUser
+            && Objects.equals(realmName, that.realmName)
+            && Objects.equals(userName, that.userName)
+            && Objects.equals(id, that.id)
+            && Objects.equals(name, that.name);
     }
 
     @Override

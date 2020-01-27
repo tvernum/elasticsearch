@@ -75,8 +75,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityDefaults() {
-        XPackLicenseState licenseState =
-                new XPackLicenseState(Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build());
+        XPackLicenseState licenseState = new XPackLicenseState(
+            Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()
+        );
         assertThat(licenseState.isAuthAllowed(), is(true));
         assertThat(licenseState.isIpFilteringAllowed(), is(true));
         assertThat(licenseState.isAuditingAllowed(), is(true));
@@ -91,8 +92,7 @@ public class XPackLicenseStateTests extends ESTestCase {
 
     public void testTransportSslDoesNotAutomaticallyEnableSecurityOnTrialLicense() {
         final XPackLicenseState licenseState;
-        licenseState =
-            new XPackLicenseState(Settings.builder().put(XPackSettings.TRANSPORT_SSL_ENABLED.getKey(), true).build());
+        licenseState = new XPackLicenseState(Settings.builder().put(XPackSettings.TRANSPORT_SSL_ENABLED.getKey(), true).build());
         assertSecurityNotAllowed(licenseState);
     }
 
@@ -150,7 +150,8 @@ public class XPackLicenseStateTests extends ESTestCase {
 
     public void testSecurityEnabledBasicExpired() {
         XPackLicenseState licenseState = new XPackLicenseState(
-            Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build());
+            Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()
+        );
         licenseState.update(BASIC, false, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -165,8 +166,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityStandard() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(STANDARD, true, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -179,8 +181,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityStandardExpired() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(STANDARD, false, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -193,8 +196,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityGold() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(GOLD, true, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -209,8 +213,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityGoldExpired() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(GOLD, false, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -225,8 +230,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityPlatinum() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(PLATINUM, true, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));
@@ -241,8 +247,9 @@ public class XPackLicenseStateTests extends ESTestCase {
     }
 
     public void testSecurityPlatinumExpired() {
-        XPackLicenseState licenseState = new XPackLicenseState(randomFrom(Settings.EMPTY,
-                Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build()));
+        XPackLicenseState licenseState = new XPackLicenseState(
+            randomFrom(Settings.EMPTY, Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build())
+        );
         licenseState.update(PLATINUM, false, null);
 
         assertThat(licenseState.isAuthAllowed(), is(true));

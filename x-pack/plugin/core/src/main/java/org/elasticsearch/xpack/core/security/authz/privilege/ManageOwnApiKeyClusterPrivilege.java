@@ -26,8 +26,7 @@ public class ManageOwnApiKeyClusterPrivilege implements NamedClusterPrivilege {
     private static final String API_KEY_REALM_TYPE = "_es_api_key";
     private static final String API_KEY_ID_KEY = "_security_api_key_id";
 
-    private ManageOwnApiKeyClusterPrivilege() {
-    }
+    private ManageOwnApiKeyClusterPrivilege() {}
 
     @Override
     public String name() {
@@ -52,16 +51,26 @@ public class ManageOwnApiKeyClusterPrivilege implements NamedClusterPrivilege {
                 return true;
             } else if (request instanceof GetApiKeyRequest) {
                 final GetApiKeyRequest getApiKeyRequest = (GetApiKeyRequest) request;
-                return checkIfUserIsOwnerOfApiKeys(authentication, getApiKeyRequest.getApiKeyId(), getApiKeyRequest.getUserName(),
-                    getApiKeyRequest.getRealmName(), getApiKeyRequest.ownedByAuthenticatedUser());
+                return checkIfUserIsOwnerOfApiKeys(
+                    authentication,
+                    getApiKeyRequest.getApiKeyId(),
+                    getApiKeyRequest.getUserName(),
+                    getApiKeyRequest.getRealmName(),
+                    getApiKeyRequest.ownedByAuthenticatedUser()
+                );
             } else if (request instanceof InvalidateApiKeyRequest) {
                 final InvalidateApiKeyRequest invalidateApiKeyRequest = (InvalidateApiKeyRequest) request;
-                return checkIfUserIsOwnerOfApiKeys(authentication, invalidateApiKeyRequest.getId(),
-                    invalidateApiKeyRequest.getUserName(), invalidateApiKeyRequest.getRealmName(),
-                    invalidateApiKeyRequest.ownedByAuthenticatedUser());
+                return checkIfUserIsOwnerOfApiKeys(
+                    authentication,
+                    invalidateApiKeyRequest.getId(),
+                    invalidateApiKeyRequest.getUserName(),
+                    invalidateApiKeyRequest.getRealmName(),
+                    invalidateApiKeyRequest.ownedByAuthenticatedUser()
+                );
             }
             throw new IllegalArgumentException(
-                "manage own api key privilege only supports API key requests (not " + request.getClass().getName() + ")");
+                "manage own api key privilege only supports API key requests (not " + request.getClass().getName() + ")"
+            );
         }
 
         @Override
@@ -69,8 +78,13 @@ public class ManageOwnApiKeyClusterPrivilege implements NamedClusterPrivilege {
             return permissionCheck instanceof ManageOwnClusterPermissionCheck;
         }
 
-        private boolean checkIfUserIsOwnerOfApiKeys(Authentication authentication, String apiKeyId, String username, String realmName,
-                                                    boolean ownedByAuthenticatedUser) {
+        private boolean checkIfUserIsOwnerOfApiKeys(
+            Authentication authentication,
+            String apiKeyId,
+            String username,
+            String realmName,
+            boolean ownedByAuthenticatedUser
+        ) {
             if (isCurrentAuthenticationUsingSameApiKeyIdFromRequest(authentication, apiKeyId)) {
                 return true;
             } else {

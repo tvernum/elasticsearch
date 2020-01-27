@@ -12,7 +12,6 @@ import java.util.Locale;
 
 public enum AuditLevel {
 
-    
     ANONYMOUS_ACCESS_DENIED,
     AUTHENTICATION_FAILED,
     REALM_AUTHENTICATION_FAILED,

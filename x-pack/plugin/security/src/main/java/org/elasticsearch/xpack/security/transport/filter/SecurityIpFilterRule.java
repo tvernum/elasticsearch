@@ -86,7 +86,7 @@ public class SecurityIpFilterRule implements IpFilterRule, ToXContentFragment {
         if (p < 0) {
             throw new UnknownHostException("Invalid CIDR notation used: " + address);
         }
-        if (p == address.length() -1) {
+        if (p == address.length() - 1) {
             throw new IllegalArgumentException("address must not end with a '/");
         }
         String addrString = address.substring(0, p);
@@ -106,7 +106,6 @@ public class SecurityIpFilterRule implements IpFilterRule, ToXContentFragment {
         }
         return new Tuple<>(addr, mask);
     }
-
 
     /**
      * Get the Subnet's Netmask in Decimal format.<BR>

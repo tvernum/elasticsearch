@@ -40,17 +40,27 @@ import static org.elasticsearch.rest.RestRequest.Method.GET;
 public class RestGetUserPrivilegesAction extends SecurityBaseRestHandler {
 
     private final SecurityContext securityContext;
-    private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(RestGetUserPrivilegesAction.class));
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestGetUserPrivilegesAction.class)
+    );
 
-    public RestGetUserPrivilegesAction(Settings settings, RestController controller, SecurityContext securityContext,
-                                       XPackLicenseState licenseState) {
+    public RestGetUserPrivilegesAction(
+        Settings settings,
+        RestController controller,
+        SecurityContext securityContext,
+        XPackLicenseState licenseState
+    ) {
         super(settings, licenseState);
         this.securityContext = securityContext;
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/user/_privileges", this,
-            GET, "/_xpack/security/user/_privileges", deprecationLogger);
+            GET,
+            "/_security/user/_privileges",
+            this,
+            GET,
+            "/_xpack/security/user/_privileges",
+            deprecationLogger
+        );
     }
 
     @Override

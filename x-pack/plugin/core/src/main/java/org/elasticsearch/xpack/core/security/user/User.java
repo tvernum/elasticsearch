@@ -28,8 +28,10 @@ public class User implements ToXContentObject {
     private final Map<String, Object> metadata;
     private final boolean enabled;
 
-    @Nullable private final String fullName;
-    @Nullable private final String email;
+    @Nullable
+    private final String fullName;
+    @Nullable
+    private final String email;
 
     public User(String username, String... roles) {
         this(username, roles, null, null, Map.of(), true);
@@ -47,8 +49,15 @@ public class User implements ToXContentObject {
         this(username, roles, fullName, email, metadata, enabled, null);
     }
 
-    private User(String username, String[] roles, String fullName, String email, Map<String, Object> metadata, boolean enabled,
-                User authenticatedUser) {
+    private User(
+        String username,
+        String[] roles,
+        String fullName,
+        String email,
+        Map<String, Object> metadata,
+        boolean enabled,
+        User authenticatedUser
+    ) {
         this.username = username;
         this.roles = roles == null ? Strings.EMPTY_ARRAY : roles;
         this.metadata = metadata == null ? Map.of() : metadata;
@@ -135,17 +144,24 @@ public class User implements ToXContentObject {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o instanceof User == false) return false;
+        if (this == o)
+            return true;
+        if (o instanceof User == false)
+            return false;
 
         User user = (User) o;
 
-        if (!username.equals(user.username)) return false;
+        if (!username.equals(user.username))
+            return false;
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
-        if (!Arrays.equals(roles, user.roles)) return false;
-        if (authenticatedUser != null ? !authenticatedUser.equals(user.authenticatedUser) : user.authenticatedUser != null) return false;
-        if (!metadata.equals(user.metadata)) return false;
-        if (fullName != null ? !fullName.equals(user.fullName) : user.fullName != null) return false;
+        if (!Arrays.equals(roles, user.roles))
+            return false;
+        if (authenticatedUser != null ? !authenticatedUser.equals(user.authenticatedUser) : user.authenticatedUser != null)
+            return false;
+        if (!metadata.equals(user.metadata))
+            return false;
+        if (fullName != null ? !fullName.equals(user.fullName) : user.fullName != null)
+            return false;
         return !(email != null ? !email.equals(user.email) : user.email != null);
 
     }
@@ -191,7 +207,7 @@ public class User implements ToXContentObject {
 
     public static User readFrom(StreamInput input) throws IOException {
         final boolean isInternalUser = input.readBoolean();
-        assert isInternalUser == false: "should always return false. Internal users should use the InternalUserSerializationHelper";
+        assert isInternalUser == false : "should always return false. Internal users should use the InternalUserSerializationHelper";
         final String username = input.readString();
         return partialReadFrom(username, input);
     }
@@ -235,4 +251,3 @@ public class User implements ToXContentObject {
         ParseField REALM_NAME = new ParseField("name");
     }
 }
-

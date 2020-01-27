@@ -39,9 +39,7 @@ public class RealmUserLookupTests extends ESTestCase {
 
     @Before
     public void setup() {
-        globalSettings = Settings.builder()
-            .put("path.home", createTempDir())
-            .build();
+        globalSettings = Settings.builder().put("path.home", createTempDir()).build();
         env = TestEnvironment.newEnvironment(globalSettings);
         threadContext = new ThreadContext(globalSettings);
     }
@@ -116,7 +114,7 @@ public class RealmUserLookupTests extends ESTestCase {
     private List<MockLookupRealm> buildRealms(int realmCount) {
         final List<MockLookupRealm> realms = new ArrayList<>(realmCount);
         for (int i = 1; i <= realmCount; i++) {
-            final RealmConfig config = new RealmConfig(new RealmIdentifier("mock","lookup-" + i), globalSettings, env, threadContext);
+            final RealmConfig config = new RealmConfig(new RealmIdentifier("mock", "lookup-" + i), globalSettings, env, threadContext);
             final MockLookupRealm realm = new MockLookupRealm(config);
             for (int j = 0; j < 5; j++) {
                 realm.registerUser(new User(randomAlphaOfLengthBetween(6, 12)));

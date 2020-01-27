@@ -97,8 +97,9 @@ public final class FieldSubsetReader extends FilterLeafReader {
             if (reader instanceof FilterDirectoryReader) {
                 FilterDirectoryReader filterDirectoryReader = (FilterDirectoryReader) reader;
                 if (filterDirectoryReader instanceof FieldSubsetDirectoryReader) {
-                    throw new IllegalArgumentException(LoggerMessageFormat.format("Can't wrap [{}] twice",
-                            FieldSubsetDirectoryReader.class));
+                    throw new IllegalArgumentException(
+                        LoggerMessageFormat.format("Can't wrap [{}] twice", FieldSubsetDirectoryReader.class)
+                    );
                 } else {
                     verifyNoOtherFieldSubsetDirectoryReaderIsWrapped(filterDirectoryReader.getDelegate());
                 }
@@ -202,7 +203,7 @@ public final class FieldSubsetReader extends FilterLeafReader {
                 if (state == -1) {
                     continue;
                 }
-                Map<String, Object> filteredValue = filter((Map<String, ?>)value, includeAutomaton, state);
+                Map<String, Object> filteredValue = filter((Map<String, ?>) value, includeAutomaton, state);
                 filtered.add(filteredValue);
             } else if (value instanceof Iterable) {
                 List<Object> filteredValue = filter((Iterable<?>) value, includeAutomaton, initialState);
@@ -386,7 +387,7 @@ public final class FieldSubsetReader extends FilterLeafReader {
             final TermsEnum e = iterator();
             long size = 0, sumDocFreq = 0, sumTotalFreq = 0;
             while (e.next() != null) {
-                size ++;
+                size++;
                 sumDocFreq += e.docFreq();
                 sumTotalFreq += e.totalTermFreq();
             }
@@ -474,12 +475,12 @@ public final class FieldSubsetReader extends FilterLeafReader {
 
         @Override
         public void seekExact(long ord) throws IOException {
-          throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public long ord() throws IOException {
-          throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException();
         }
     }
 

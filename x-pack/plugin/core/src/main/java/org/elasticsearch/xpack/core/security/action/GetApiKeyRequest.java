@@ -47,8 +47,13 @@ public final class GetApiKeyRequest extends ActionRequest {
         }
     }
 
-    public GetApiKeyRequest(@Nullable String realmName, @Nullable String userName, @Nullable String apiKeyId,
-                            @Nullable String apiKeyName, boolean ownedByAuthenticatedUser) {
+    public GetApiKeyRequest(
+        @Nullable String realmName,
+        @Nullable String userName,
+        @Nullable String apiKeyId,
+        @Nullable String apiKeyName,
+        boolean ownedByAuthenticatedUser
+    ) {
         this.realmName = realmName;
         this.userName = userName;
         this.apiKeyId = apiKeyId;
@@ -146,15 +151,17 @@ public final class GetApiKeyRequest extends ActionRequest {
         if (Strings.hasText(apiKeyId) || Strings.hasText(apiKeyName)) {
             if (Strings.hasText(realmName) || Strings.hasText(userName)) {
                 validationException = addValidationError(
-                        "username or realm name must not be specified when the api key id or api key name is specified",
-                        validationException);
+                    "username or realm name must not be specified when the api key id or api key name is specified",
+                    validationException
+                );
             }
         }
         if (ownedByAuthenticatedUser) {
             if (Strings.hasText(realmName) || Strings.hasText(userName)) {
                 validationException = addValidationError(
                     "neither username nor realm-name may be specified when retrieving owned API keys",
-                    validationException);
+                    validationException
+                );
             }
         }
         if (Strings.hasText(apiKeyId) && Strings.hasText(apiKeyName)) {
@@ -184,11 +191,11 @@ public final class GetApiKeyRequest extends ActionRequest {
             return false;
         }
         GetApiKeyRequest that = (GetApiKeyRequest) o;
-        return ownedByAuthenticatedUser == that.ownedByAuthenticatedUser &&
-            Objects.equals(realmName, that.realmName) &&
-            Objects.equals(userName, that.userName) &&
-            Objects.equals(apiKeyId, that.apiKeyId) &&
-            Objects.equals(apiKeyName, that.apiKeyName);
+        return ownedByAuthenticatedUser == that.ownedByAuthenticatedUser
+            && Objects.equals(realmName, that.realmName)
+            && Objects.equals(userName, that.userName)
+            && Objects.equals(apiKeyId, that.apiKeyId)
+            && Objects.equals(apiKeyName, that.apiKeyName);
     }
 
     @Override

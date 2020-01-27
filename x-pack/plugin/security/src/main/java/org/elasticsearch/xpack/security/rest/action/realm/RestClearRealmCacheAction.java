@@ -27,8 +27,13 @@ public final class RestClearRealmCacheAction extends SecurityBaseRestHandler {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
         controller.registerWithDeprecatedHandler(
-            POST, "/_security/realm/{realms}/_clear_cache", this,
-            POST, "/_xpack/security/realm/{realms}/_clear_cache", deprecationLogger);
+            POST,
+            "/_security/realm/{realms}/_clear_cache",
+            this,
+            POST,
+            "/_xpack/security/realm/{realms}/_clear_cache",
+            deprecationLogger
+        );
     }
 
     @Override

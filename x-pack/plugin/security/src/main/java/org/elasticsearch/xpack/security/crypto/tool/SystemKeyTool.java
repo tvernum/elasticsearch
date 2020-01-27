@@ -42,8 +42,10 @@ public class SystemKeyTool extends EnvironmentAwareCommand {
         arguments = parser.nonOptions("key path");
     }
 
-    public static final Set<PosixFilePermission> PERMISSION_OWNER_READ_WRITE = Sets.newHashSet(PosixFilePermission.OWNER_READ,
-            PosixFilePermission.OWNER_WRITE);
+    public static final Set<PosixFilePermission> PERMISSION_OWNER_READ_WRITE = Sets.newHashSet(
+        PosixFilePermission.OWNER_READ,
+        PosixFilePermission.OWNER_WRITE
+    );
 
     public static void main(String[] args) throws Exception {
         final SystemKeyTool tool = new SystemKeyTool();
@@ -81,8 +83,10 @@ public class SystemKeyTool extends EnvironmentAwareCommand {
         PosixFileAttributeView view = Files.getFileAttributeView(keyPath, PosixFileAttributeView.class);
         if (view != null) {
             view.setPermissions(PERMISSION_OWNER_READ_WRITE);
-            terminal.println("Ensure the generated key can be read by the user that Elasticsearch runs as, "
-                    + "permissions are set to owner read/write only");
+            terminal.println(
+                "Ensure the generated key can be read by the user that Elasticsearch runs as, "
+                    + "permissions are set to owner read/write only"
+            );
         }
     }
 
@@ -99,7 +103,6 @@ public class SystemKeyTool extends EnvironmentAwareCommand {
             throw new ElasticsearchException("failed to generate key", e);
         }
     }
-
 
     @SuppressForbidden(reason = "Parsing command line path")
     private static Path parsePath(String path) {

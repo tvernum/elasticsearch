@@ -74,10 +74,12 @@ public class NativePrivilegeStore {
 
     private static final Collector<Tuple<String, String>, ?, Map<String, List<String>>> TUPLES_TO_MAP = Collectors.toMap(
         Tuple::v1,
-        t -> CollectionUtils.newSingletonArrayList(t.v2()), (a, b) -> {
+        t -> CollectionUtils.newSingletonArrayList(t.v2()),
+        (a, b) -> {
             a.addAll(b);
             return a;
-        });
+        }
+    );
     private static final Logger logger = LogManager.getLogger(NativePrivilegeStore.class);
 
     private final Settings settings;
@@ -90,32 +92,41 @@ public class NativePrivilegeStore {
         this.securityIndexManager = securityIndexManager;
     }
 
-    public void getPrivileges(Collection<String> applications, Collection<String> names,
-                              ActionListener<Collection<ApplicationPrivilegeDescriptor>> listener) {
+    public void getPrivileges(
+        Collection<String> applications,
+        Collection<String> names,
+        ActionListener<Collection<ApplicationPrivilegeDescriptor>> listener
+    ) {
         final SecurityIndexManager frozenSecurityIndex = securityIndexManager.freeze();
         if (frozenSecurityIndex.indexExists() == false) {
             listener.onResponse(Collections.emptyList());
         } else if (frozenSecurityIndex.isAvailable() == false) {
             listener.onFailure(frozenSecurityIndex.getUnavailableReason());
         } else if (isSinglePrivilegeMatch(applications, names)) {
-            getPrivilege(Objects.requireNonNull(Iterables.get(applications, 0)), Objects.requireNonNull(Iterables.get(names, 0)),
-                ActionListener.wrap(privilege ->
-                        listener.onResponse(privilege == null ? Collections.emptyList() : Collections.singletonList(privilege)),
-                    listener::onFailure));
+            getPrivilege(
+                Objects.requireNonNull(Iterables.get(applications, 0)),
+                Objects.requireNonNull(Iterables.get(names, 0)),
+                ActionListener.wrap(
+                    privilege -> listener.onResponse(privilege == null ? Collections.emptyList() : Collections.singletonList(privilege)),
+                    listener::onFailure
+                )
+            );
         } else {
             securityIndexManager.checkIndexVersionThenExecute(listener::onFailure, () -> {
                 final QueryBuilder query;
-                final TermQueryBuilder typeQuery = QueryBuilders
-                    .termQuery(ApplicationPrivilegeDescriptor.Fields.TYPE.getPreferredName(), DOC_TYPE_VALUE);
+                final TermQueryBuilder typeQuery = QueryBuilders.termQuery(
+                    ApplicationPrivilegeDescriptor.Fields.TYPE.getPreferredName(),
+                    DOC_TYPE_VALUE
+                );
                 if (isEmpty(applications) && isEmpty(names)) {
                     query = typeQuery;
                 } else if (isEmpty(names)) {
                     query = QueryBuilders.boolQuery().filter(typeQuery).filter(getApplicationNameQuery(applications));
                 } else if (isEmpty(applications)) {
-                    query = QueryBuilders.boolQuery().filter(typeQuery)
-                        .filter(getPrivilegeNameQuery(names));
+                    query = QueryBuilders.boolQuery().filter(typeQuery).filter(getPrivilegeNameQuery(names));
                 } else if (hasWildcard(applications)) {
-                    query = QueryBuilders.boolQuery().filter(typeQuery)
+                    query = QueryBuilders.boolQuery()
+                        .filter(typeQuery)
                         .filter(getApplicationNameQuery(applications))
                         .filter(getPrivilegeNameQuery(names));
                 } else {
@@ -132,11 +143,16 @@ public class NativePrivilegeStore {
                         .setSize(1000)
                         .setFetchSource(true)
                         .request();
-                    logger.trace(() ->
-                        new ParameterizedMessage("Searching for privileges [{}] with query [{}]", names, Strings.toString(query)));
+                    logger.trace(
+                        () -> new ParameterizedMessage("Searching for privileges [{}] with query [{}]", names, Strings.toString(query))
+                    );
                     request.indicesOptions().ignoreUnavailable();
-                    ScrollHelper.fetchAllByEntity(client, request, new ContextPreservingActionListener<>(supplier, listener),
-                        hit -> buildPrivilege(hit.getId(), hit.getSourceRef()));
+                    ScrollHelper.fetchAllByEntity(
+                        client,
+                        request,
+                        new ContextPreservingActionListener<>(supplier, listener),
+                        hit -> buildPrivilege(hit.getId(), hit.getSourceRef())
+                    );
                 }
             });
         }
@@ -193,14 +209,18 @@ public class NativePrivilegeStore {
     void getPrivilege(String application, String name, ActionListener<ApplicationPrivilegeDescriptor> listener) {
         final SecurityIndexManager frozenSecurityIndex = securityIndexManager.freeze();
         if (frozenSecurityIndex.isAvailable() == false) {
-            logger.warn(new ParameterizedMessage("failed to load privilege [{}] index not available", name),
-                frozenSecurityIndex.getUnavailableReason());
+            logger.warn(
+                new ParameterizedMessage("failed to load privilege [{}] index not available", name),
+                frozenSecurityIndex.getUnavailableReason()
+            );
             listener.onResponse(null);
         } else {
-            securityIndexManager.checkIndexVersionThenExecute(listener::onFailure,
-                () -> executeAsyncWithOrigin(client.threadPool().getThreadContext(), SECURITY_ORIGIN,
-                    client.prepareGet(SECURITY_MAIN_ALIAS, toDocId(application, name))
-                            .request(),
+            securityIndexManager.checkIndexVersionThenExecute(
+                listener::onFailure,
+                () -> executeAsyncWithOrigin(
+                    client.threadPool().getThreadContext(),
+                    SECURITY_ORIGIN,
+                    client.prepareGet(SECURITY_MAIN_ALIAS, toDocId(application, name)).request(),
                     new ActionListener<GetResponse>() {
                         @Override
                         public void onResponse(GetResponse response) {
@@ -223,12 +243,17 @@ public class NativePrivilegeStore {
                             }
                         }
                     },
-                    client::get));
+                    client::get
+                )
+            );
         }
     }
 
-    public void putPrivileges(Collection<ApplicationPrivilegeDescriptor> privileges, WriteRequest.RefreshPolicy refreshPolicy,
-                              ActionListener<Map<String, List<String>>> listener) {
+    public void putPrivileges(
+        Collection<ApplicationPrivilegeDescriptor> privileges,
+        WriteRequest.RefreshPolicy refreshPolicy,
+        ActionListener<Map<String, List<String>>> listener
+    ) {
         securityIndexManager.prepareIndexIfNeededThenExecute(listener::onFailure, () -> {
             ActionListener<IndexResponse> groupListener = new GroupedActionListener<>(
                 ActionListener.wrap((Collection<IndexResponse> responses) -> {
@@ -238,23 +263,34 @@ public class NativePrivilegeStore {
                         .map(NativePrivilegeStore::nameFromDocId)
                         .collect(TUPLES_TO_MAP);
                     clearRolesCache(listener, createdNames);
-                }, listener::onFailure), privileges.size());
+                }, listener::onFailure),
+                privileges.size()
+            );
             for (ApplicationPrivilegeDescriptor privilege : privileges) {
                 innerPutPrivilege(privilege, refreshPolicy, groupListener);
             }
         });
     }
 
-    private void innerPutPrivilege(ApplicationPrivilegeDescriptor privilege, WriteRequest.RefreshPolicy refreshPolicy,
-                                   ActionListener<IndexResponse> listener) {
+    private void innerPutPrivilege(
+        ApplicationPrivilegeDescriptor privilege,
+        WriteRequest.RefreshPolicy refreshPolicy,
+        ActionListener<IndexResponse> listener
+    ) {
         try {
             final String name = privilege.getName();
             final XContentBuilder xContentBuilder = privilege.toXContent(jsonBuilder(), true);
-            ClientHelper.executeAsyncWithOrigin(client.threadPool().getThreadContext(), SECURITY_ORIGIN,
-                client.prepareIndex(SECURITY_MAIN_ALIAS).setId(toDocId(privilege.getApplication(), name))
+            ClientHelper.executeAsyncWithOrigin(
+                client.threadPool().getThreadContext(),
+                SECURITY_ORIGIN,
+                client.prepareIndex(SECURITY_MAIN_ALIAS)
+                    .setId(toDocId(privilege.getApplication(), name))
                     .setSource(xContentBuilder)
                     .setRefreshPolicy(refreshPolicy)
-                    .request(), listener, client::index);
+                    .request(),
+                listener,
+                client::index
+            );
         } catch (Exception e) {
             logger.warn("Failed to put privilege {} - {}", Strings.toString(privilege), e.toString());
             listener.onFailure(e);
@@ -262,8 +298,12 @@ public class NativePrivilegeStore {
 
     }
 
-    public void deletePrivileges(String application, Collection<String> names, WriteRequest.RefreshPolicy refreshPolicy,
-                                 ActionListener<Map<String, List<String>>> listener) {
+    public void deletePrivileges(
+        String application,
+        Collection<String> names,
+        WriteRequest.RefreshPolicy refreshPolicy,
+        ActionListener<Map<String, List<String>>> listener
+    ) {
         final SecurityIndexManager frozenSecurityIndex = securityIndexManager.freeze();
         if (frozenSecurityIndex.indexExists() == false) {
             listener.onResponse(Collections.emptyMap());
@@ -271,20 +311,22 @@ public class NativePrivilegeStore {
             listener.onFailure(frozenSecurityIndex.getUnavailableReason());
         } else {
             securityIndexManager.checkIndexVersionThenExecute(listener::onFailure, () -> {
-                ActionListener<DeleteResponse> groupListener = new GroupedActionListener<>(
-                    ActionListener.wrap(responses -> {
-                        final Map<String, List<String>> deletedNames = responses.stream()
-                            .filter(r -> r.getResult() == DocWriteResponse.Result.DELETED)
-                            .map(r -> r.getId())
-                            .map(NativePrivilegeStore::nameFromDocId)
-                            .collect(TUPLES_TO_MAP);
-                        clearRolesCache(listener, deletedNames);
-                    }, listener::onFailure), names.size());
+                ActionListener<DeleteResponse> groupListener = new GroupedActionListener<>(ActionListener.wrap(responses -> {
+                    final Map<String, List<String>> deletedNames = responses.stream()
+                        .filter(r -> r.getResult() == DocWriteResponse.Result.DELETED)
+                        .map(r -> r.getId())
+                        .map(NativePrivilegeStore::nameFromDocId)
+                        .collect(TUPLES_TO_MAP);
+                    clearRolesCache(listener, deletedNames);
+                }, listener::onFailure), names.size());
                 for (String name : names) {
-                    ClientHelper.executeAsyncWithOrigin(client.threadPool().getThreadContext(), SECURITY_ORIGIN,
-                        client.prepareDelete(SECURITY_MAIN_ALIAS, toDocId(application, name))
-                            .setRefreshPolicy(refreshPolicy)
-                            .request(), groupListener, client::delete);
+                    ClientHelper.executeAsyncWithOrigin(
+                        client.threadPool().getThreadContext(),
+                        SECURITY_ORIGIN,
+                        client.prepareDelete(SECURITY_MAIN_ALIAS, toDocId(application, name)).setRefreshPolicy(refreshPolicy).request(),
+                        groupListener,
+                        client::delete
+                    );
                 }
             });
         }
@@ -293,20 +335,18 @@ public class NativePrivilegeStore {
     private <T> void clearRolesCache(ActionListener<T> listener, T value) {
         // This currently clears _all_ roles, but could be improved to clear only those roles that reference the affected application
         ClearRolesCacheRequest request = new ClearRolesCacheRequest();
-        executeAsyncWithOrigin(client, SECURITY_ORIGIN, ClearRolesCacheAction.INSTANCE, request,
-            new ActionListener<>() {
-                @Override
-                public void onResponse(ClearRolesCacheResponse nodes) {
-                    listener.onResponse(value);
-                }
+        executeAsyncWithOrigin(client, SECURITY_ORIGIN, ClearRolesCacheAction.INSTANCE, request, new ActionListener<>() {
+            @Override
+            public void onResponse(ClearRolesCacheResponse nodes) {
+                listener.onResponse(value);
+            }
 
-                @Override
-                public void onFailure(Exception e) {
-                    logger.error("unable to clear role cache", e);
-                    listener.onFailure(
-                        new ElasticsearchException("clearing the role cache failed. please clear the role cache manually", e));
-                }
-            });
+            @Override
+            public void onFailure(Exception e) {
+                logger.error("unable to clear role cache", e);
+                listener.onFailure(new ElasticsearchException("clearing the role cache failed. please clear the role cache manually", e));
+            }
+        });
     }
 
     private ApplicationPrivilegeDescriptor buildPrivilege(String docId, BytesReference source) {
@@ -318,14 +358,20 @@ public class NativePrivilegeStore {
         try {
             // EMPTY is safe here because we never use namedObject
 
-            try (StreamInput input = source.streamInput();
-                 XContentParser parser = XContentType.JSON.xContent().createParser(NamedXContentRegistry.EMPTY,
-                     LoggingDeprecationHandler.INSTANCE, input)) {
+            try (
+                StreamInput input = source.streamInput();
+                XContentParser parser = XContentType.JSON.xContent()
+                    .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, input)
+            ) {
                 final ApplicationPrivilegeDescriptor privilege = ApplicationPrivilegeDescriptor.parse(parser, null, null, true);
-                assert privilege.getApplication().equals(name.v1())
-                    : "Incorrect application name for privilege. Expected [" + name.v1() + "] but was " + privilege.getApplication();
-                assert privilege.getName().equals(name.v2())
-                    : "Incorrect name for application privilege. Expected [" + name.v2() + "] but was " + privilege.getName();
+                assert privilege.getApplication().equals(name.v1()) : "Incorrect application name for privilege. Expected ["
+                    + name.v1()
+                    + "] but was "
+                    + privilege.getApplication();
+                assert privilege.getName().equals(name.v2()) : "Incorrect name for application privilege. Expected ["
+                    + name.v2()
+                    + "] but was "
+                    + privilege.getName();
                 return privilege;
             }
         } catch (IOException | XContentParseException e) {

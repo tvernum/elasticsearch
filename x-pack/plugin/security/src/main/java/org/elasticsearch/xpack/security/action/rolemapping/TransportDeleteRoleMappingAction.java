@@ -16,14 +16,16 @@ import org.elasticsearch.xpack.core.security.action.rolemapping.DeleteRoleMappin
 import org.elasticsearch.xpack.core.security.action.rolemapping.DeleteRoleMappingResponse;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
 
-public class TransportDeleteRoleMappingAction
-        extends HandledTransportAction<DeleteRoleMappingRequest, DeleteRoleMappingResponse> {
+public class TransportDeleteRoleMappingAction extends HandledTransportAction<DeleteRoleMappingRequest, DeleteRoleMappingResponse> {
 
     private final NativeRoleMappingStore roleMappingStore;
 
     @Inject
-    public TransportDeleteRoleMappingAction(ActionFilters actionFilters, TransportService transportService,
-                                            NativeRoleMappingStore roleMappingStore) {
+    public TransportDeleteRoleMappingAction(
+        ActionFilters actionFilters,
+        TransportService transportService,
+        NativeRoleMappingStore roleMappingStore
+    ) {
         super(DeleteRoleMappingAction.NAME, transportService, actionFilters, DeleteRoleMappingRequest::new);
         this.roleMappingStore = roleMappingStore;
     }

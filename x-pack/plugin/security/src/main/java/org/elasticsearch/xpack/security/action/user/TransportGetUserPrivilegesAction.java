@@ -28,8 +28,12 @@ public class TransportGetUserPrivilegesAction extends HandledTransportAction<Get
     private final AuthorizationService authorizationService;
 
     @Inject
-    public TransportGetUserPrivilegesAction(ThreadPool threadPool, TransportService transportService,
-                                            ActionFilters actionFilters, AuthorizationService authorizationService) {
+    public TransportGetUserPrivilegesAction(
+        ThreadPool threadPool,
+        TransportService transportService,
+        ActionFilters actionFilters,
+        AuthorizationService authorizationService
+    ) {
         super(GetUserPrivilegesAction.NAME, transportService, actionFilters, GetUserPrivilegesRequest::new);
         this.threadPool = threadPool;
         this.authorizationService = authorizationService;

@@ -49,8 +49,10 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
     public static final String TYPE = "reserved";
 
     private final ReservedUserInfo bootstrapUserInfo;
-    public static final Setting<SecureString> BOOTSTRAP_ELASTIC_PASSWORD = SecureSetting.secureString("bootstrap.password",
-            KeyStoreWrapper.SEED_SETTING);
+    public static final Setting<SecureString> BOOTSTRAP_ELASTIC_PASSWORD = SecureSetting.secureString(
+        "bootstrap.password",
+        KeyStoreWrapper.SEED_SETTING
+    );
 
     private final NativeUsersStore nativeUsersStore;
     private final AnonymousUser anonymousUser;
@@ -61,8 +63,14 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
     private final ReservedUserInfo disabledDefaultUserInfo;
     private final ReservedUserInfo enabledDefaultUserInfo;
 
-    public ReservedRealm(Environment env, Settings settings, NativeUsersStore nativeUsersStore, AnonymousUser anonymousUser,
-                         SecurityIndexManager securityIndex, ThreadPool threadPool) {
+    public ReservedRealm(
+        Environment env,
+        Settings settings,
+        NativeUsersStore nativeUsersStore,
+        AnonymousUser anonymousUser,
+        SecurityIndexManager securityIndex,
+        ThreadPool threadPool
+    ) {
         super(new RealmConfig(new RealmConfig.RealmIdentifier(TYPE, TYPE), settings, env, threadPool.getThreadContext()), threadPool);
         this.nativeUsersStore = nativeUsersStore;
         this.realmEnabled = XPackSettings.RESERVED_REALM_ENABLED_SETTING.get(settings);
@@ -73,8 +81,9 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
         final char[] emptyPasswordHash = reservedRealmHasher.hash(new SecureString("".toCharArray()));
         disabledDefaultUserInfo = new ReservedUserInfo(emptyPasswordHash, false, true);
         enabledDefaultUserInfo = new ReservedUserInfo(emptyPasswordHash, true, true);
-        final char[] hash = BOOTSTRAP_ELASTIC_PASSWORD.get(settings).length() == 0 ? emptyPasswordHash :
-            reservedRealmHasher.hash(BOOTSTRAP_ELASTIC_PASSWORD.get(settings));
+        final char[] hash = BOOTSTRAP_ELASTIC_PASSWORD.get(settings).length() == 0
+            ? emptyPasswordHash
+            : reservedRealmHasher.hash(BOOTSTRAP_ELASTIC_PASSWORD.get(settings));
         bootstrapUserInfo = new ReservedUserInfo(hash, true, hash == emptyPasswordHash);
     }
 
@@ -158,7 +167,6 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
         }
     }
 
-
     public void users(ActionListener<Collection<User>> listener) {
         if (realmEnabled == false) {
             listener.onResponse(anonymousEnabled ? Collections.singletonList(anonymousUser) : Collections.emptyList());
@@ -196,7 +204,6 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
         }
     }
 
-
     private void getUserInfo(final String username, ActionListener<ReservedUserInfo> listener) {
         if (securityIndex.indexExists() == false) {
             listener.onResponse(getDefaultUserInfo(username));
@@ -208,8 +215,10 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
                     listener.onResponse(userInfo);
                 }
             }, (e) -> {
-                logger.error((Supplier<?>) () ->
-                        new ParameterizedMessage("failed to retrieve password hash for reserved user [{}]", username), e);
+                logger.error(
+                    (Supplier<?>) () -> new ParameterizedMessage("failed to retrieve password hash for reserved user [{}]", username),
+                    e
+                );
                 listener.onResponse(null);
             }));
         }

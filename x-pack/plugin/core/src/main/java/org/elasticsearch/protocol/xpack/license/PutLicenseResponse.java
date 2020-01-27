@@ -46,8 +46,12 @@ public class PutLicenseResponse extends AcknowledgedResponse {
         this(acknowledged, status, null, Collections.<String, String[]>emptyMap());
     }
 
-    public PutLicenseResponse(boolean acknowledged, LicensesStatus status, String acknowledgeHeader,
-                              Map<String, String[]> acknowledgeMessages) {
+    public PutLicenseResponse(
+        boolean acknowledged,
+        LicensesStatus status,
+        String acknowledgeHeader,
+        Map<String, String[]> acknowledgeMessages
+    ) {
         super(acknowledged);
         this.status = status;
         this.acknowledgeHeader = acknowledgeHeader;
@@ -105,14 +109,17 @@ public class PutLicenseResponse extends AcknowledgedResponse {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        if (!super.equals(o))
+            return false;
         PutLicenseResponse that = (PutLicenseResponse) o;
 
-        return status == that.status &&
-            ProtocolUtils.equals(acknowledgeMessages, that.acknowledgeMessages) &&
-            Objects.equals(acknowledgeHeader, that.acknowledgeHeader);
+        return status == that.status
+            && ProtocolUtils.equals(acknowledgeMessages, that.acknowledgeMessages)
+            && Objects.equals(acknowledgeHeader, that.acknowledgeHeader);
     }
 
     @Override

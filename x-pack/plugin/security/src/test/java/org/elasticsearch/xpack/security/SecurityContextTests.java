@@ -35,9 +35,7 @@ public class SecurityContextTests extends ESTestCase {
 
     @Before
     public void buildSecurityContext() throws IOException {
-        settings = Settings.builder()
-                .put("path.home", createTempDir())
-                .build();
+        settings = Settings.builder().put("path.home", createTempDir()).build();
         threadContext = new ThreadContext(settings);
         securityContext = new SecurityContext(settings, threadContext);
     }
@@ -72,8 +70,10 @@ public class SecurityContextTests extends ESTestCase {
         assertEquals(user, securityContext.getUser());
         assertEquals(AuthenticationType.INTERNAL, securityContext.getAuthentication().getAuthenticationType());
 
-        IllegalStateException e = expectThrows(IllegalStateException.class,
-                () -> securityContext.setUser(randomFrom(user, SystemUser.INSTANCE), Version.CURRENT));
+        IllegalStateException e = expectThrows(
+            IllegalStateException.class,
+            () -> securityContext.setUser(randomFrom(user, SystemUser.INSTANCE), Version.CURRENT)
+        );
         assertEquals("authentication is already present in the context", e.getMessage());
     }
 

@@ -24,8 +24,12 @@ public class SecurityInfoTransportAction extends XPackInfoFeatureTransportAction
     private final XPackLicenseState licenseState;
 
     @Inject
-    public SecurityInfoTransportAction(TransportService transportService, ActionFilters actionFilters,
-                                       Settings settings, XPackLicenseState licenseState) {
+    public SecurityInfoTransportAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        Settings settings,
+        XPackLicenseState licenseState
+    ) {
         super(XPackInfoFeatureAction.SECURITY.name(), transportService, actionFilters);
         this.enabled = XPackSettings.SECURITY_ENABLED.get(settings);
         this.licenseState = licenseState;

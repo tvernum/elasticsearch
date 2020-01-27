@@ -32,8 +32,7 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
  */
 public class RestOpenIdConnectLogoutAction extends OpenIdConnectBaseRestHandler {
 
-    static final ObjectParser<OpenIdConnectLogoutRequest, Void> PARSER = new ObjectParser<>("oidc_logout",
-        OpenIdConnectLogoutRequest::new);
+    static final ObjectParser<OpenIdConnectLogoutRequest, Void> PARSER = new ObjectParser<>("oidc_logout", OpenIdConnectLogoutRequest::new);
 
     static {
         PARSER.declareString(OpenIdConnectLogoutRequest::setToken, new ParseField("token"));
@@ -49,7 +48,9 @@ public class RestOpenIdConnectLogoutAction extends OpenIdConnectBaseRestHandler 
     protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         try (XContentParser parser = request.contentParser()) {
             final OpenIdConnectLogoutRequest logoutRequest = PARSER.parse(parser, null);
-            return channel -> client.execute(OpenIdConnectLogoutAction.INSTANCE, logoutRequest,
+            return channel -> client.execute(
+                OpenIdConnectLogoutAction.INSTANCE,
+                logoutRequest,
                 new RestBuilderListener<OpenIdConnectLogoutResponse>(channel) {
                     @Override
                     public RestResponse buildResponse(OpenIdConnectLogoutResponse response, XContentBuilder builder) throws Exception {
@@ -58,7 +59,8 @@ public class RestOpenIdConnectLogoutAction extends OpenIdConnectBaseRestHandler 
                         builder.endObject();
                         return new BytesRestResponse(RestStatus.OK, builder);
                     }
-                });
+                }
+            );
         }
     }
 

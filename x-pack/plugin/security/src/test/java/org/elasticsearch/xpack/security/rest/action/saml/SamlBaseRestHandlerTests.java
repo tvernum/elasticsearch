@@ -28,8 +28,9 @@ public class SamlBaseRestHandlerTests extends ESTestCase {
     }
 
     public void testSamlNotAvailableOnBasicStandardOrGold() {
-        final SamlBaseRestHandler handler = buildHandler(randomFrom(License.OperationMode.BASIC, License.OperationMode.STANDARD,
-            License.OperationMode.GOLD));
+        final SamlBaseRestHandler handler = buildHandler(
+            randomFrom(License.OperationMode.BASIC, License.OperationMode.STANDARD, License.OperationMode.GOLD)
+        );
         Exception e = handler.checkFeatureAvailable(new FakeRestRequest());
         assertThat(e, instanceOf(ElasticsearchException.class));
         ElasticsearchException elasticsearchException = (ElasticsearchException) e;
@@ -37,9 +38,7 @@ public class SamlBaseRestHandlerTests extends ESTestCase {
     }
 
     private SamlBaseRestHandler buildHandler(License.OperationMode licenseMode) {
-        final Settings settings = Settings.builder()
-                .put(XPackSettings.SECURITY_ENABLED.getKey(), true)
-                .build();
+        final Settings settings = Settings.builder().put(XPackSettings.SECURITY_ENABLED.getKey(), true).build();
         final TestUtils.UpdatableLicenseState licenseState = new TestUtils.UpdatableLicenseState(settings);
         licenseState.update(licenseMode, true, null);
 

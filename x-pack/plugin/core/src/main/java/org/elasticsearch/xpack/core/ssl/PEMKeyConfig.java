@@ -142,13 +142,17 @@ class PEMKeyConfig extends KeyConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         PEMKeyConfig that = (PEMKeyConfig) o;
 
-        if (keyPath != null ? !keyPath.equals(that.keyPath) : that.keyPath != null) return false;
-        if (keyPassword != null ? !keyPassword.equals(that.keyPassword) : that.keyPassword != null) return false;
+        if (keyPath != null ? !keyPath.equals(that.keyPath) : that.keyPath != null)
+            return false;
+        if (keyPassword != null ? !keyPassword.equals(that.keyPassword) : that.keyPassword != null)
+            return false;
         return certPath != null ? certPath.equals(that.certPath) : that.certPath == null;
 
     }
@@ -163,8 +167,6 @@ class PEMKeyConfig extends KeyConfig {
 
     @Override
     public String toString() {
-        return "keyPath=[" + keyPath +
-                "], certPaths=[" + certPath +
-                "]";
+        return "keyPath=[" + keyPath + "], certPaths=[" + certPath + "]";
     }
 }

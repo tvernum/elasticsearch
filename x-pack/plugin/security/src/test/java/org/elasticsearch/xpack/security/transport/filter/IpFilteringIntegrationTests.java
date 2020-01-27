@@ -41,27 +41,29 @@ public class IpFilteringIntegrationTests extends SecurityIntegTestCase {
 
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
-        String randomClientPortRange = randomClientPort + "-" + (randomClientPort+100);
-        return Settings.builder().put(super.nodeSettings(nodeOrdinal))
-                .put("transport.profiles.client.port", randomClientPortRange)
-                // make sure this is "localhost", no matter if ipv4 or ipv6, but be consistent
-                .put("transport.profiles.client.bind_host", "localhost")
-                .put("transport.profiles.client.xpack.security.filter.deny", "_all")
-                .put(IPFilter.TRANSPORT_FILTER_DENY_SETTING.getKey(), "_all")
-                .build();
+        String randomClientPortRange = randomClientPort + "-" + (randomClientPort + 100);
+        return Settings.builder()
+            .put(super.nodeSettings(nodeOrdinal))
+            .put("transport.profiles.client.port", randomClientPortRange)
+            // make sure this is "localhost", no matter if ipv4 or ipv6, but be consistent
+            .put("transport.profiles.client.bind_host", "localhost")
+            .put("transport.profiles.client.xpack.security.filter.deny", "_all")
+            .put(IPFilter.TRANSPORT_FILTER_DENY_SETTING.getKey(), "_all")
+            .build();
     }
 
     public void testThatIpFilteringIsIntegratedIntoNettyPipelineViaHttp() throws Exception {
-        TransportAddress transportAddress =
-                randomFrom(internalCluster().getDataNodeInstance(HttpServerTransport.class).boundAddress().boundAddresses());
-        try (Socket socket = new Socket()){
+        TransportAddress transportAddress = randomFrom(
+            internalCluster().getDataNodeInstance(HttpServerTransport.class).boundAddress().boundAddresses()
+        );
+        try (Socket socket = new Socket()) {
             trySocketConnection(socket, transportAddress.address());
             assertThat(socket.isClosed(), is(true));
         }
     }
 
     public void testThatIpFilteringIsAppliedForProfile() throws Exception {
-        try (Socket socket = new Socket()){
+        try (Socket socket = new Socket()) {
             trySocketConnection(socket, getProfileAddress("client"));
             assertThat(socket.isClosed(), is(true));
         }
@@ -80,8 +82,9 @@ public class IpFilteringIntegrationTests extends SecurityIntegTestCase {
     }
 
     private static InetSocketAddress getProfileAddress(String profile) {
-        TransportAddress transportAddress =
-                randomFrom(internalCluster().getInstance(Transport.class).profileBoundAddresses().get(profile).boundAddresses());
+        TransportAddress transportAddress = randomFrom(
+            internalCluster().getInstance(Transport.class).profileBoundAddresses().get(profile).boundAddresses()
+        );
         return transportAddress.address();
     }
 }

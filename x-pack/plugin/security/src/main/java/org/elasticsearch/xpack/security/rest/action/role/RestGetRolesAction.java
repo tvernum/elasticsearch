@@ -37,12 +37,15 @@ public class RestGetRolesAction extends SecurityBaseRestHandler {
     public RestGetRolesAction(Settings settings, RestController controller, XPackLicenseState licenseState) {
         super(settings, licenseState);
         // TODO: remove deprecated endpoint in 8.0.0
+        controller.registerWithDeprecatedHandler(GET, "/_security/role/", this, GET, "/_xpack/security/role/", deprecationLogger);
         controller.registerWithDeprecatedHandler(
-            GET, "/_security/role/", this,
-            GET, "/_xpack/security/role/", deprecationLogger);
-        controller.registerWithDeprecatedHandler(
-            GET, "/_security/role/{name}", this,
-            GET, "/_xpack/security/role/{name}", deprecationLogger);
+            GET,
+            "/_security/role/{name}",
+            this,
+            GET,
+            "/_xpack/security/role/{name}",
+            deprecationLogger
+        );
     }
 
     @Override
@@ -53,9 +56,7 @@ public class RestGetRolesAction extends SecurityBaseRestHandler {
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
         final String[] roles = request.paramAsStringArray("name", Strings.EMPTY_ARRAY);
-        return channel -> new GetRolesRequestBuilder(client)
-            .names(roles)
-            .execute(new RestBuilderListener<>(channel) {
+        return channel -> new GetRolesRequestBuilder(client).names(roles).execute(new RestBuilderListener<>(channel) {
             @Override
             public RestResponse buildResponse(GetRolesResponse response, XContentBuilder builder) throws Exception {
                 builder.startObject();

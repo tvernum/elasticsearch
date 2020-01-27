@@ -26,11 +26,23 @@ public class TransportPostStartBasicAction extends TransportMasterNodeAction<Pos
     private final LicenseService licenseService;
 
     @Inject
-    public TransportPostStartBasicAction(TransportService transportService, ClusterService clusterService,
-                                         LicenseService licenseService, ThreadPool threadPool, ActionFilters actionFilters,
-                                         IndexNameExpressionResolver indexNameExpressionResolver) {
-        super(PostStartBasicAction.NAME, transportService, clusterService, threadPool, actionFilters,
-                PostStartBasicRequest::new, indexNameExpressionResolver);
+    public TransportPostStartBasicAction(
+        TransportService transportService,
+        ClusterService clusterService,
+        LicenseService licenseService,
+        ThreadPool threadPool,
+        ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver
+    ) {
+        super(
+            PostStartBasicAction.NAME,
+            transportService,
+            clusterService,
+            threadPool,
+            actionFilters,
+            PostStartBasicRequest::new,
+            indexNameExpressionResolver
+        );
         this.licenseService = licenseService;
     }
 
@@ -45,8 +57,12 @@ public class TransportPostStartBasicAction extends TransportMasterNodeAction<Pos
     }
 
     @Override
-    protected void masterOperation(Task task, PostStartBasicRequest request, ClusterState state,
-                                   ActionListener<PostStartBasicResponse> listener) throws Exception {
+    protected void masterOperation(
+        Task task,
+        PostStartBasicRequest request,
+        ClusterState state,
+        ActionListener<PostStartBasicResponse> listener
+    ) throws Exception {
         licenseService.startBasicLicense(request, listener);
     }
 

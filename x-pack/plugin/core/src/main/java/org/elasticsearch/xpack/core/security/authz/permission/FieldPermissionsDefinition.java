@@ -34,14 +34,16 @@ public final class FieldPermissionsDefinition {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         FieldPermissionsDefinition that = (FieldPermissionsDefinition) o;
 
-        return fieldGrantExcludeGroups != null ?
-                fieldGrantExcludeGroups.equals(that.fieldGrantExcludeGroups) :
-                that.fieldGrantExcludeGroups == null;
+        return fieldGrantExcludeGroups != null
+            ? fieldGrantExcludeGroups.equals(that.fieldGrantExcludeGroups)
+            : that.fieldGrantExcludeGroups == null;
     }
 
     @Override
@@ -68,12 +70,15 @@ public final class FieldPermissionsDefinition {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
 
             FieldGrantExcludeGroup that = (FieldGrantExcludeGroup) o;
 
-            if (!Arrays.equals(grantedFields, that.grantedFields)) return false;
+            if (!Arrays.equals(grantedFields, that.grantedFields))
+                return false;
             return Arrays.equals(excludedFields, that.excludedFields);
         }
 
@@ -87,8 +92,10 @@ public final class FieldPermissionsDefinition {
         @Override
         public String toString() {
             return getClass().getSimpleName()
-                + "[grant=" + Strings.arrayToCommaDelimitedString(grantedFields)
-                + "; exclude=" + Strings.arrayToCommaDelimitedString(excludedFields)
+                + "[grant="
+                + Strings.arrayToCommaDelimitedString(grantedFields)
+                + "; exclude="
+                + Strings.arrayToCommaDelimitedString(excludedFields)
                 + "]";
         }
     }
