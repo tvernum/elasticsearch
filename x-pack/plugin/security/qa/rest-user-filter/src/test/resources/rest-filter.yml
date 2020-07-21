@@ -1,0 +1,32 @@
+# Operator filter allows GET/PUT cluster settings for the "operator_access" user
+operator:
+  users:
+  - username: "full_access"
+    realm: "default_file"
+  - username: "operator_access"
+    realm: "default_file"
+  actions:
+  - grant:
+      paths:
+      - "/_cluster/settings"
+      methods:
+      - "GET"
+      - "PUT"
+
+# Default filter rejects PUT cluster settings for all users
+default:
+  users:
+  - username: "*"
+    realm: "*"
+  actions:
+  - grant:
+      paths:
+      - "*"
+      methods:
+      - "*"
+    except:
+      paths:
+      - "/_cluster/settings"
+      methods:
+      - "PUT"
+

@@ -12,7 +12,9 @@ import org.apache.logging.log4j.util.Supplier;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.http.HttpChannel;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -24,9 +26,11 @@ import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.xpack.core.security.rest.RestRequestFilter;
 import org.elasticsearch.xpack.security.authc.AuthenticationService;
 import org.elasticsearch.xpack.security.authc.support.SecondaryAuthenticator;
+import org.elasticsearch.xpack.security.rest.filter.SecurityRestActionFilter;
 import org.elasticsearch.xpack.security.transport.SSLEngineUtils;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 public class SecurityRestFilter implements RestHandler {
@@ -39,15 +43,22 @@ public class SecurityRestFilter implements RestHandler {
     private final XPackLicenseState licenseState;
     private final ThreadContext threadContext;
     private final boolean extractClientCertificate;
+    private final SecurityRestActionFilter actionFilter;
 
-    public SecurityRestFilter(XPackLicenseState licenseState, ThreadContext threadContext, AuthenticationService authenticationService,
-                              SecondaryAuthenticator secondaryAuthenticator, RestHandler restHandler, boolean extractClientCertificate) {
+    public SecurityRestFilter(Environment environment, XPackLicenseState licenseState, ThreadContext threadContext,
+                              AuthenticationService authenticationService, SecondaryAuthenticator secondaryAuthenticator,
+                              RestHandler restHandler, boolean extractClientCertificate) {
         this.licenseState = licenseState;
         this.threadContext = threadContext;
         this.authenticationService = authenticationService;
         this.secondaryAuthenticator = secondaryAuthenticator;
         this.restHandler = restHandler;
         this.extractClientCertificate = extractClientCertificate;
+        this.actionFilter = new SecurityRestActionFilter(environment);
+    }
+
+    public static Collection<? extends Setting<?>> getSettings() {
+        return List.of(SecurityRestActionFilter.CONFIG_PATH_SETTING);
     }
 
     @Override
@@ -66,6 +77,12 @@ public class SecurityRestFilter implements RestHandler {
                         logger.trace("No authentication available for REST request [{}]", requestUri);
                     } else {
                         logger.trace("Authenticated REST request [{}] as {}", requestUri, authentication);
+                    }
+                    try {
+                        actionFilter.authorize(authentication, request);
+                    } catch(Exception e) {
+                        handleException("Rest filter", request, channel, e);
+                        return;
                     }
                     secondaryAuthenticator.authenticateAndAttachToContext(request, ActionListener.wrap(
                         secondaryAuthentication -> {

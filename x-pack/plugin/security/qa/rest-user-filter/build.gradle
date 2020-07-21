@@ -15,7 +15,7 @@ forbiddenPatterns {
 
 testClusters.integTest {
   testDistribution = 'DEFAULT'
-  numberOfNodes = 2
+  // numberOfNodes = 2
 
   extraConfigFile 'http.key', file('src/test/resources/ssl/http.key')
   extraConfigFile 'http.crt', file('src/test/resources/ssl/http.crt')
@@ -24,7 +24,10 @@ testClusters.integTest {
   extraConfigFile 'ca.crt', file('src/test/resources/ssl/ca.crt')
 
   setting 'xpack.ml.enabled', 'false'
-  setting 'xpack.license.self_generated.type', 'basic'
+  setting 'xpack.license.self_generated.type', 'trial'
+  setting 'xpack.security.enabled', 'true'
+  setting 'xpack.security.http.filter', 'rest-filter.yml'
+  setting 'xpack.security.ssl.diagnose.trust', 'false'
   setting 'xpack.security.http.ssl.enabled', 'true'
   setting 'xpack.security.http.ssl.certificate', 'http.crt'
   setting 'xpack.security.http.ssl.key', 'http.key'
@@ -35,5 +38,13 @@ testClusters.integTest {
   setting 'xpack.security.transport.ssl.key', 'transport.key'
   setting 'xpack.security.transport.ssl.key_passphrase', 'transport-password'
   setting 'xpack.security.transport.ssl.certificate_authorities', 'ca.crt'
-}
+  setting 'xpack.security.authc.token.enabled', 'true'
+  setting 'xpack.security.authc.api_key.enabled', 'true'
+  setting 'logger.org.elasticsearch.xpack.security.rest', 'TRACE'
 
+  extraConfigFile 'roles.yml', file('src/test/resources/roles.yml')
+  extraConfigFile 'rest-filter.yml', file('src/test/resources/rest-filter.yml')
+  user username: "full_access", password: "full-password", role: "superuser"
+  user username: "admin_access", password: "admin-password", role: "superuser"
+  user username: "operator_access", password: "operator-password", role: "operator_role"
+}

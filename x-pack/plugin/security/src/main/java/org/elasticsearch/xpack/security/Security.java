@@ -302,7 +302,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
     private final SetOnce<TransportInterceptor> securityInterceptor = new SetOnce<>();
     private final SetOnce<IPFilter> ipFilter = new SetOnce<>();
     private final SetOnce<AuthenticationService> authcService = new SetOnce<>();
-    private final SetOnce<SecondaryAuthenticator> secondayAuthc = new SetOnce<>();
+    private final SetOnce<SecondaryAuthenticator> secondaryAuthc = new SetOnce<>();
     private final SetOnce<AuditTrailService> auditTrailService = new SetOnce<>();
     private final SetOnce<SecurityContext> securityContext = new SetOnce<>();
     private final SetOnce<ThreadContext> threadContext = new SetOnce<>();
@@ -314,6 +314,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
     private final SetOnce<DocumentSubsetBitsetCache> dlsBitsetCache = new SetOnce<>();
     private final SetOnce<List<BootstrapCheck>> bootstrapChecks = new SetOnce<>();
     private final List<SecurityExtension> securityExtensions = new ArrayList<>();
+    private Environment environment;
 
     public Security(Settings settings, final Path configPath) {
         this(settings, configPath, Collections.emptyList());
@@ -334,7 +335,6 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
             this.bootstrapChecks.set(Collections.emptyList());
         }
         this.securityExtensions.addAll(extensions);
-
     }
 
     private static void runStartupChecks(Settings settings) {
@@ -371,6 +371,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
                                         ResourceWatcherService resourceWatcherService, ScriptService scriptService,
                                         NamedXContentRegistry xContentRegistry, Environment environment,
                                         IndexNameExpressionResolver expressionResolver) throws Exception {
+        this.environment = environment;
         if (enabled == false) {
             return Collections.singletonList(new SecurityUsageServices(null, null, null, null));
         }
@@ -490,7 +491,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         components.add(authzService);
 
         final SecondaryAuthenticator secondaryAuthenticator = new SecondaryAuthenticator(securityContext.get(), authcService.get());
-        this.secondayAuthc.set(secondaryAuthenticator);
+        this.secondaryAuthc.set(secondaryAuthenticator);
         components.add(secondaryAuthenticator);
 
         ipFilter.set(new IPFilter(settings, auditTrailService, clusterService.getClusterSettings(), getLicenseState()));
@@ -628,6 +629,9 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         SSLService.registerSettings(settingsList);
         // IP Filter settings
         IPFilter.addSettings(settingsList);
+        // Rest Filter
+        settingsList.addAll(SecurityRestFilter.getSettings());
+
 
         // audit settings
         LoggingAuditTrail.registerSettings(settingsList);
@@ -1001,7 +1005,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         final boolean ssl = HTTP_SSL_ENABLED.get(settings);
         final SSLConfiguration httpSSLConfig = getSslService().getHttpTransportSSLConfiguration();
         boolean extractClientCertificate = ssl && getSslService().isSSLClientAuthEnabled(httpSSLConfig);
-        return handler -> new SecurityRestFilter(getLicenseState(), threadContext, authcService.get(), secondayAuthc.get(),
+        return handler -> new SecurityRestFilter(environment, getLicenseState(), threadContext, authcService.get(), secondaryAuthc.get(),
             handler, extractClientCertificate);
     }
 

@@ -1,0 +1,5 @@
+# A basic role that is used to test security
+operator_role:
+  cluster:
+    - manage
+

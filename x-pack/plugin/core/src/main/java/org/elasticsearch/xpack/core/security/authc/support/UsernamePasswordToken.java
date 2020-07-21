@@ -50,6 +50,10 @@ public class UsernamePasswordToken implements AuthenticationToken {
         }
     }
 
+    public String basicAuthHeaderValue() {
+        return basicAuthHeaderValue(this.username, this.password);
+    }
+
     @Override
     public String principal() {
         return username;
