@@ -18,8 +18,8 @@ import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCacheAction;
 import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCacheRequest;
 import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCacheResponse;
-import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +28,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
     ClearPrivilegesCacheRequest.Node, ClearPrivilegesCacheResponse.Node> {
 
     private final NativePrivilegeStore privilegesStore;
-    private final CompositeRolesStore rolesStore;
+    private final RolesStore rolesStore;
 
     @Inject
     public TransportClearPrivilegesCacheAction(
@@ -37,7 +37,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
         TransportService transportService,
         ActionFilters actionFilters,
         NativePrivilegeStore privilegesStore,
-        CompositeRolesStore rolesStore) {
+        RolesStore.Holder rolesStore) {
         super(
             ClearPrivilegesCacheAction.NAME,
             threadPool,
@@ -49,7 +49,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
             ThreadPool.Names.MANAGEMENT,
             ClearPrivilegesCacheResponse.Node.class);
         this.privilegesStore = privilegesStore;
-        this.rolesStore = rolesStore;
+        this.rolesStore = rolesStore.store;
     }
 
     @Override

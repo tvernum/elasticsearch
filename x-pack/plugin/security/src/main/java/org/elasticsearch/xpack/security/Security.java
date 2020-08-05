@@ -104,9 +104,9 @@ import org.elasticsearch.xpack.core.security.action.rolemapping.DeleteRoleMappin
 import org.elasticsearch.xpack.core.security.action.rolemapping.GetRoleMappingsAction;
 import org.elasticsearch.xpack.core.security.action.rolemapping.PutRoleMappingAction;
 import org.elasticsearch.xpack.core.security.action.saml.SamlAuthenticateAction;
+import org.elasticsearch.xpack.core.security.action.saml.SamlCompleteLogoutAction;
 import org.elasticsearch.xpack.core.security.action.saml.SamlInvalidateSessionAction;
 import org.elasticsearch.xpack.core.security.action.saml.SamlLogoutAction;
-import org.elasticsearch.xpack.core.security.action.saml.SamlCompleteLogoutAction;
 import org.elasticsearch.xpack.core.security.action.saml.SamlPrepareAuthenticationAction;
 import org.elasticsearch.xpack.core.security.action.token.CreateTokenAction;
 import org.elasticsearch.xpack.core.security.action.token.InvalidateTokenAction;
@@ -169,9 +169,9 @@ import org.elasticsearch.xpack.security.action.rolemapping.TransportDeleteRoleMa
 import org.elasticsearch.xpack.security.action.rolemapping.TransportGetRoleMappingsAction;
 import org.elasticsearch.xpack.security.action.rolemapping.TransportPutRoleMappingAction;
 import org.elasticsearch.xpack.security.action.saml.TransportSamlAuthenticateAction;
+import org.elasticsearch.xpack.security.action.saml.TransportSamlCompleteLogoutAction;
 import org.elasticsearch.xpack.security.action.saml.TransportSamlInvalidateSessionAction;
 import org.elasticsearch.xpack.security.action.saml.TransportSamlLogoutAction;
-import org.elasticsearch.xpack.security.action.saml.TransportSamlCompleteLogoutAction;
 import org.elasticsearch.xpack.security.action.saml.TransportSamlPrepareAuthenticationAction;
 import org.elasticsearch.xpack.security.action.token.TransportCreateTokenAction;
 import org.elasticsearch.xpack.security.action.token.TransportInvalidateTokenAction;
@@ -208,8 +208,10 @@ import org.elasticsearch.xpack.security.authz.interceptor.UpdateRequestIntercept
 import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.authz.store.DeprecationRoleDescriptorConsumer;
 import org.elasticsearch.xpack.security.authz.store.FileRolesStore;
+import org.elasticsearch.xpack.security.authz.store.FilteringRolesStore;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
 import org.elasticsearch.xpack.security.authz.store.NativeRolesStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 import org.elasticsearch.xpack.security.ingest.SetSecurityUserProcessor;
 import org.elasticsearch.xpack.security.rest.SecurityRestFilter;
 import org.elasticsearch.xpack.security.rest.action.RestAuthenticateAction;
@@ -237,9 +239,9 @@ import org.elasticsearch.xpack.security.rest.action.rolemapping.RestDeleteRoleMa
 import org.elasticsearch.xpack.security.rest.action.rolemapping.RestGetRoleMappingsAction;
 import org.elasticsearch.xpack.security.rest.action.rolemapping.RestPutRoleMappingAction;
 import org.elasticsearch.xpack.security.rest.action.saml.RestSamlAuthenticateAction;
+import org.elasticsearch.xpack.security.rest.action.saml.RestSamlCompleteLogoutAction;
 import org.elasticsearch.xpack.security.rest.action.saml.RestSamlInvalidateSessionAction;
 import org.elasticsearch.xpack.security.rest.action.saml.RestSamlLogoutAction;
-import org.elasticsearch.xpack.security.rest.action.saml.RestSamlCompleteLogoutAction;
 import org.elasticsearch.xpack.security.rest.action.saml.RestSamlPrepareAuthenticationAction;
 import org.elasticsearch.xpack.security.rest.action.user.RestChangePasswordAction;
 import org.elasticsearch.xpack.security.rest.action.user.RestDeleteUserAction;
@@ -452,14 +454,15 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         final ApiKeyService apiKeyService = new ApiKeyService(settings, Clock.systemUTC(), client, getLicenseState(), securityIndex.get(),
             clusterService, threadPool);
         components.add(apiKeyService);
-        final CompositeRolesStore allRolesStore = new CompositeRolesStore(settings, fileRolesStore, nativeRolesStore, reservedRolesStore,
+        final CompositeRolesStore compositeRolesStore = new CompositeRolesStore(settings, fileRolesStore, nativeRolesStore, reservedRolesStore,
             privilegeStore, rolesProviders, threadPool.getThreadContext(), getLicenseState(), fieldPermissionsCache, apiKeyService,
             dlsBitsetCache.get(), new DeprecationRoleDescriptorConsumer(clusterService, threadPool));
-        securityIndex.get().addIndexStateListener(allRolesStore::onSecurityIndexStateChange);
+        final RolesStore rolesStore = new FilteringRolesStore(settings, compositeRolesStore, resourceWatcherService, getLicenseState());
+        securityIndex.get().addIndexStateListener(compositeRolesStore::onSecurityIndexStateChange);
 
         // to keep things simple, just invalidate all cached entries on license change. this happens so rarely that the impact should be
         // minimal
-        getLicenseState().addListener(allRolesStore::invalidateAll);
+        getLicenseState().addListener(rolesStore::invalidateAll);
         getLicenseState().addListener(new SecurityStatusChangeListener(getLicenseState()));
 
         final AuthenticationFailureHandler failureHandler = createAuthenticationFailureHandler(realms, extensionComponents);
@@ -480,13 +483,13 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         }
         requestInterceptors = Collections.unmodifiableSet(requestInterceptors);
 
-        final AuthorizationService authzService = new AuthorizationService(settings, allRolesStore, clusterService,
+        final AuthorizationService authzService = new AuthorizationService(settings, rolesStore, clusterService,
             auditTrailService, failureHandler, threadPool, anonymousUser, getAuthorizationEngine(), requestInterceptors,
             getLicenseState(), expressionResolver);
 
         components.add(nativeRolesStore); // used by roles actions
         components.add(reservedRolesStore); // used by roles actions
-        components.add(allRolesStore); // for SecurityInfoTransportAction and clear roles cache
+        components.add(new RolesStore.Holder(rolesStore)); // for SecurityInfoTransportAction and clear roles cache
         components.add(authzService);
 
         final SecondaryAuthenticator secondaryAuthenticator = new SecondaryAuthenticator(securityContext.get(), authcService.get());
@@ -502,7 +505,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         securityActionFilter.set(new SecurityActionFilter(authcService.get(), authzService, getLicenseState(),
             threadPool, securityContext.get(), destructiveOperations));
 
-        components.add(new SecurityUsageServices(realms, allRolesStore, nativeRoleMappingStore, ipFilter.get()));
+        components.add(new SecurityUsageServices(realms, rolesStore, nativeRoleMappingStore, ipFilter.get()));
 
         return components;
     }

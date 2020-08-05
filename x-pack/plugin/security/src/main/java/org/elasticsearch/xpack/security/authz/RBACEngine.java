@@ -68,10 +68,9 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableCluster
 import org.elasticsearch.xpack.core.security.authz.privilege.NamedClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.support.Automatons;
-import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.esnative.ReservedRealm;
-import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,10 +102,10 @@ public class RBACEngine implements AuthorizationEngine {
 
     private static final Logger logger = LogManager.getLogger(RBACEngine.class);
 
-    private final CompositeRolesStore rolesStore;
+    private final RolesStore rolesStore;
     private final FieldPermissionsCache fieldPermissionsCache;
 
-    public RBACEngine(Settings settings, CompositeRolesStore rolesStore) {
+    public RBACEngine(Settings settings, RolesStore rolesStore) {
         this.rolesStore = rolesStore;
         this.fieldPermissionsCache = new FieldPermissionsCache(settings);
     }
@@ -114,19 +113,15 @@ public class RBACEngine implements AuthorizationEngine {
     @Override
     public void resolveAuthorizationInfo(RequestInfo requestInfo, ActionListener<AuthorizationInfo> listener) {
         final Authentication authentication = requestInfo.getAuthentication();
-        getRoles(authentication.getUser(), authentication, ActionListener.wrap(role -> {
+        rolesStore.getRoles(authentication, ActionListener.wrap(role -> {
             if (authentication.getUser().isRunAs()) {
-                getRoles(authentication.getUser().authenticatedUser(), authentication, ActionListener.wrap(
+                rolesStore.getRoles(authentication, ActionListener.wrap(
                     authenticatedUserRole -> listener.onResponse(new RBACAuthorizationInfo(role, authenticatedUserRole)),
                     listener::onFailure));
             } else {
                 listener.onResponse(new RBACAuthorizationInfo(role, role));
             }
         }, listener::onFailure));
-    }
-
-    private void getRoles(User user, Authentication authentication, ActionListener<Role> listener) {
-        rolesStore.getRoles(user, authentication, listener);
     }
 
     @Override

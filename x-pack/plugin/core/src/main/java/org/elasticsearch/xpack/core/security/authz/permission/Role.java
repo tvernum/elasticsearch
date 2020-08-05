@@ -213,15 +213,6 @@ public class Role {
             }
         }
 
-        public ClusterPermission cluster() {
-            return cluster;
-        }
-
-        public Builder cluster(ClusterPermission cluster) {
-            this.cluster = cluster;
-            return this;
-        }
-
         public Builder cluster(Set<String> privilegeNames, Iterable<ConfigurableClusterPrivilege> configurableClusterPrivileges) {
             ClusterPermission.Builder builder = ClusterPermission.builder();
             if (privilegeNames.isEmpty() == false) {

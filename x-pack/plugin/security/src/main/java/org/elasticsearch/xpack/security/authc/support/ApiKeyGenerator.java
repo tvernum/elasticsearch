@@ -16,7 +16,7 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.support.DLSRoleQueryValidator;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
-import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,10 +24,10 @@ import java.util.HashSet;
 public class ApiKeyGenerator {
 
     private final ApiKeyService apiKeyService;
-    private final CompositeRolesStore rolesStore;
+    private final RolesStore rolesStore;
     private final NamedXContentRegistry xContentRegistry;
 
-    public ApiKeyGenerator(ApiKeyService apiKeyService, CompositeRolesStore rolesStore, NamedXContentRegistry xContentRegistry) {
+    public ApiKeyGenerator(ApiKeyService apiKeyService, RolesStore rolesStore, NamedXContentRegistry xContentRegistry) {
         this.apiKeyService = apiKeyService;
         this.rolesStore = rolesStore;
         this.xContentRegistry = xContentRegistry;

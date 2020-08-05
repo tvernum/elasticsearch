@@ -15,7 +15,6 @@ import org.elasticsearch.action.StepListener;
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesAction;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
-import org.elasticsearch.xpack.core.action.CreateDataStreamAction;
 import org.elasticsearch.action.bulk.BulkItemRequest;
 import org.elasticsearch.action.bulk.BulkShardRequest;
 import org.elasticsearch.action.bulk.TransportShardBulkAction;
@@ -39,6 +38,7 @@ import org.elasticsearch.license.XPackLicenseState.Feature;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportActionProxy;
 import org.elasticsearch.transport.TransportRequest;
+import org.elasticsearch.xpack.core.action.CreateDataStreamAction;
 import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesRequest;
 import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesResponse;
 import org.elasticsearch.xpack.core.security.action.user.HasPrivilegesRequest;
@@ -72,7 +72,7 @@ import org.elasticsearch.xpack.security.audit.AuditTrailService;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authz.interceptor.RequestInterceptor;
-import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -118,7 +118,7 @@ public class AuthorizationService {
     private final boolean isAnonymousEnabled;
     private final boolean anonymousAuthzExceptionEnabled;
 
-    public AuthorizationService(Settings settings, CompositeRolesStore rolesStore, ClusterService clusterService,
+    public AuthorizationService(Settings settings, RolesStore rolesStore, ClusterService clusterService,
                                 AuditTrailService auditTrailService, AuthenticationFailureHandler authcFailureHandler,
                                 ThreadPool threadPool, AnonymousUser anonymousUser, @Nullable AuthorizationEngine authorizationEngine,
                                 Set<RequestInterceptor> requestInterceptors, XPackLicenseState licenseState,

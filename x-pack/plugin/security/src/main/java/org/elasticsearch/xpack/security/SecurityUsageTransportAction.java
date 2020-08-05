@@ -28,7 +28,7 @@ import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrail;
 import org.elasticsearch.xpack.security.authc.Realms;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
-import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
+import org.elasticsearch.xpack.security.authz.store.RolesStore;
 import org.elasticsearch.xpack.security.transport.filter.IPFilter;
 
 import java.util.Arrays;
@@ -49,7 +49,7 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
     private final Settings settings;
     private final XPackLicenseState licenseState;
     private final Realms realms;
-    private final CompositeRolesStore rolesStore;
+    private final RolesStore rolesStore;
     private final NativeRoleMappingStore roleMappingStore;
     private final IPFilter ipFilter;
 

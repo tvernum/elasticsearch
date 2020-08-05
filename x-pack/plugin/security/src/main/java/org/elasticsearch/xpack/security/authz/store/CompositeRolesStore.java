@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsAction;
 import org.elasticsearch.action.support.ContextPreservingActionListener;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
@@ -33,7 +32,6 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor.IndicesPrivileges;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.DocumentSubsetBitsetCache;
-import org.elasticsearch.xpack.core.security.authz.permission.ClusterPermission;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCache;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition.FieldGrantExcludeGroup;
@@ -45,7 +43,6 @@ import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
-import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.support.CacheIteratorHelper;
 import org.elasticsearch.xpack.core.security.support.MetadataUtils;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
@@ -55,7 +52,6 @@ import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.core.security.user.XPackSecurityUser;
 import org.elasticsearch.xpack.core.security.user.XPackUser;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
-import org.elasticsearch.xpack.security.authz.limits.RoleLimits;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
 
 import java.util.ArrayList;
@@ -85,7 +81,7 @@ import static org.elasticsearch.xpack.security.support.SecurityIndexManager.isMo
  * A composite roles store that combines built in roles, file-based roles, and index-based roles. Checks the built in roles first, then the
  * file roles, and finally the index roles.
  */
-public class CompositeRolesStore {
+public class CompositeRolesStore implements RolesStore {
 
     private static final String ROLES_STORE_SOURCE = "roles_stores";
     private static final Setting<Integer> CACHE_SIZE_SETTING =
@@ -99,7 +95,6 @@ public class CompositeRolesStore {
     private final FileRolesStore fileRolesStore;
     private final NativeRolesStore nativeRolesStore;
     private final NativePrivilegeStore privilegeStore;
-    private final RoleLimits roleLimits;
     private final XPackLicenseState licenseState;
     private final Consumer<Collection<RoleDescriptor>> effectiveRoleDescriptorsConsumer;
     private final FieldPermissionsCache fieldPermissionsCache;
@@ -109,7 +104,6 @@ public class CompositeRolesStore {
     private final DocumentSubsetBitsetCache dlsBitsetCache;
     private final ThreadContext threadContext;
     private final AtomicLong numInvalidation = new AtomicLong();
-    private final Role superuserRole;
     private final AnonymousUser anonymousUser;
     private final ApiKeyService apiKeyService;
     private final boolean isAnonymousEnabled;
@@ -127,11 +121,6 @@ public class CompositeRolesStore {
         fileRolesStore.addListener(this::invalidate);
         this.nativeRolesStore = Objects.requireNonNull(nativeRolesStore);
         this.privilegeStore = Objects.requireNonNull(privilegeStore);
-        this.roleLimits = builder -> {
-            ClusterPermission perm = builder.cluster();
-            builder.cluster(perm.excludingAction(Automatons.patterns(ClusterUpdateSettingsAction.NAME + "*")));
-            return builder;
-        };
         this.licenseState = Objects.requireNonNull(licenseState);
         this.fieldPermissionsCache = Objects.requireNonNull(fieldPermissionsCache);
         this.apiKeyService = Objects.requireNonNull(apiKeyService);
@@ -155,7 +144,6 @@ public class CompositeRolesStore {
             allList.addAll(rolesProviders);
             this.allRoleProviders = Collections.unmodifiableList(allList);
         }
-        this.superuserRole =  roleLimits.apply(Role.builder(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR, null)).build();
         this.anonymousUser = new AnonymousUser(settings);
         this.isAnonymousEnabled = AnonymousUser.isAnonymousEnabled(settings);
     }
@@ -169,6 +157,7 @@ public class CompositeRolesStore {
         return builder.build();
     }
 
+    @Override
     public void roles(Set<String> roleNames, ActionListener<Role> roleActionListener) {
         final RoleKey roleKey = new RoleKey(roleNames, ROLES_STORE_SOURCE);
         Role existing = roleCache.get(roleKey);
@@ -217,7 +206,9 @@ public class CompositeRolesStore {
             });
     }
 
-    public void getRoles(User user, Authentication authentication, ActionListener<Role> roleActionListener) {
+    @Override
+    public void getRoles(Authentication authentication, ActionListener<Role> roleActionListener) {
+        User user = authentication.getUser();
         // we need to special case the internal users in this method, if we apply the anonymous roles to every user including these system
         // user accounts then we run into the chance of a deadlock because then we need to get a role that we may be trying to get as the
         // internal user. The SystemUser is special cased as it has special privileges to execute internal actions and should never be
@@ -232,7 +223,7 @@ public class CompositeRolesStore {
             return;
         }
         if (XPackSecurityUser.is(user)) {
-            roleActionListener.onResponse(superuserRole);
+            roleActionListener.onResponse(ReservedRolesStore.SUPERUSER_ROLE);
             return;
         }
         if (AsyncSearchUser.is(user)) {
@@ -288,7 +279,7 @@ public class CompositeRolesStore {
             if (roleNames.isEmpty()) {
                 roleActionListener.onResponse(Role.EMPTY);
             } else if (roleNames.contains(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName())) {
-                roleActionListener.onResponse(superuserRole);
+                roleActionListener.onResponse(ReservedRolesStore.SUPERUSER_ROLE);
             } else {
                 roles(roleNames, roleActionListener);
             }
@@ -313,7 +304,7 @@ public class CompositeRolesStore {
     private void buildThenMaybeCacheRole(RoleKey roleKey, Collection<RoleDescriptor> roleDescriptors, Set<String> missing,
                                          boolean tryCache, long invalidationCounter, ActionListener<Role> listener) {
         logger.trace("Building role from descriptors [{}] for names [{}] from source [{}]", roleDescriptors, roleKey.names, roleKey.source);
-        buildRoleFromDescriptors(roleDescriptors, fieldPermissionsCache, privilegeStore, roleLimits, ActionListener.wrap(role -> {
+        buildRoleFromDescriptors(roleDescriptors, fieldPermissionsCache, privilegeStore, ActionListener.wrap(role -> {
             if (role != null && tryCache) {
                 try (ReleasableLock ignored = roleCacheHelper.acquireUpdateLock()) {
                     /* this is kinda spooky. We use a read/write lock to ensure we don't modify the cache if we hold
@@ -352,6 +343,7 @@ public class CompositeRolesStore {
         }
     }
 
+    @Override
     public void getRoleDescriptors(Set<String> roleNames, ActionListener<Set<RoleDescriptor>> listener) {
         roleDescriptors(roleNames, ActionListener.wrap(rolesRetrievalResult -> {
             if (rolesRetrievalResult.isSuccess()) {
@@ -413,7 +405,7 @@ public class CompositeRolesStore {
     }
 
     public static void buildRoleFromDescriptors(Collection<RoleDescriptor> roleDescriptors, FieldPermissionsCache fieldPermissionsCache,
-                                                NativePrivilegeStore privilegeStore, RoleLimits roleLimits, ActionListener<Role> listener) {
+                                                NativePrivilegeStore privilegeStore, ActionListener<Role> listener) {
         if (roleDescriptors.isEmpty()) {
             listener.onResponse(Role.EMPTY);
             return;
@@ -471,7 +463,7 @@ public class CompositeRolesStore {
         });
 
         if (applicationPrivilegesMap.isEmpty()) {
-            listener.onResponse(roleLimits.apply(builder).build());
+            listener.onResponse(builder.build());
         } else {
             final Set<String> applicationNames = applicationPrivilegesMap.keySet().stream()
                     .map(Tuple::v1)
@@ -482,11 +474,12 @@ public class CompositeRolesStore {
             privilegeStore.getPrivileges(applicationNames, applicationPrivilegeNames, ActionListener.wrap(appPrivileges -> {
                 applicationPrivilegesMap.forEach((key, names) -> ApplicationPrivilege.get(key.v1(), names, appPrivileges)
                     .forEach(priv -> builder.addApplicationPrivilege(priv, key.v2())));
-                listener.onResponse(roleLimits.apply(builder).build());
+                listener.onResponse(builder.build());
             }, listener::onFailure));
         }
     }
 
+    @Override
     public void invalidateAll() {
         numInvalidation.incrementAndGet();
         negativeLookupCache.invalidateAll();
@@ -496,6 +489,7 @@ public class CompositeRolesStore {
         dlsBitsetCache.clear("role store invalidation");
     }
 
+    @Override
     public void invalidate(String role) {
         numInvalidation.incrementAndGet();
 
@@ -509,6 +503,7 @@ public class CompositeRolesStore {
         roles.forEach(negativeLookupCache::invalidate);
     }
 
+    @Override
     public void usageStats(ActionListener<Map<String, Object>> listener) {
         final Map<String, Object> usage = new HashMap<>(2);
         usage.put("file", fileRolesStore.usageStats());
