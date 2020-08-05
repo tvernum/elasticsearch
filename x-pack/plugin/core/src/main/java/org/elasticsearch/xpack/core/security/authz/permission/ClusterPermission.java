@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * A permission that is based on privileges for cluster wide actions, with the optional ability to inspect the request object
@@ -72,6 +73,12 @@ public class ClusterPermission {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public ClusterPermission excludingAction(Automaton excludeAction) {
+        return new ClusterPermission(clusterPrivileges, checks.stream()
+            .map(c -> new ExcludeActionPermissionCheck(excludeAction, c))
+            .collect(Collectors.toList()));
     }
 
     public static class Builder {
@@ -235,6 +242,38 @@ public class ClusterPermission {
                 return this.clusterPrivilege.equals(otherCheck.clusterPrivilege);
             }
             return false;
+        }
+    }
+
+    private static class ExcludeActionPermissionCheck implements PermissionCheck {
+        private final Predicate<String> excludePredicate;
+        private final Automaton excludeAction;
+        private final PermissionCheck delegate;
+
+        public ExcludeActionPermissionCheck(Automaton excludeAutomaton, PermissionCheck delegate) {
+            this.excludeAction = excludeAutomaton;
+            this.delegate = delegate;
+            this.excludePredicate = Automatons.predicate(excludeAutomaton);
+        }
+
+        @Override
+        public boolean check(String action, TransportRequest request, Authentication authentication) {
+            if (excludePredicate.test(action)) {
+                return false;
+            }
+            return delegate.check(action, request, authentication);
+        }
+
+        @Override
+        public boolean implies(PermissionCheck permissionCheck) {
+            if (permissionCheck instanceof ActionBasedPermissionCheck) {
+                Automaton otherAutomaton = ((ActionBasedPermissionCheck) permissionCheck).automaton;
+                // there is some overlap between the excluded action & the other check, so reject the permission
+                if (Operations.isEmpty(Operations.intersection(otherAutomaton, excludeAction)) == false) {
+                    return false;
+                }
+            }
+            return delegate.implies(permissionCheck);
         }
     }
 }
