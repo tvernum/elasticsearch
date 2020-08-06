@@ -54,6 +54,7 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.Authoriza
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.permission.IndicesAccessDescriptor;
 import org.elasticsearch.xpack.core.security.authz.permission.ResourcePrivileges;
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilege;
@@ -1021,17 +1022,17 @@ public class RBACEngineTests extends ESTestCase {
         assertThat(response.getConditionalClusterPrivileges(), containsInAnyOrder(manageApplicationPrivileges));
 
         assertThat(response.getIndexPrivileges(), iterableWithSize(3));
-        final GetUserPrivilegesResponse.Indices index1 = findIndexPrivilege(response.getIndexPrivileges(), "index-1");
+        final IndicesAccessDescriptor index1 = findIndexPrivilege(response.getIndexPrivileges(), "index-1");
         assertThat(index1.getIndices(), containsInAnyOrder("index-1"));
         assertThat(index1.getPrivileges(), containsInAnyOrder("read", "write"));
         assertThat(index1.getFieldSecurity(), emptyIterable());
         assertThat(index1.getQueries(), emptyIterable());
-        final GetUserPrivilegesResponse.Indices index2 = findIndexPrivilege(response.getIndexPrivileges(), "index-2");
+        final IndicesAccessDescriptor index2 = findIndexPrivilege(response.getIndexPrivileges(), "index-2");
         assertThat(index2.getIndices(), containsInAnyOrder("index-2", "index-3"));
         assertThat(index2.getPrivileges(), containsInAnyOrder("all"));
         assertThat(index2.getFieldSecurity(), emptyIterable());
         assertThat(index2.getQueries(), emptyIterable());
-        final GetUserPrivilegesResponse.Indices index4 = findIndexPrivilege(response.getIndexPrivileges(), "index-4");
+        final IndicesAccessDescriptor index4 = findIndexPrivilege(response.getIndexPrivileges(), "index-4");
         assertThat(index4.getIndices(), containsInAnyOrder("index-4", "index-5"));
         assertThat(index4.getPrivileges(), containsInAnyOrder("read"));
         assertThat(index4.getFieldSecurity(), containsInAnyOrder(
@@ -1111,7 +1112,7 @@ public class RBACEngineTests extends ESTestCase {
         assertThat(authorizedIndices.isEmpty(), is(true));
     }
 
-    private GetUserPrivilegesResponse.Indices findIndexPrivilege(Set<GetUserPrivilegesResponse.Indices> indices, String name) {
+    private IndicesAccessDescriptor findIndexPrivilege(Set<IndicesAccessDescriptor> indices, String name) {
         return indices.stream().filter(i -> i.getIndices().contains(name)).findFirst().get();
     }
 

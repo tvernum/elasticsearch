@@ -23,7 +23,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesRequest;
 import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesResponse;
-import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesResponse.Indices;
+import org.elasticsearch.xpack.core.security.authz.permission.IndicesAccessDescriptor;
 import org.elasticsearch.xpack.core.security.action.user.HasPrivilegesRequest;
 import org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
@@ -200,7 +200,7 @@ public class CustomAuthorizationEngine implements AuthorizationEngine {
     private GetUserPrivilegesResponse getUserPrivilegesResponse(boolean isSuperuser) {
         final Set<String> cluster = isSuperuser ? Collections.singleton("ALL") : Collections.emptySet();
         final Set<ConfigurableClusterPrivilege> conditionalCluster = Collections.emptySet();
-        final Set<GetUserPrivilegesResponse.Indices> indices = isSuperuser ? Collections.singleton(new Indices(Collections.singleton("*"),
+        final Set<IndicesAccessDescriptor> indices = isSuperuser ? Collections.singleton(new IndicesAccessDescriptor(Collections.singleton("*"),
             Collections.singleton("*"), Collections.emptySet(), Collections.emptySet(), true)) : Collections.emptySet();
 
         final Set<RoleDescriptor.ApplicationResourcePrivileges> application = isSuperuser ?

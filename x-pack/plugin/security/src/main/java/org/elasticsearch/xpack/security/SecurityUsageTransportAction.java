@@ -28,7 +28,7 @@ import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrail;
 import org.elasticsearch.xpack.security.authc.Realms;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 import org.elasticsearch.xpack.security.transport.filter.IPFilter;
 
 import java.util.Arrays;
@@ -49,7 +49,7 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
     private final Settings settings;
     private final XPackLicenseState licenseState;
     private final Realms realms;
-    private final RolesStore rolesStore;
+    private final PermissionsStore permissionsStore;
     private final NativeRoleMappingStore roleMappingStore;
     private final IPFilter ipFilter;
 
@@ -62,7 +62,7 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
         this.settings = settings;
         this.licenseState = licenseState;
         this.realms = securityServices.realms;
-        this.rolesStore = securityServices.rolesStore;
+        this.permissionsStore = securityServices.permissionsStore;
         this.roleMappingStore = securityServices.roleMappingStore;
         this.ipFilter = securityServices.ipFilter;
     }
@@ -112,10 +112,10 @@ public class SecurityUsageTransportAction extends XPackUsageFeatureTransportActi
                 doCountDown.run();
             }, listener::onFailure);
 
-        if (rolesStore == null || enabled == false) {
+        if (permissionsStore == null || enabled == false) {
             rolesStoreUsageListener.onResponse(Collections.emptyMap());
         } else {
-            rolesStore.usageStats(rolesStoreUsageListener);
+            permissionsStore.usageStats(rolesStoreUsageListener);
         }
         if (roleMappingStore == null || enabled == false) {
             roleMappingStoreUsageListener.onResponse(Collections.emptyMap());

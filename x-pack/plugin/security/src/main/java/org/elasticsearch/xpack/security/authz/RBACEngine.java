@@ -27,7 +27,6 @@ import org.elasticsearch.action.search.SearchTransportService;
 import org.elasticsearch.action.termvectors.MultiTermVectorsAction;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.transport.TransportActionProxy;
@@ -55,30 +54,25 @@ import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCache;
-import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
-import org.elasticsearch.xpack.core.security.authz.permission.IndicesPermission;
+import org.elasticsearch.xpack.core.security.authz.permission.IndicesAccessDescriptor;
+import org.elasticsearch.xpack.core.security.authz.permission.Permissions;
 import org.elasticsearch.xpack.core.security.authz.permission.ResourcePrivileges;
 import org.elasticsearch.xpack.core.security.authz.permission.ResourcePrivilegesMap;
-import org.elasticsearch.xpack.core.security.authz.permission.Role;
-import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeResolver;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.NamedClusterPrivilege;
-import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.esnative.ReservedRealm;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -87,7 +81,6 @@ import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.elasticsearch.common.Strings.arrayToCommaDelimitedString;
 import static org.elasticsearch.xpack.security.action.user.TransportHasPrivilegesAction.getApplicationNames;
 import static org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrail.PRINCIPAL_ROLES_FIELD_NAME;
 
@@ -102,20 +95,20 @@ public class RBACEngine implements AuthorizationEngine {
 
     private static final Logger logger = LogManager.getLogger(RBACEngine.class);
 
-    private final RolesStore rolesStore;
+    private final PermissionsStore<?> permissionsStore;
     private final FieldPermissionsCache fieldPermissionsCache;
 
-    public RBACEngine(Settings settings, RolesStore rolesStore) {
-        this.rolesStore = rolesStore;
+    public RBACEngine(Settings settings, PermissionsStore<?> permissionsStore) {
+        this.permissionsStore = permissionsStore;
         this.fieldPermissionsCache = new FieldPermissionsCache(settings);
     }
 
     @Override
     public void resolveAuthorizationInfo(RequestInfo requestInfo, ActionListener<AuthorizationInfo> listener) {
         final Authentication authentication = requestInfo.getAuthentication();
-        rolesStore.getRoles(authentication, ActionListener.wrap(role -> {
+        permissionsStore.getUserPermissions(authentication, ActionListener.wrap(role -> {
             if (authentication.getUser().isRunAs()) {
-                rolesStore.getRoles(authentication, ActionListener.wrap(
+                permissionsStore.getUserPermissions(authentication, ActionListener.wrap(
                     authenticatedUserRole -> listener.onResponse(new RBACAuthorizationInfo(role, authenticatedUserRole)),
                     listener::onFailure));
             } else {
@@ -127,7 +120,7 @@ public class RBACEngine implements AuthorizationEngine {
     @Override
     public void authorizeRunAs(RequestInfo requestInfo, AuthorizationInfo authorizationInfo, ActionListener<AuthorizationResult> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getAuthenticatedUserAuthorizationInfo().getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getAuthenticatedUserAuthorizationInfo().getRole();
             listener.onResponse(
                 new AuthorizationResult(role.checkRunAs(requestInfo.getAuthentication().getUser().principal())));
         } else {
@@ -140,7 +133,7 @@ public class RBACEngine implements AuthorizationEngine {
     public void authorizeClusterAction(RequestInfo requestInfo, AuthorizationInfo authorizationInfo,
                                        ActionListener<AuthorizationResult> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
             if (role.checkClusterAction(requestInfo.getAction(), requestInfo.getRequest(), requestInfo.getAuthentication())) {
                 listener.onResponse(AuthorizationResult.granted());
             } else if (checkSameUserPermissions(requestInfo.getAction(), requestInfo.getRequest(), requestInfo.getAuthentication())) {
@@ -322,7 +315,7 @@ public class RBACEngine implements AuthorizationEngine {
     private void authorizeIndexActionName(String action, AuthorizationInfo authorizationInfo, IndicesAccessControl grantedValue,
                                           ActionListener<IndexAuthorizationResult> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
             if (role.checkIndicesAction(action)) {
                 listener.onResponse(new IndexAuthorizationResult(true, grantedValue));
             } else {
@@ -338,7 +331,7 @@ public class RBACEngine implements AuthorizationEngine {
     public void loadAuthorizedIndices(RequestInfo requestInfo, AuthorizationInfo authorizationInfo,
                                       Map<String, IndexAbstraction> indicesLookup, ActionListener<List<String>> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
             listener.onResponse(resolveAuthorizedIndicesFromRole(role, requestInfo, indicesLookup));
         } else {
             listener.onFailure(
@@ -351,7 +344,7 @@ public class RBACEngine implements AuthorizationEngine {
                                                   Map<String, List<String>> indexNameToNewNames,
                                                   ActionListener<AuthorizationResult> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
             Map<String, Automaton> permissionMap = new HashMap<>();
             for (Entry<String, List<String>> entry : indexNameToNewNames.entrySet()) {
                 Automaton existingPermissions = permissionMap.computeIfAbsent(entry.getKey(), role::allowedActionsMatcher);
@@ -380,9 +373,9 @@ public class RBACEngine implements AuthorizationEngine {
                 new IllegalArgumentException("unsupported authorization info:" + authorizationInfo.getClass().getSimpleName()));
             return;
         }
-        final Role userRole = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+        final Permissions userRole = ((RBACAuthorizationInfo) authorizationInfo).getRole();
         logger.trace(() -> new ParameterizedMessage("Check whether role [{}] has privileges cluster=[{}] index=[{}] application=[{}]",
-            Strings.arrayToCommaDelimitedString(userRole.names()),
+            userRole.description(),
             Strings.arrayToCommaDelimitedString(request.clusterPrivileges()),
             Strings.arrayToCommaDelimitedString(request.indexPrivileges()),
             Strings.arrayToCommaDelimitedString(request.applicationPrivileges())
@@ -431,19 +424,19 @@ public class RBACEngine implements AuthorizationEngine {
             listener.onFailure(
                 new IllegalArgumentException("unsupported authorization info:" + authorizationInfo.getClass().getSimpleName()));
         } else {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
             listener.onResponse(buildUserPrivilegesResponseObject(role));
         }
     }
 
-    GetUserPrivilegesResponse buildUserPrivilegesResponseObject(Role userRole) {
-        logger.trace(() -> new ParameterizedMessage("List privileges for role [{}]", arrayToCommaDelimitedString(userRole.names())));
+    GetUserPrivilegesResponse buildUserPrivilegesResponseObject(Permissions userRole) {
+        logger.trace(() -> new ParameterizedMessage("List privileges for role [{}]", userRole.description()));
 
         // We use sorted sets for Strings because they will typically be small, and having a predictable order allows for simpler testing
         final Set<String> cluster = new TreeSet<>();
         // But we don't have a meaningful ordering for objects like ConfigurableClusterPrivilege, so the tests work with "random" ordering
         final Set<ConfigurableClusterPrivilege> conditionalCluster = new HashSet<>();
-        for (ClusterPrivilege privilege : userRole.cluster().privileges()) {
+        for (ClusterPrivilege privilege : userRole.clusterPrivileges()) {
             if (privilege instanceof NamedClusterPrivilege) {
                 cluster.add(((NamedClusterPrivilege) privilege).name());
             } else if (privilege instanceof ConfigurableClusterPrivilege) {
@@ -455,48 +448,14 @@ public class RBACEngine implements AuthorizationEngine {
             }
         }
 
-        final Set<GetUserPrivilegesResponse.Indices> indices = new LinkedHashSet<>();
-        for (IndicesPermission.Group group : userRole.indices().groups()) {
-            final Set<BytesReference> queries = group.getQuery() == null ? Collections.emptySet() : group.getQuery();
-            final Set<FieldPermissionsDefinition.FieldGrantExcludeGroup> fieldSecurity = group.getFieldPermissions().hasFieldLevelSecurity()
-                ? group.getFieldPermissions().getFieldPermissionsDefinition().getFieldGrantExcludeGroups() : Collections.emptySet();
-            indices.add(new GetUserPrivilegesResponse.Indices(
-                Arrays.asList(group.indices()),
-                group.privilege().name(),
-                fieldSecurity,
-                queries,
-                group.allowRestrictedIndices()
-            ));
-        }
-
-        final Set<RoleDescriptor.ApplicationResourcePrivileges> application = new LinkedHashSet<>();
-        for (String applicationName : userRole.application().getApplicationNames()) {
-            for (ApplicationPrivilege privilege : userRole.application().getPrivileges(applicationName)) {
-                final Set<String> resources = userRole.application().getResourcePatterns(privilege);
-                if (resources.isEmpty()) {
-                    logger.trace("No resources defined in application privilege {}", privilege);
-                } else {
-                    application.add(RoleDescriptor.ApplicationResourcePrivileges.builder()
-                        .application(applicationName)
-                        .privileges(privilege.name())
-                        .resources(resources)
-                        .build());
-                }
-            }
-        }
-
-        final Privilege runAsPrivilege = userRole.runAs().getPrivilege();
-        final Set<String> runAs;
-        if (Operations.isEmpty(runAsPrivilege.getAutomaton())) {
-            runAs = Collections.emptySet();
-        } else {
-            runAs = runAsPrivilege.name();
-        }
+        final Set<IndicesAccessDescriptor> indices = userRole.indexPrivileges();
+        final Set<RoleDescriptor.ApplicationResourcePrivileges> application = userRole.applicationPrivileges();
+        final Set<String> runAs = userRole.runAsPrincipals();
 
         return new GetUserPrivilegesResponse(cluster, conditionalCluster, indices, application, runAs);
     }
 
-    static List<String> resolveAuthorizedIndicesFromRole(Role role, RequestInfo requestInfo, Map<String, IndexAbstraction> lookup) {
+    static List<String> resolveAuthorizedIndicesFromRole(Permissions role, RequestInfo requestInfo, Map<String, IndexAbstraction> lookup) {
         Predicate<IndexAbstraction> predicate = role.allowedIndicesMatcher(requestInfo.getAction());
 
         // do not include data streams for actions that do not operate on data streams
@@ -526,8 +485,8 @@ public class RBACEngine implements AuthorizationEngine {
                                            Map<String, IndexAbstraction> aliasAndIndexLookup,
                                            ActionListener<IndexAuthorizationResult> listener) {
         if (authorizationInfo instanceof RBACAuthorizationInfo) {
-            final Role role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
-            final IndicesAccessControl accessControl = role.authorize(action, indices, aliasAndIndexLookup, fieldPermissionsCache);
+            final Permissions role = ((RBACAuthorizationInfo) authorizationInfo).getRole();
+            final IndicesAccessControl accessControl = role.authorizeIndices(action, indices, aliasAndIndexLookup, fieldPermissionsCache);
             listener.onResponse(new IndexAuthorizationResult(true, accessControl));
         } else {
             listener.onFailure(new IllegalArgumentException("unsupported authorization info:" +
@@ -558,18 +517,18 @@ public class RBACEngine implements AuthorizationEngine {
 
     static class RBACAuthorizationInfo implements AuthorizationInfo {
 
-        private final Role role;
+        private final Permissions role;
         private final Map<String, Object> info;
         private final RBACAuthorizationInfo authenticatedUserAuthorizationInfo;
 
-        RBACAuthorizationInfo(Role role, Role authenticatedUserRole) {
+        RBACAuthorizationInfo(Permissions role, Permissions authenticatedUserRole) {
             this.role = role;
             this.info = Collections.singletonMap(PRINCIPAL_ROLES_FIELD_NAME, role.names());
             this.authenticatedUserAuthorizationInfo =
                 authenticatedUserRole == null ? this : new RBACAuthorizationInfo(authenticatedUserRole, null);
         }
 
-        Role getRole() {
+        Permissions getRole() {
             return role;
         }
 

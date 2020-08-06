@@ -81,7 +81,7 @@ import static org.elasticsearch.xpack.security.support.SecurityIndexManager.isMo
  * A composite roles store that combines built in roles, file-based roles, and index-based roles. Checks the built in roles first, then the
  * file roles, and finally the index roles.
  */
-public class CompositeRolesStore implements RolesStore {
+public class CompositeRolesStore implements PermissionsStore<Role> {
 
     private static final String ROLES_STORE_SOURCE = "roles_stores";
     private static final Setting<Integer> CACHE_SIZE_SETTING =
@@ -158,7 +158,7 @@ public class CompositeRolesStore implements RolesStore {
     }
 
     @Override
-    public void roles(Set<String> roleNames, ActionListener<Role> roleActionListener) {
+    public void getNamedRoles(Set<String> roleNames, ActionListener<? super Role> roleActionListener) {
         final RoleKey roleKey = new RoleKey(roleNames, ROLES_STORE_SOURCE);
         Role existing = roleCache.get(roleKey);
         if (existing != null) {
@@ -207,7 +207,7 @@ public class CompositeRolesStore implements RolesStore {
     }
 
     @Override
-    public void getRoles(Authentication authentication, ActionListener<Role> roleActionListener) {
+    public void getUserPermissions(Authentication authentication, ActionListener<? super Role> roleActionListener) {
         User user = authentication.getUser();
         // we need to special case the internal users in this method, if we apply the anonymous roles to every user including these system
         // user accounts then we run into the chance of a deadlock because then we need to get a role that we may be trying to get as the
@@ -281,13 +281,13 @@ public class CompositeRolesStore implements RolesStore {
             } else if (roleNames.contains(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName())) {
                 roleActionListener.onResponse(ReservedRolesStore.SUPERUSER_ROLE);
             } else {
-                roles(roleNames, roleActionListener);
+                getNamedRoles(roleNames, roleActionListener);
             }
         }
     }
 
     public void buildAndCacheRoleFromDescriptors(Collection<RoleDescriptor> roleDescriptors, String source,
-                                                  ActionListener<Role> listener) {
+                                                  ActionListener<? super Role> listener) {
         if (ROLES_STORE_SOURCE.equals(source)) {
             throw new IllegalArgumentException("source [" + ROLES_STORE_SOURCE + "] is reserved for internal use");
         }
@@ -302,7 +302,7 @@ public class CompositeRolesStore implements RolesStore {
     }
 
     private void buildThenMaybeCacheRole(RoleKey roleKey, Collection<RoleDescriptor> roleDescriptors, Set<String> missing,
-                                         boolean tryCache, long invalidationCounter, ActionListener<Role> listener) {
+                                         boolean tryCache, long invalidationCounter, ActionListener<? super Role> listener) {
         logger.trace("Building role from descriptors [{}] for names [{}] from source [{}]", roleDescriptors, roleKey.names, roleKey.source);
         buildRoleFromDescriptors(roleDescriptors, fieldPermissionsCache, privilegeStore, ActionListener.wrap(role -> {
             if (role != null && tryCache) {
@@ -327,7 +327,7 @@ public class CompositeRolesStore implements RolesStore {
         }, listener::onFailure));
     }
 
-    private void buildAndCacheRoleForApiKey(Authentication authentication, boolean limitedBy, ActionListener<Role> roleActionListener) {
+    private void buildAndCacheRoleForApiKey(Authentication authentication, boolean limitedBy, ActionListener<? super Role> roleActionListener) {
         final Tuple<String, BytesReference> apiKeyIdAndBytes = apiKeyService.getApiKeyIdAndRoleBytes(authentication, limitedBy);
         final String roleDescriptorsHash = MessageDigests.toHexString(
             MessageDigests.sha256().digest(BytesReference.toBytes(apiKeyIdAndBytes.v2())));

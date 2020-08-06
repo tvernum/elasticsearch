@@ -6,8 +6,10 @@
 package org.elasticsearch.xpack.core.security.authz.permission;
 
 import org.apache.lucene.util.automaton.Automaton;
+import org.apache.lucene.util.automaton.Operations;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.util.set.Sets;
@@ -27,13 +29,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class Role {
+public class Role implements Permissions {
 
     public static final Role EMPTY = Role.builder("__empty").build();
 
@@ -51,6 +54,12 @@ public class Role {
         this.runAs = Objects.requireNonNull(runAs);
     }
 
+    @Override
+    public String description() {
+        return Strings.arrayToCommaDelimitedString(names());
+    }
+
+    @Override
     public String[] names() {
         return names;
     }
@@ -71,6 +80,57 @@ public class Role {
         return runAs;
     }
 
+    @Override
+    public Collection<ClusterPrivilege> clusterPrivileges() {
+        return cluster.privileges();
+    }
+
+    @Override
+    public Set<IndicesAccessDescriptor> indexPrivileges() {
+        Set<IndicesAccessDescriptor> descriptors = new LinkedHashSet<>();
+        for (IndicesPermission.Group group : indices.groups()) {
+            final Set<BytesReference> queries = group.getQuery() == null ? Collections.emptySet() : group.getQuery();
+            final Set<FieldPermissionsDefinition.FieldGrantExcludeGroup> fieldSecurity = group.getFieldPermissions().hasFieldLevelSecurity()
+                ? group.getFieldPermissions().getFieldPermissionsDefinition().getFieldGrantExcludeGroups() : Collections.emptySet();
+            descriptors.add(new IndicesAccessDescriptor(
+                Arrays.asList(group.indices()),
+                group.privilege().name(),
+                fieldSecurity,
+                queries,
+                group.allowRestrictedIndices()
+            ));
+        }
+        return descriptors;
+    }
+
+    @Override
+    public Set<RoleDescriptor.ApplicationResourcePrivileges> applicationPrivileges() {
+        Set<RoleDescriptor.ApplicationResourcePrivileges> descriptors = new LinkedHashSet<>();
+        for (String applicationName : application.getApplicationNames()) {
+            for (ApplicationPrivilege privilege : application.getPrivileges(applicationName)) {
+                final Set<String> resources = application.getResourcePatterns(privilege);
+                if (resources.isEmpty() == false) {
+                    descriptors.add(RoleDescriptor.ApplicationResourcePrivileges.builder()
+                        .application(applicationName)
+                        .privileges(privilege.name())
+                        .resources(resources)
+                        .build());
+                }
+            }
+        }
+        return descriptors;
+    }
+
+    @Override
+    public Set<String> runAsPrincipals() {
+        final Privilege runAsPrivilege = runAs.getPrivilege();
+        if (Operations.isEmpty(runAsPrivilege.getAutomaton())) {
+            return Set.of();
+        } else {
+            return runAsPrivilege.name();
+        }
+    }
+
     public static Builder builder(String... names) {
         return new Builder(names);
     }
@@ -79,97 +139,54 @@ public class Role {
         return new Builder(rd, fieldPermissionsCache);
     }
 
-    /**
-     * @return A predicate that will match all the indices that this role
-     * has the privilege for executing the given action on.
-     */
+    @Override
     public Predicate<IndexAbstraction> allowedIndicesMatcher(String action) {
         return indices.allowedIndicesMatcher(action);
     }
 
+    @Override
     public Automaton allowedActionsMatcher(String index) {
         return indices.allowedActionsMatcher(index);
     }
 
+    @Override
     public boolean checkRunAs(String runAsName) {
         return runAs.check(runAsName);
     }
 
-    /**
-     * Check if indices permissions allow for the given action
-     *
-     * @param action indices action
-     * @return {@code true} if action is allowed else returns {@code false}
-     */
+    @Override
     public boolean checkIndicesAction(String action) {
         return indices.check(action);
     }
 
 
-    /**
-     * For given index patterns and index privileges determines allowed privileges and creates an instance of {@link ResourcePrivilegesMap}
-     * holding a map of resource to {@link ResourcePrivileges} where resource is index pattern and the map of index privilege to whether it
-     * is allowed or not.
-     *
-     * @param checkForIndexPatterns check permission grants for the set of index patterns
-     * @param allowRestrictedIndices if {@code true} then checks permission grants even for restricted indices by index matching
-     * @param checkForPrivileges check permission grants for the set of index privileges
-     * @return an instance of {@link ResourcePrivilegesMap}
-     */
+    @Override
     public ResourcePrivilegesMap checkIndicesPrivileges(Set<String> checkForIndexPatterns, boolean allowRestrictedIndices,
                                                         Set<String> checkForPrivileges) {
         return indices.checkResourcePrivileges(checkForIndexPatterns, allowRestrictedIndices, checkForPrivileges);
     }
 
-    /**
-     * Check if cluster permissions allow for the given action in the context of given
-     * authentication.
-     *
-     * @param action cluster action
-     * @param request {@link TransportRequest}
-     * @param authentication {@link Authentication}
-     * @return {@code true} if action is allowed else returns {@code false}
-     */
+    @Override
     public boolean checkClusterAction(String action, TransportRequest request, Authentication authentication) {
         return cluster.check(action, request, authentication);
     }
 
-    /**
-     * Check if cluster permissions grants the given cluster privilege
-     *
-     * @param clusterPrivilege cluster privilege
-     * @return {@code true} if cluster privilege is allowed else returns {@code false}
-     */
+    @Override
     public boolean grants(ClusterPrivilege clusterPrivilege) {
         return cluster.implies(clusterPrivilege.buildPermission(ClusterPermission.builder()).build());
     }
 
-    /**
-     * For a given application, checks for the privileges for resources and returns an instance of {@link ResourcePrivilegesMap} holding a
-     * map of resource to {@link ResourcePrivileges} where the resource is application resource and the map of application privilege to
-     * whether it is allowed or not.
-     *
-     * @param applicationName checks privileges for the provided application name
-     * @param checkForResources check permission grants for the set of resources
-     * @param checkForPrivilegeNames check permission grants for the set of privilege names
-     * @param storedPrivileges stored {@link ApplicationPrivilegeDescriptor} for an application against which the access checks are
-     * performed
-     * @return an instance of {@link ResourcePrivilegesMap}
-     */
+    @Override
     public ResourcePrivilegesMap checkApplicationResourcePrivileges(final String applicationName, Set<String> checkForResources,
                                                                     Set<String> checkForPrivilegeNames,
                                                                     Collection<ApplicationPrivilegeDescriptor> storedPrivileges) {
         return application.checkResourcePrivileges(applicationName, checkForResources, checkForPrivilegeNames, storedPrivileges);
     }
 
-    /**
-     * Returns whether at least one group encapsulated by this indices permissions is authorized to execute the
-     * specified action with the requested indices/aliases. At the same time if field and/or document level security
-     * is configured for any group also the allowed fields and role queries are resolved.
-     */
-    public IndicesAccessControl authorize(String action, Set<String> requestedIndicesOrAliases,
-                                          Map<String, IndexAbstraction> aliasAndIndexLookup,
-                                          FieldPermissionsCache fieldPermissionsCache) {
+    @Override
+    public IndicesAccessControl authorizeIndices(String action, Set<String> requestedIndicesOrAliases,
+                                                 Map<String, IndexAbstraction> aliasAndIndexLookup,
+                                                 FieldPermissionsCache fieldPermissionsCache) {
         Map<String, IndicesAccessControl.IndexAccessControl> indexPermissions = indices.authorize(
             action, requestedIndicesOrAliases, aliasAndIndexLookup, fieldPermissionsCache
         );

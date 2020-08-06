@@ -72,7 +72,7 @@ import org.elasticsearch.xpack.security.audit.AuditTrailService;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authz.interceptor.RequestInterceptor;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -118,7 +118,7 @@ public class AuthorizationService {
     private final boolean isAnonymousEnabled;
     private final boolean anonymousAuthzExceptionEnabled;
 
-    public AuthorizationService(Settings settings, RolesStore rolesStore, ClusterService clusterService,
+    public AuthorizationService(Settings settings, PermissionsStore permissionsStore, ClusterService clusterService,
                                 AuditTrailService auditTrailService, AuthenticationFailureHandler authcFailureHandler,
                                 ThreadPool threadPool, AnonymousUser anonymousUser, @Nullable AuthorizationEngine authorizationEngine,
                                 Set<RequestInterceptor> requestInterceptors, XPackLicenseState licenseState,
@@ -131,7 +131,7 @@ public class AuthorizationService {
         this.anonymousUser = anonymousUser;
         this.isAnonymousEnabled = AnonymousUser.isAnonymousEnabled(settings);
         this.anonymousAuthzExceptionEnabled = ANONYMOUS_AUTHORIZATION_EXCEPTION_SETTING.get(settings);
-        this.rbacEngine = new RBACEngine(settings, rolesStore);
+        this.rbacEngine = new RBACEngine(settings, permissionsStore);
         this.authorizationEngine = authorizationEngine == null ? this.rbacEngine : authorizationEngine;
         this.requestInterceptors = requestInterceptors;
         this.settings = settings;

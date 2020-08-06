@@ -21,6 +21,7 @@ import org.elasticsearch.test.EqualsHashCodeTestUtils;
 import org.elasticsearch.xpack.core.XPackClientPlugin;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor.ApplicationResourcePrivileges;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition.FieldGrantExcludeGroup;
+import org.elasticsearch.xpack.core.security.authz.permission.IndicesAccessDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivileges.ManageApplicationPrivileges;
 
@@ -77,8 +78,8 @@ public class GetUserPrivilegesResponseTests extends ESTestCase {
                     final Set<String> cluster = maybeMutate(random, 0, original.getClusterPrivileges(), () -> randomAlphaOfLength(5));
                     final Set<ConfigurableClusterPrivilege> conditionalCluster = maybeMutate(random, 1,
                         original.getConditionalClusterPrivileges(), () -> new ManageApplicationPrivileges(randomStringSet(3)));
-                        final Set<GetUserPrivilegesResponse.Indices> index = maybeMutate(random, 2, original.getIndexPrivileges(),
-                                () -> new GetUserPrivilegesResponse.Indices(randomStringSet(1), randomStringSet(1), emptySet(), emptySet(),
+                        final Set<IndicesAccessDescriptor> index = maybeMutate(random, 2, original.getIndexPrivileges(),
+                                () -> new IndicesAccessDescriptor(randomStringSet(1), randomStringSet(1), emptySet(), emptySet(),
                                         randomBoolean()));
                     final Set<ApplicationResourcePrivileges> application = maybeMutate(random, 3, original.getApplicationPrivileges(),
                         () -> ApplicationResourcePrivileges.builder().resources(generateRandomStringArray(3, 3, false, false))
@@ -107,8 +108,8 @@ public class GetUserPrivilegesResponseTests extends ESTestCase {
             () -> new ManageApplicationPrivileges(
                 randomStringSet(3)
             )));
-        final Set<GetUserPrivilegesResponse.Indices> index = Sets.newHashSet(randomArray(5, GetUserPrivilegesResponse.Indices[]::new,
-            () -> new GetUserPrivilegesResponse.Indices(randomStringSet(6), randomStringSet(8),
+        final Set<IndicesAccessDescriptor> index = Sets.newHashSet(randomArray(5, IndicesAccessDescriptor[]::new,
+            () -> new IndicesAccessDescriptor(randomStringSet(6), randomStringSet(8),
                 Sets.newHashSet(randomArray(3, FieldGrantExcludeGroup[]::new, () -> new FieldGrantExcludeGroup(
                     generateRandomStringArray(3, 5, false, false), generateRandomStringArray(3, 5, false, false)))),
                 randomStringSet(3).stream().map(BytesArray::new).collect(Collectors.toSet()), randomBoolean()
@@ -122,8 +123,8 @@ public class GetUserPrivilegesResponseTests extends ESTestCase {
         return new GetUserPrivilegesResponse(cluster, conditionalCluster, index, application, runAs);
     }
 
-    private List<GetUserPrivilegesResponse.Indices> sorted(Collection<GetUserPrivilegesResponse.Indices> indices) {
-        final ArrayList<GetUserPrivilegesResponse.Indices> list = CollectionUtils.iterableAsArrayList(indices);
+    private List<IndicesAccessDescriptor> sorted(Collection<IndicesAccessDescriptor> indices) {
+        final ArrayList<IndicesAccessDescriptor> list = CollectionUtils.iterableAsArrayList(indices);
         Collections.sort(list, (a, b) -> {
             int cmp = compareCollection(a.getIndices(), b.getIndices(), String::compareTo);
             if (cmp != 0) {

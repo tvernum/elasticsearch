@@ -242,7 +242,7 @@ public class AuthorizationServiceTests extends ESTestCase {
                 );
             }
             return Void.TYPE;
-        }).when(rolesStore).getRoles(any(Authentication.class), any(ActionListener.class));
+        }).when(rolesStore).getUserPermissions(any(Authentication.class), any(ActionListener.class));
         roleMap.put(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName(), ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR);
         authorizationService = new AuthorizationService(settings, rolesStore, clusterService,
             auditTrailService, new DefaultAuthenticationFailureHandler(Collections.emptyMap()), threadPool, new AnonymousUser(settings),

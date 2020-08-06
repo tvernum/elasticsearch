@@ -23,7 +23,7 @@ import java.util.function.Predicate;
 
 /**
  * A {@link Role} limited by another role.<br>
- * The effective permissions returned on {@link #authorize(String, Set, Map, FieldPermissionsCache)} call would be limited by the
+ * The effective permissions returned on {@link #authorizeIndices(String, Set, Map, FieldPermissionsCache)} call would be limited by the
  * provided role.
  */
 public final class LimitedRole extends Role {
@@ -56,12 +56,12 @@ public final class LimitedRole extends Role {
     }
 
     @Override
-    public IndicesAccessControl authorize(String action, Set<String> requestedIndicesOrAliases,
-                                          Map<String, IndexAbstraction> aliasAndIndexLookup,
-                                          FieldPermissionsCache fieldPermissionsCache) {
+    public IndicesAccessControl authorizeIndices(String action, Set<String> requestedIndicesOrAliases,
+                                                 Map<String, IndexAbstraction> aliasAndIndexLookup,
+                                                 FieldPermissionsCache fieldPermissionsCache) {
         IndicesAccessControl indicesAccessControl =
-            super.authorize(action, requestedIndicesOrAliases, aliasAndIndexLookup, fieldPermissionsCache);
-        IndicesAccessControl limitedByIndicesAccessControl = limitedBy.authorize(action, requestedIndicesOrAliases, aliasAndIndexLookup,
+            super.authorizeIndices(action, requestedIndicesOrAliases, aliasAndIndexLookup, fieldPermissionsCache);
+        IndicesAccessControl limitedByIndicesAccessControl = limitedBy.authorizeIndices(action, requestedIndicesOrAliases, aliasAndIndexLookup,
                 fieldPermissionsCache);
 
         return indicesAccessControl.limitIndicesAccessControl(limitedByIndicesAccessControl);

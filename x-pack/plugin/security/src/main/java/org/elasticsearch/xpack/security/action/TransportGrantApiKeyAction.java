@@ -26,7 +26,7 @@ import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.AuthenticationService;
 import org.elasticsearch.xpack.security.authc.TokenService;
 import org.elasticsearch.xpack.security.authc.support.ApiKeyGenerator;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 /**
  * Implementation of the action needed to create an API key on behalf of another user (using an OAuth style "grant")
@@ -41,7 +41,7 @@ public final class TransportGrantApiKeyAction extends HandledTransportAction<Gra
     @Inject
     public TransportGrantApiKeyAction(TransportService transportService, ActionFilters actionFilters, ThreadPool threadPool,
                                       ApiKeyService apiKeyService, AuthenticationService authenticationService, TokenService tokenService,
-                                      RolesStore.Holder rolesStore, NamedXContentRegistry xContentRegistry) {
+                                      PermissionsStore.Holder rolesStore, NamedXContentRegistry xContentRegistry) {
         this(transportService, actionFilters, threadPool.getThreadContext(),
             new ApiKeyGenerator(apiKeyService, rolesStore.store, xContentRegistry), authenticationService, tokenService
         );

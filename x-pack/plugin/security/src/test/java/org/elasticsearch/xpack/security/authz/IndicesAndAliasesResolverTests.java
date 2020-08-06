@@ -261,8 +261,8 @@ public class IndicesAndAliasesResolverTests extends ESTestCase {
                 );
             }
             return Void.TYPE;
-        }).when(rolesStore).roles(any(Set.class), any(ActionListener.class));
-        doCallRealMethod().when(rolesStore).getRoles(any(Authentication.class), any(ActionListener.class));
+        }).when(rolesStore).getNamedRoles(any(Set.class), any(ActionListener.class));
+        doCallRealMethod().when(rolesStore).getUserPermissions(any(Authentication.class), any(ActionListener.class));
 
         ClusterService clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(new ClusterSettings(settings, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS));
@@ -1860,7 +1860,7 @@ public class IndicesAndAliasesResolverTests extends ESTestCase {
         PlainActionFuture<Role> rolesListener = new PlainActionFuture<>();
         final Authentication authentication =
             new Authentication(user, new RealmRef("test", "indices-aliases-resolver-tests", "node"), null);
-        rolesStore.getRoles(authentication, rolesListener);
+        rolesStore.getUserPermissions(authentication, rolesListener);
         return RBACEngine.resolveAuthorizedIndicesFromRole(rolesListener.actionGet(), getRequestInfo(request, action),
             metadata.getIndicesLookup());
     }

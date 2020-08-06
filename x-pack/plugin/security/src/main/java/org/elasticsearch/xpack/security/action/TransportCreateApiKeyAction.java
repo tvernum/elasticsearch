@@ -21,7 +21,7 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.support.ApiKeyGenerator;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 /**
  * Implementation of the action needed to create an API key
@@ -33,7 +33,7 @@ public final class TransportCreateApiKeyAction extends HandledTransportAction<Cr
 
     @Inject
     public TransportCreateApiKeyAction(TransportService transportService, ActionFilters actionFilters, ApiKeyService apiKeyService,
-                                       SecurityContext context, RolesStore.Holder rolesStore, NamedXContentRegistry xContentRegistry) {
+                                       SecurityContext context, PermissionsStore.Holder rolesStore, NamedXContentRegistry xContentRegistry) {
         super(CreateApiKeyAction.NAME, transportService, actionFilters, CreateApiKeyRequest::new);
         this.generator = new ApiKeyGenerator(apiKeyService, rolesStore.store, xContentRegistry);
         this.securityContext = context;

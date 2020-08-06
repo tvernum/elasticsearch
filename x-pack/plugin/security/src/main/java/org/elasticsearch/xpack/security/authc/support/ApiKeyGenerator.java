@@ -16,7 +16,7 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.support.DLSRoleQueryValidator;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,12 +24,12 @@ import java.util.HashSet;
 public class ApiKeyGenerator {
 
     private final ApiKeyService apiKeyService;
-    private final RolesStore rolesStore;
+    private final PermissionsStore<?> permissionsStore;
     private final NamedXContentRegistry xContentRegistry;
 
-    public ApiKeyGenerator(ApiKeyService apiKeyService, RolesStore rolesStore, NamedXContentRegistry xContentRegistry) {
+    public ApiKeyGenerator(ApiKeyService apiKeyService, PermissionsStore<?> permissionsStore, NamedXContentRegistry xContentRegistry) {
         this.apiKeyService = apiKeyService;
-        this.rolesStore = rolesStore;
+        this.permissionsStore = permissionsStore;
         this.xContentRegistry = xContentRegistry;
     }
 
@@ -39,7 +39,7 @@ public class ApiKeyGenerator {
             return;
         }
         apiKeyService.ensureEnabled();
-        rolesStore.getRoleDescriptors(new HashSet<>(Arrays.asList(authentication.getUser().roles())),
+        permissionsStore.getRoleDescriptors(new HashSet<>(Arrays.asList(authentication.getUser().roles())),
             ActionListener.wrap(roleDescriptors -> {
                     for (RoleDescriptor rd : roleDescriptors) {
                         try {

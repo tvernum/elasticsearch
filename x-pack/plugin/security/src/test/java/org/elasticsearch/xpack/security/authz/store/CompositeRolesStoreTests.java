@@ -174,25 +174,25 @@ public class CompositeRolesStoreTests extends ESTestCase {
             null, null, licenseState, null, null, rds -> effectiveRoleDescriptors.set(rds));
 
         PlainActionFuture<Role> roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("fls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("fls"), roleFuture);
         assertEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("dls"), roleFuture);
         assertEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("fls_dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("fls_dls"), roleFuture);
         assertEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("no_fls_dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("no_fls_dls"), roleFuture);
         assertNotEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(noFlsDlsRole));
         effectiveRoleDescriptors.set(null);
@@ -244,25 +244,25 @@ public class CompositeRolesStoreTests extends ESTestCase {
             null, null, licenseState, null, null, rds -> effectiveRoleDescriptors.set(rds));
 
         PlainActionFuture<Role> roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("fls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("fls"), roleFuture);
         assertNotEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(flsRole));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("dls"), roleFuture);
         assertNotEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(dlsRole));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("fls_dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("fls_dls"), roleFuture);
         assertNotEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(flsDlsRole));
         effectiveRoleDescriptors.set(null);
 
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton("no_fls_dls"), roleFuture);
+        compositeRolesStore.getNamedRoles(Collections.singleton("no_fls_dls"), roleFuture);
         assertNotEquals(Role.EMPTY, roleFuture.actionGet());
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(noFlsDlsRole));
         effectiveRoleDescriptors.set(null);
@@ -297,7 +297,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         final String roleName = randomAlphaOfLengthBetween(1, 10);
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton(roleName), future);
+        compositeRolesStore.getNamedRoles(Collections.singleton(roleName), future);
         final Role role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
@@ -315,7 +315,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 : Collections.singleton(roleName);
         for (int i = 0; i < numberOfTimesToCall; i++) {
             future = new PlainActionFuture<>();
-            compositeRolesStore.roles(names, future);
+            compositeRolesStore.getNamedRoles(names, future);
             future.actionGet();
             if (getSuperuserRole && i == 0) {
                 assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR));
@@ -359,7 +359,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         final String roleName = randomAlphaOfLengthBetween(1, 10);
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton(roleName), future);
+        compositeRolesStore.getNamedRoles(Collections.singleton(roleName), future);
         final Role role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
@@ -398,7 +398,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         final String roleName = randomAlphaOfLengthBetween(1, 10);
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(Collections.singleton(roleName), future);
+        compositeRolesStore.getNamedRoles(Collections.singleton(roleName), future);
         final Role role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
@@ -413,7 +413,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         final Set<String> names = Collections.singleton(roleName);
         for (int i = 0; i < numberOfTimesToCall; i++) {
             future = new PlainActionFuture<>();
-            compositeRolesStore.roles(names, future);
+            compositeRolesStore.getNamedRoles(names, future);
             future.actionGet();
             assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
             effectiveRoleDescriptors.set(null);
@@ -485,7 +485,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         final Set<String> roleNames = Sets.newHashSet("roleA", "roleB", "unknown");
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(roleNames, future);
+        compositeRolesStore.getNamedRoles(roleNames, future);
         final Role role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(roleAProvider1, roleBProvider2));
         effectiveRoleDescriptors.set(null);
@@ -504,7 +504,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         final int numberOfTimesToCall = scaledRandomIntBetween(1, 8);
         for (int i = 0; i < numberOfTimesToCall; i++) {
             future = new PlainActionFuture<>();
-            compositeRolesStore.roles(Collections.singleton("unknown"), future);
+            compositeRolesStore.getNamedRoles(Collections.singleton("unknown"), future);
             future.actionGet();
             if (i == 0) {
                 assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
@@ -713,7 +713,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         final Set<String> roleNames = Sets.newHashSet("roleA", "roleB", "unknown");
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(roleNames, future);
+        compositeRolesStore.getNamedRoles(roleNames, future);
         try {
             future.get();
             fail("provider should have thrown a failure");
@@ -760,7 +760,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
 
         Set<String> roleNames = Sets.newHashSet("roleA");
         PlainActionFuture<Role> future = new PlainActionFuture<>();
-        compositeRolesStore.roles(roleNames, future);
+        compositeRolesStore.getNamedRoles(roleNames, future);
         Role role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
         effectiveRoleDescriptors.set(null);
@@ -776,7 +776,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         xPackLicenseState.update(randomFrom(OperationMode.PLATINUM, OperationMode.ENTERPRISE, OperationMode.TRIAL), true, null);
         roleNames = Sets.newHashSet("roleA");
         future = new PlainActionFuture<>();
-        compositeRolesStore.roles(roleNames, future);
+        compositeRolesStore.getNamedRoles(roleNames, future);
         role = future.actionGet();
         assertThat(effectiveRoleDescriptors.get(), containsInAnyOrder(roleA));
         effectiveRoleDescriptors.set(null);
@@ -792,7 +792,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         xPackLicenseState.update(randomFrom(OperationMode.PLATINUM, OperationMode.ENTERPRISE, OperationMode.TRIAL), false, null);
         roleNames = Sets.newHashSet("roleA");
         future = new PlainActionFuture<>();
-        compositeRolesStore.roles(roleNames, future);
+        compositeRolesStore.getNamedRoles(roleNames, future);
         role = future.actionGet();
         assertEquals(0, role.indices().groups().length);
         assertThat(effectiveRoleDescriptors.get().isEmpty(), is(true));
@@ -910,7 +910,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         PlainActionFuture<Role> rolesFuture = new PlainActionFuture<>();
         final User user = new User("no role user");
         Authentication auth = new Authentication(user, new RealmRef("name", "type", "node"), null);
-        compositeRolesStore.getRoles(auth, rolesFuture);
+        compositeRolesStore.getUserPermissions(auth, rolesFuture);
         final Role roles = rolesFuture.actionGet();
         assertEquals(Role.EMPTY, roles);
     }
@@ -947,7 +947,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         PlainActionFuture<Role> rolesFuture = new PlainActionFuture<>();
         final User user = new User("no role user");
         Authentication auth = new Authentication(user, new RealmRef("name", "type", "node"), null);
-        compositeRolesStore.getRoles(auth, rolesFuture);
+        compositeRolesStore.getUserPermissions(auth, rolesFuture);
         final Role roles = rolesFuture.actionGet();
         assertThat(Arrays.asList(roles.names()), hasItem("anonymous_user_role"));
     }
@@ -977,7 +977,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         // test Xpack user short circuits to its own reserved role
         PlainActionFuture<Role> rolesFuture = new PlainActionFuture<>();
         Authentication auth = new Authentication(XPackUser.INSTANCE, new RealmRef("name", "type", "node"), null);
-        compositeRolesStore.getRoles(auth, rolesFuture);
+        compositeRolesStore.getUserPermissions(auth, rolesFuture);
         Role roles = rolesFuture.actionGet();
         assertThat(roles, equalTo(XPackUser.ROLE));
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
@@ -986,7 +986,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         // test AyncSearch user short circuits to its own reserved role
         rolesFuture = new PlainActionFuture<>();
         auth = new Authentication(AsyncSearchUser.INSTANCE, new RealmRef("name", "type", "node"), null);
-        compositeRolesStore.getRoles(auth, rolesFuture);
+        compositeRolesStore.getUserPermissions(auth, rolesFuture);
         roles = rolesFuture.actionGet();
         assertThat(roles, equalTo(AsyncSearchUser.ROLE));
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
@@ -1015,7 +1015,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 rds -> effectiveRoleDescriptors.set(rds));
         verify(fileRolesStore).addListener(any(Consumer.class)); // adds a listener in ctor
         IllegalArgumentException iae = expectThrows(IllegalArgumentException.class,
-            () -> compositeRolesStore.getRoles(null, null));
+            () -> compositeRolesStore.getUserPermissions(null, null));
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
         assertEquals("the user [_system] is the system user and we should never try to get its roles", iae.getMessage());
     }
@@ -1059,7 +1059,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             version);
 
         PlainActionFuture<Role> roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.getRoles(authentication, roleFuture);
+        compositeRolesStore.getUserPermissions(authentication, roleFuture);
         Role role = roleFuture.actionGet();
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
 
@@ -1112,7 +1112,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             version);
 
         PlainActionFuture<Role> roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.getRoles(authentication, roleFuture);
+        compositeRolesStore.getUserPermissions(authentication, roleFuture);
         Role role = roleFuture.actionGet();
         assertThat(role.checkClusterAction("cluster:admin/foo", Empty.INSTANCE, mock(Authentication.class)), is(false));
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
@@ -1256,7 +1256,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
         doCallRealMethod().when(apiKeyService).getApiKeyIdAndRoleBytes(eq(authentication), anyBoolean());
 
         PlainActionFuture<Role> roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.getRoles(authentication, roleFuture);
+        compositeRolesStore.getUserPermissions(authentication, roleFuture);
         roleFuture.actionGet();
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
         verify(apiKeyService, times(2)).getApiKeyIdAndRoleBytes(eq(authentication), anyBoolean());
@@ -1277,7 +1277,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 limitedByRoleBytes));
         doCallRealMethod().when(apiKeyService).getApiKeyIdAndRoleBytes(eq(authentication), anyBoolean());
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.getRoles(authentication, roleFuture);
+        compositeRolesStore.getUserPermissions(authentication, roleFuture);
         roleFuture.actionGet();
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
         verify(apiKeyService, times(2)).getApiKeyIdAndRoleBytes(eq(authentication), anyBoolean());
@@ -1298,7 +1298,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
                 limitedByRoleBytes));
         doCallRealMethod().when(apiKeyService).getApiKeyIdAndRoleBytes(eq(authentication), anyBoolean());
         roleFuture = new PlainActionFuture<>();
-        compositeRolesStore.getRoles(authentication, roleFuture);
+        compositeRolesStore.getUserPermissions(authentication, roleFuture);
         roleFuture.actionGet();
         assertThat(effectiveRoleDescriptors.get(), is(nullValue()));
         verify(apiKeyService).getApiKeyIdAndRoleBytes(eq(authentication), eq(false));

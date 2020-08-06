@@ -19,7 +19,7 @@ import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCac
 import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCacheRequest;
 import org.elasticsearch.xpack.core.security.action.privilege.ClearPrivilegesCacheResponse;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +28,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
     ClearPrivilegesCacheRequest.Node, ClearPrivilegesCacheResponse.Node> {
 
     private final NativePrivilegeStore privilegesStore;
-    private final RolesStore rolesStore;
+    private final PermissionsStore permissionsStore;
 
     @Inject
     public TransportClearPrivilegesCacheAction(
@@ -37,7 +37,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
         TransportService transportService,
         ActionFilters actionFilters,
         NativePrivilegeStore privilegesStore,
-        RolesStore.Holder rolesStore) {
+        PermissionsStore.Holder rolesStore) {
         super(
             ClearPrivilegesCacheAction.NAME,
             threadPool,
@@ -49,7 +49,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
             ThreadPool.Names.MANAGEMENT,
             ClearPrivilegesCacheResponse.Node.class);
         this.privilegesStore = privilegesStore;
-        this.rolesStore = rolesStore.store;
+        this.permissionsStore = rolesStore.store;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class TransportClearPrivilegesCacheAction extends TransportNodesAction<Cl
             privilegesStore.invalidate(List.of(request.getApplicationNames()));
         }
         if (request.clearRolesCache()) {
-            rolesStore.invalidateAll();
+            permissionsStore.invalidateAll();
         }
         return new ClearPrivilegesCacheResponse.Node(clusterService.localNode());
     }

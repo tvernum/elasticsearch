@@ -208,10 +208,10 @@ import org.elasticsearch.xpack.security.authz.interceptor.UpdateRequestIntercept
 import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.authz.store.DeprecationRoleDescriptorConsumer;
 import org.elasticsearch.xpack.security.authz.store.FileRolesStore;
-import org.elasticsearch.xpack.security.authz.store.FilteringRolesStore;
+import org.elasticsearch.xpack.security.authz.store.FilteringPermissionsStore;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
 import org.elasticsearch.xpack.security.authz.store.NativeRolesStore;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 import org.elasticsearch.xpack.security.ingest.SetSecurityUserProcessor;
 import org.elasticsearch.xpack.security.rest.SecurityRestFilter;
 import org.elasticsearch.xpack.security.rest.action.RestAuthenticateAction;
@@ -457,12 +457,12 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         final CompositeRolesStore compositeRolesStore = new CompositeRolesStore(settings, fileRolesStore, nativeRolesStore, reservedRolesStore,
             privilegeStore, rolesProviders, threadPool.getThreadContext(), getLicenseState(), fieldPermissionsCache, apiKeyService,
             dlsBitsetCache.get(), new DeprecationRoleDescriptorConsumer(clusterService, threadPool));
-        final RolesStore rolesStore = new FilteringRolesStore(settings, compositeRolesStore, resourceWatcherService, getLicenseState());
+        final PermissionsStore permissionsStore = new FilteringPermissionsStore(settings, compositeRolesStore, resourceWatcherService, getLicenseState());
         securityIndex.get().addIndexStateListener(compositeRolesStore::onSecurityIndexStateChange);
 
         // to keep things simple, just invalidate all cached entries on license change. this happens so rarely that the impact should be
         // minimal
-        getLicenseState().addListener(rolesStore::invalidateAll);
+        getLicenseState().addListener(permissionsStore::invalidateAll);
         getLicenseState().addListener(new SecurityStatusChangeListener(getLicenseState()));
 
         final AuthenticationFailureHandler failureHandler = createAuthenticationFailureHandler(realms, extensionComponents);
@@ -483,13 +483,13 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         }
         requestInterceptors = Collections.unmodifiableSet(requestInterceptors);
 
-        final AuthorizationService authzService = new AuthorizationService(settings, rolesStore, clusterService,
+        final AuthorizationService authzService = new AuthorizationService(settings, permissionsStore, clusterService,
             auditTrailService, failureHandler, threadPool, anonymousUser, getAuthorizationEngine(), requestInterceptors,
             getLicenseState(), expressionResolver);
 
         components.add(nativeRolesStore); // used by roles actions
         components.add(reservedRolesStore); // used by roles actions
-        components.add(new RolesStore.Holder(rolesStore)); // for SecurityInfoTransportAction and clear roles cache
+        components.add(new PermissionsStore.Holder(permissionsStore)); // for SecurityInfoTransportAction and clear roles cache
         components.add(authzService);
 
         final SecondaryAuthenticator secondaryAuthenticator = new SecondaryAuthenticator(securityContext.get(), authcService.get());
@@ -505,7 +505,7 @@ public class Security extends Plugin implements SystemIndexPlugin, IngestPlugin,
         securityActionFilter.set(new SecurityActionFilter(authcService.get(), authzService, getLicenseState(),
             threadPool, securityContext.get(), destructiveOperations));
 
-        components.add(new SecurityUsageServices(realms, rolesStore, nativeRoleMappingStore, ipFilter.get()));
+        components.add(new SecurityUsageServices(realms, permissionsStore, nativeRoleMappingStore, ipFilter.get()));
 
         return components;
     }

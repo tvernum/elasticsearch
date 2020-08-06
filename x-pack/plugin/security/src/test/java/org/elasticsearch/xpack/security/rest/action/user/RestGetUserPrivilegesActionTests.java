@@ -21,6 +21,7 @@ import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.action.user.GetUserPrivilegesResponse;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor.ApplicationResourcePrivileges;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.permission.IndicesAccessDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivileges;
 
@@ -56,8 +57,8 @@ public class RestGetUserPrivilegesActionTests extends ESTestCase {
         final Set<String> cluster = new LinkedHashSet<>(Arrays.asList("monitor", "manage_ml", "manage_watcher"));
         final Set<ConfigurableClusterPrivilege> conditionalCluster = Collections.singleton(
             new ConfigurableClusterPrivileges.ManageApplicationPrivileges(new LinkedHashSet<>(Arrays.asList("app01", "app02"))));
-        final Set<GetUserPrivilegesResponse.Indices> index = new LinkedHashSet<>(Arrays.asList(
-            new GetUserPrivilegesResponse.Indices(Arrays.asList("index-1", "index-2", "index-3-*"), Arrays.asList("read", "write"),
+        final Set<IndicesAccessDescriptor> index = new LinkedHashSet<>(Arrays.asList(
+            new IndicesAccessDescriptor(Arrays.asList("index-1", "index-2", "index-3-*"), Arrays.asList("read", "write"),
                 new LinkedHashSet<>(Arrays.asList(
                     new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[]{"public.*"}, new String[0]),
                     new FieldPermissionsDefinition.FieldGrantExcludeGroup(new String[]{"*"}, new String[]{"private.*"})
@@ -68,7 +69,7 @@ public class RestGetUserPrivilegesActionTests extends ESTestCase {
                 )),
                 false
             ),
-            new GetUserPrivilegesResponse.Indices(Arrays.asList("index-4"), Collections.singleton("all"),
+            new IndicesAccessDescriptor(Arrays.asList("index-4"), Collections.singleton("all"),
                 Collections.emptySet(), Collections.emptySet(), true
             )
         ));

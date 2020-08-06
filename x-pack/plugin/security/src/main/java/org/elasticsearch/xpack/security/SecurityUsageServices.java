@@ -7,7 +7,7 @@ package org.elasticsearch.xpack.security;
 
 import org.elasticsearch.xpack.security.authc.Realms;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 import org.elasticsearch.xpack.security.transport.filter.IPFilter;
 
 /**
@@ -17,13 +17,13 @@ import org.elasticsearch.xpack.security.transport.filter.IPFilter;
  */
 class SecurityUsageServices {
     final Realms realms;
-    final RolesStore rolesStore;
+    final PermissionsStore permissionsStore;
     final NativeRoleMappingStore roleMappingStore;
     final IPFilter ipFilter;
 
-    SecurityUsageServices(Realms realms, RolesStore rolesStore, NativeRoleMappingStore roleMappingStore, IPFilter ipFilter) {
+    SecurityUsageServices(Realms realms, PermissionsStore permissionsStore, NativeRoleMappingStore roleMappingStore, IPFilter ipFilter) {
         this.realms = realms;
-        this.rolesStore = rolesStore;
+        this.permissionsStore = permissionsStore;
         this.roleMappingStore = roleMappingStore;
         this.ipFilter = ipFilter;
     }

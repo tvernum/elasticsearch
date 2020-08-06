@@ -9,18 +9,17 @@ package org.elasticsearch.xpack.security.authz.store;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
-import org.elasticsearch.xpack.core.security.authz.permission.Role;
+import org.elasticsearch.xpack.core.security.authz.permission.Permissions;
 
 import java.util.Map;
 import java.util.Set;
 
-public interface RolesStore {
+public interface PermissionsStore<T extends Permissions> {
 
-    void roles(Set<String> roleNames, ActionListener<Role> roleActionListener);
-
-    void getRoles(Authentication authentication, ActionListener<Role> roleActionListener);
+    void getUserPermissions(Authentication authentication, ActionListener<? super T> roleActionListener);
 
     // Role retrieval methods
+    void getNamedRoles(Set<String> roleNames, ActionListener<? super T> roleActionListener);
     void getRoleDescriptors(Set<String> roleNames, ActionListener<Set<RoleDescriptor>> listener);
 
     // Cache management methods
@@ -31,9 +30,9 @@ public interface RolesStore {
     void usageStats(ActionListener<Map<String, Object>> listener);
 
     class Holder {
-        public final RolesStore store;
+        public final PermissionsStore store;
 
-        public Holder(RolesStore store) {
+        public Holder(PermissionsStore store) {
             this.store = store;
         }
     }

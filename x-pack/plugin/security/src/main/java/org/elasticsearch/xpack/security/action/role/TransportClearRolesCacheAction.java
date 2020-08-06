@@ -17,7 +17,7 @@ import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.security.action.role.ClearRolesCacheAction;
 import org.elasticsearch.xpack.core.security.action.role.ClearRolesCacheRequest;
 import org.elasticsearch.xpack.core.security.action.role.ClearRolesCacheResponse;
-import org.elasticsearch.xpack.security.authz.store.RolesStore;
+import org.elasticsearch.xpack.security.authz.store.PermissionsStore;
 
 import java.io.IOException;
 import java.util.List;
@@ -25,14 +25,14 @@ import java.util.List;
 public class TransportClearRolesCacheAction extends TransportNodesAction<ClearRolesCacheRequest, ClearRolesCacheResponse,
         ClearRolesCacheRequest.Node, ClearRolesCacheResponse.Node> {
 
-    private final RolesStore rolesStore;
+    private final PermissionsStore permissionsStore;
 
     @Inject
     public TransportClearRolesCacheAction(ThreadPool threadPool, ClusterService clusterService,
-                                          TransportService transportService, ActionFilters actionFilters, RolesStore.Holder rolesStore) {
+                                          TransportService transportService, ActionFilters actionFilters, PermissionsStore.Holder rolesStore) {
         super(ClearRolesCacheAction.NAME, threadPool, clusterService, transportService, actionFilters, ClearRolesCacheRequest::new,
             ClearRolesCacheRequest.Node::new, ThreadPool.Names.MANAGEMENT, ClearRolesCacheResponse.Node.class);
-        this.rolesStore = rolesStore.store;
+        this.permissionsStore = rolesStore.store;
     }
 
     @Override
@@ -54,10 +54,10 @@ public class TransportClearRolesCacheAction extends TransportNodesAction<ClearRo
     @Override
     protected ClearRolesCacheResponse.Node nodeOperation(ClearRolesCacheRequest.Node request, Task task) {
         if (request.getNames() == null || request.getNames().length == 0) {
-            rolesStore.invalidateAll();
+            permissionsStore.invalidateAll();
         } else {
             for (String role : request.getNames()) {
-                rolesStore.invalidate(role);
+                permissionsStore.invalidate(role);
             }
         }
         return new ClearRolesCacheResponse.Node(clusterService.localNode());
