@@ -27,6 +27,7 @@ import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.LongSupplier;
 
@@ -41,12 +42,12 @@ public class QueryRewriteContext {
     private final List<BiConsumer<Client, ActionListener<?>>> asyncActions = new ArrayList<>();
 
     public QueryRewriteContext(
-            NamedXContentRegistry xContentRegistry, NamedWriteableRegistry writeableRegistry,Client client,
+            NamedXContentRegistry xContentRegistry, NamedWriteableRegistry writeableRegistry, Client client,
             LongSupplier nowInMillis) {
 
         this.xContentRegistry = xContentRegistry;
         this.writeableRegistry = writeableRegistry;
-        this.client = client;
+        this.client = client == null ? null : client.filterWithHeader(Map.of());
         this.nowInMillis = nowInMillis;
     }
 

@@ -21,7 +21,6 @@ package org.elasticsearch.test;
 
 import com.carrotsearch.randomizedtesting.RandomizedTest;
 import com.carrotsearch.randomizedtesting.SeedUtils;
-
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.Accountable;
 import org.elasticsearch.Version;
@@ -300,6 +299,8 @@ public abstract class AbstractBuilderTestCase extends ESTestCase {
                 };
             } else if (method.equals(Object.class.getMethod("toString"))) {
                 return "MockClient";
+            } else if (method.equals(Client.class.getMethod("filterWithHeader", Map.class))) {
+                return proxy;
             }
             throw new UnsupportedOperationException("this test can't handle calls to: " + method);
         }
