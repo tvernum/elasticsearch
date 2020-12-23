@@ -19,9 +19,9 @@
 
 package org.elasticsearch.action.admin.cluster.stats;
 
-import org.elasticsearch.cluster.ClusterState;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
-import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.metadata.MappingMetadata;
+import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -52,7 +52,7 @@ public final class AnalysisStats implements ToXContentFragment, Writeable {
     /**
      * Create {@link AnalysisStats} from the given cluster state.
      */
-    public static AnalysisStats of(ClusterState state) {
+    public static AnalysisStats of(Metadata metadata) {
         final Map<String, IndexFeatureStats> usedCharFilterTypes = new HashMap<>();
         final Map<String, IndexFeatureStats> usedTokenizerTypes = new HashMap<>();
         final Map<String, IndexFeatureStats> usedTokenFilterTypes = new HashMap<>();
@@ -62,11 +62,16 @@ public final class AnalysisStats implements ToXContentFragment, Writeable {
         final Map<String, IndexFeatureStats> usedBuiltInTokenFilters = new HashMap<>();
         final Map<String, IndexFeatureStats> usedBuiltInAnalyzers = new HashMap<>();
 
-        for (IndexMetaData indexMetaData : state.metaData()) {
+        for (IndexMetadata indexMetadata : metadata) {
+            if (indexMetadata.isSystem()) {
+                // Don't include system indices in statistics about analysis,
+                // we care about the user's indices.
+                continue;
+            }
             Set<String> indexAnalyzers = new HashSet<>();
-            MappingMetaData mappingMetaData = indexMetaData.mapping();
-            if (mappingMetaData != null) {
-                MappingVisitor.visitMapping(mappingMetaData.getSourceAsMap(), fieldMapping -> {
+            MappingMetadata mappingMetadata = indexMetadata.mapping();
+            if (mappingMetadata != null) {
+                MappingVisitor.visitMapping(mappingMetadata.getSourceAsMap(), (field, fieldMapping) -> {
                     for (String key : new String[] { "analyzer", "search_analyzer", "search_quote_analyzer" }) {
                         Object analyzerO = fieldMapping.get(key);
                         if (analyzerO != null) {
@@ -90,7 +95,7 @@ public final class AnalysisStats implements ToXContentFragment, Writeable {
             Set<String> indexTokenizerTypes = new HashSet<>();
             Set<String> indexTokenFilterTypes = new HashSet<>();
 
-            Settings indexSettings = indexMetaData.getSettings();
+            Settings indexSettings = indexMetadata.getSettings();
             Map<String, Settings> analyzerSettings = indexSettings.getGroups("index.analysis.analyzer");
             usedBuiltInAnalyzers.keySet().removeAll(analyzerSettings.keySet());
             for (Settings analyzerSetting : analyzerSettings.values()) {

@@ -20,93 +20,44 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.WhileNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
 /**
  * Represents a while loop.
  */
-public final class SWhile extends AStatement {
+public class SWhile extends AStatement {
 
-    private AExpression condition;
-    private final SBlock block;
+    private final AExpression conditionNode;
+    private final SBlock blockNode;
 
-    private boolean continuous = false;
+    public SWhile(int identifier, Location location, AExpression conditionNode, SBlock blockNode) {
+        super(identifier, location);
 
-    public SWhile(Location location, AExpression condition, SBlock block) {
-        super(location);
+        this.conditionNode = Objects.requireNonNull(conditionNode);
+        this.blockNode = blockNode;
+    }
 
-        this.condition = Objects.requireNonNull(condition);
-        this.block = block;
+    public AExpression getConditionNode() {
+        return conditionNode;
+    }
+
+    public SBlock getBlockNode() {
+        return blockNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitWhile(this, scope);
+    }
 
-        scope = scope.newLocalScope();
+    @Override
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        conditionNode.visit(userTreeVisitor, scope);
 
-        AExpression.Input conditionInput = new AExpression.Input();
-        conditionInput.expected = boolean.class;
-        condition.analyze(scriptRoot, scope, conditionInput);
-        condition.cast();
-
-        if (condition instanceof EBoolean) {
-            continuous = ((EBoolean)condition).constant;
-
-            if (!continuous) {
-                throw createError(new IllegalArgumentException("Extraneous while loop."));
-            }
-
-            if (block == null) {
-                throw createError(new IllegalArgumentException("While loop has no escape."));
-            }
+        if (blockNode != null) {
+            blockNode.visit(userTreeVisitor, scope);
         }
-
-        if (block != null) {
-            Input blockInput = new Input();
-            blockInput.beginLoop = true;
-            blockInput.inLoop = true;
-
-            Output blockOutput = block.analyze(scriptRoot, scope, blockInput);
-
-            if (blockOutput.loopEscape && blockOutput.anyContinue == false) {
-                throw createError(new IllegalArgumentException("Extraneous while loop."));
-            }
-
-            if (continuous && blockOutput.anyBreak == false) {
-                output.methodEscape = true;
-                output.allEscape = true;
-            }
-
-            blockOutput.statementCount = Math.max(1, blockOutput.statementCount);
-        }
-
-        output.statementCount = 1;
-
-        return output;
-    }
-
-    @Override
-    WhileNode write(ClassNode classNode) {
-        WhileNode whileNode = new WhileNode();
-
-        whileNode.setConditionNode(condition.cast(condition.write(classNode)));
-        whileNode.setBlockNode(block == null ? null : block.write(classNode));
-
-        whileNode.setLocation(location);
-        whileNode.setContinuous(continuous);
-
-        return whileNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(condition, block);
     }
 }

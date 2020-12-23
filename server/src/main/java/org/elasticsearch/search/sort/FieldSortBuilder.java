@@ -20,16 +20,17 @@
 package org.elasticsearch.search.sort;
 
 import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiTerms;
 import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.search.SortField;
+import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.time.DateMathParser;
 import org.elasticsearch.common.time.DateUtils;
 import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ObjectParser.ValueType;
@@ -40,7 +41,6 @@ import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.index.fielddata.IndexFieldData.XFieldComparatorSource.Nested;
 import org.elasticsearch.index.fielddata.IndexNumericFieldData;
 import org.elasticsearch.index.fielddata.IndexNumericFieldData.NumericType;
-import org.elasticsearch.index.fielddata.plain.SortedNumericDVIndexFieldData;
 import org.elasticsearch.index.mapper.DateFieldMapper.DateFieldType;
 import org.elasticsearch.index.mapper.KeywordFieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
@@ -52,6 +52,7 @@ import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.query.QueryShardException;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.MultiValueMode;
+import org.elasticsearch.search.SearchSortValuesAndFormats;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
@@ -80,6 +81,12 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
      * special field name to sort by index order
      */
     public static final String DOC_FIELD_NAME = "_doc";
+
+    /**
+     * special field name to sort by index order
+     */
+    public static final String SHARD_DOC_FIELD_NAME = ShardDocSortField.NAME;
+
     private static final SortFieldAndFormat SORT_DOC = new SortFieldAndFormat(
             new SortField(null, SortField.Type.DOC), DocValueFormat.RAW);
     private static final SortFieldAndFormat SORT_DOC_REVERSE = new SortFieldAndFormat(
@@ -257,7 +264,7 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
      * Specifying a numeric type tells Elasticsearch what type the sort values should
      * have, which is important for cross-index search, if a field does not have
      * the same type on all indices.
-     * Allowed values are <code>long</code> and <code>double</code>.
+     * Allowed values are <code>long</code>, <code>double</code>, <code>date</code> and <code>date_nanos</code>.
      */
     public FieldSortBuilder setNumericType(String numericType) {
         String lowerCase = numericType.toLowerCase(Locale.ENGLISH);
@@ -320,35 +327,91 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
 
     @Override
     public SortFieldAndFormat build(QueryShardContext context) throws IOException {
+        final boolean reverse = order == SortOrder.DESC;
+
         if (DOC_FIELD_NAME.equals(fieldName)) {
-            return order == SortOrder.DESC ? SORT_DOC_REVERSE : SORT_DOC;
+            return reverse ? SORT_DOC_REVERSE : SORT_DOC;
+        } else if (SHARD_DOC_FIELD_NAME.equals(fieldName)) {
+            return new SortFieldAndFormat(new ShardDocSortField(context.getShardRequestIndex(), reverse), DocValueFormat.RAW);
         }
 
-        MappedFieldType fieldType = context.fieldMapper(fieldName);
+        MappedFieldType fieldType = context.getFieldType(fieldName);
         Nested nested = nested(context, fieldType);
         if (fieldType == null) {
             fieldType = resolveUnmappedType(context);
         }
 
-        boolean reverse = order == SortOrder.DESC;
         IndexFieldData<?> fieldData = context.getForField(fieldType);
         if (fieldData instanceof IndexNumericFieldData == false
                 && (sortMode == SortMode.SUM || sortMode == SortMode.AVG || sortMode == SortMode.MEDIAN)) {
             throw new QueryShardException(context, "we only support AVG, MEDIAN and SUM on number based fields");
         }
         final SortField field;
+        boolean isNanosecond = false;
         if (numericType != null) {
             if (fieldData instanceof IndexNumericFieldData == false) {
                 throw new QueryShardException(context,
                     "[numeric_type] option cannot be set on a non-numeric field, got " + fieldType.typeName());
             }
-            SortedNumericDVIndexFieldData numericFieldData = (SortedNumericDVIndexFieldData) fieldData;
+            IndexNumericFieldData numericFieldData = (IndexNumericFieldData) fieldData;
             NumericType resolvedType = resolveNumericType(numericType);
             field = numericFieldData.sortField(resolvedType, missing, localSortMode(), nested, reverse);
+            isNanosecond = resolvedType == NumericType.DATE_NANOSECONDS;
         } else {
             field = fieldData.sortField(missing, localSortMode(), nested, reverse);
+            if (fieldData instanceof IndexNumericFieldData) {
+                isNanosecond = ((IndexNumericFieldData) fieldData).getNumericType() == NumericType.DATE_NANOSECONDS;
+            }
         }
-        return new SortFieldAndFormat(field, fieldType.docValueFormat(null, null));
+        DocValueFormat format = fieldType.docValueFormat(null, null);
+        if (isNanosecond) {
+            format = DocValueFormat.withNanosecondResolution(format);
+        }
+        return new SortFieldAndFormat(field, format);
+    }
+
+    public boolean canRewriteToMatchNone() {
+        return nestedSort == null && (missing == null || "_last".equals(missing));
+    }
+
+    /**
+     * Returns whether some values of the given {@link QueryShardContext#getIndexReader()} are within the
+     * primary sort value provided in the <code>bottomSortValues</code>.
+     */
+    public boolean isBottomSortShardDisjoint(QueryShardContext context, SearchSortValuesAndFormats bottomSortValues) throws IOException {
+        if (bottomSortValues == null || bottomSortValues.getRawSortValues().length == 0) {
+            return false;
+        }
+
+        if (canRewriteToMatchNone() == false) {
+            return false;
+        }
+        MappedFieldType fieldType = context.getFieldType(fieldName);
+        if (fieldType == null) {
+            // unmapped
+            return false;
+        }
+        if (fieldType.isSearchable() == false) {
+            return false;
+        }
+        DocValueFormat docValueFormat = bottomSortValues.getSortValueFormats()[0];
+        final DateMathParser dateMathParser;
+        if (docValueFormat instanceof DocValueFormat.DateTime) {
+            dateMathParser = ((DocValueFormat.DateTime) docValueFormat).getDateMathParser();
+        } else {
+            dateMathParser = null;
+        }
+        Object bottomSortValue =  bottomSortValues.getFormattedSortValues()[0];
+        Object minValue = order() == SortOrder.DESC ? bottomSortValue : null;
+        Object maxValue = order() == SortOrder.DESC ? null : bottomSortValue;
+        try {
+            MappedFieldType.Relation relation = fieldType.isFieldWithinQuery(context.getIndexReader(), minValue, maxValue,
+                true, true, null, dateMathParser, context);
+            return relation == MappedFieldType.Relation.DISJOINT;
+        } catch (ElasticsearchParseException exc) {
+            // can happen if the sort field is mapped differently in another search index
+            return false;
+        }
     }
 
     @Override
@@ -357,7 +420,7 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
             throw new IllegalArgumentException("sorting by _doc is not supported");
         }
 
-        MappedFieldType fieldType = context.fieldMapper(fieldName);
+        MappedFieldType fieldType = context.getFieldType(fieldName);
         Nested nested = nested(context, fieldType);
         if (fieldType == null) {
             fieldType = resolveUnmappedType(context);
@@ -369,7 +432,11 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
             throw new QueryShardException(context, "we only support AVG, MEDIAN and SUM on number based fields");
         }
         if (numericType != null) {
-            SortedNumericDVIndexFieldData numericFieldData = (SortedNumericDVIndexFieldData) fieldData;
+            if (fieldData instanceof IndexNumericFieldData == false) {
+                throw new QueryShardException(context,
+                    "[numeric_type] option cannot be set on a non-numeric field, got " + fieldType.typeName());
+            }
+            IndexNumericFieldData numericFieldData = (IndexNumericFieldData) fieldData;
             NumericType resolvedType = resolveNumericType(numericType);
             return numericFieldData.newBucketedSort(resolvedType, context.bigArrays(), missing, localSortMode(), nested, order,
                     fieldType.docValueFormat(null, null), bucketSize, extra);
@@ -387,7 +454,7 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
         if (unmappedType == null) {
             throw new QueryShardException(context, "No mapping found for [" + fieldName + "] in order to sort on");
         }
-        return context.getMapperService().unmappedFieldType(unmappedType);
+        return context.buildAnonymousFieldType(unmappedType);
     }
 
     private MultiValueMode localSortMode() {
@@ -441,8 +508,8 @@ public class FieldSortBuilder extends SortBuilder<FieldSortBuilder> {
             return null;
         }
         IndexReader reader = context.getIndexReader();
-        MappedFieldType fieldType = context.fieldMapper(sortField.getField());
-        if (reader == null || (fieldType == null || fieldType.indexOptions() == IndexOptions.NONE)) {
+        MappedFieldType fieldType = context.getFieldType(sortField.getField());
+        if (reader == null || (fieldType == null || fieldType.isSearchable() == false)) {
             return null;
         }
         switch (IndexSortConfig.getSortFieldType(sortField)) {

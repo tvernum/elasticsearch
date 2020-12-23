@@ -25,7 +25,6 @@ import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.support.AggregationPath.PathElement;
-import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.profile.Timer;
 import org.elasticsearch.search.sort.SortOrder;
 
@@ -59,11 +58,6 @@ public class ProfilingAggregator extends Aggregator {
     }
 
     @Override
-    public SearchContext context() {
-        return delegate.context();
-    }
-
-    @Override
     public Aggregator parent() {
         return delegate.parent();
     }
@@ -84,16 +78,15 @@ public class ProfilingAggregator extends Aggregator {
     }
 
     @Override
-    public InternalAggregation buildAggregation(long bucket) throws IOException {
+    public InternalAggregation[] buildAggregations(long[] owningBucketOrds) throws IOException {
         Timer timer = profileBreakdown.getTimer(AggregationTimingType.BUILD_AGGREGATION);
         timer.start();
-        InternalAggregation result;
         try {
-            result = delegate.buildAggregation(bucket);
+            return delegate.buildAggregations(owningBucketOrds);
         } finally {
             timer.stop();
+            delegate.collectDebugInfo(profileBreakdown::addDebugInfo);
         }
-        return result;
     }
 
     @Override
@@ -103,7 +96,13 @@ public class ProfilingAggregator extends Aggregator {
 
     @Override
     public LeafBucketCollector getLeafCollector(LeafReaderContext ctx) throws IOException {
-        return new ProfilingLeafBucketCollector(delegate.getLeafCollector(ctx), profileBreakdown);
+        Timer timer = profileBreakdown.getTimer(AggregationTimingType.BUILD_LEAF_COLLECTOR);
+        timer.start();
+        try {
+            return new ProfilingLeafBucketCollector(delegate.getLeafCollector(ctx), profileBreakdown);
+        } finally {
+            timer.stop();
+        }
     }
 
     @Override
@@ -120,13 +119,13 @@ public class ProfilingAggregator extends Aggregator {
     }
 
     @Override
-    public void postCollection() throws IOException {
-        delegate.postCollection();
+    public String toString() {
+        return delegate.toString();
     }
 
     @Override
-    public String toString() {
-        return delegate.toString();
+    public Aggregator[] subAggregators() {
+        return delegate.subAggregators();
     }
 
     public static Aggregator unwrap(Aggregator agg) {

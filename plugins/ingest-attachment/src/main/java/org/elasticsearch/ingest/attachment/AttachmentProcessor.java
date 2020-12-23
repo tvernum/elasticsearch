@@ -56,16 +56,18 @@ public final class AttachmentProcessor extends AbstractProcessor {
     private final int indexedChars;
     private final boolean ignoreMissing;
     private final String indexedCharsField;
+    private final String resourceName;
 
-    AttachmentProcessor(String tag, String field, String targetField, Set<Property> properties,
-                        int indexedChars, boolean ignoreMissing, String indexedCharsField) {
-        super(tag);
+    AttachmentProcessor(String tag, String description, String field, String targetField, Set<Property> properties,
+                        int indexedChars, boolean ignoreMissing, String indexedCharsField, String resourceName) {
+        super(tag, description);
         this.field = field;
         this.targetField = targetField;
         this.properties = properties;
         this.indexedChars = indexedChars;
         this.ignoreMissing = ignoreMissing;
         this.indexedCharsField = indexedCharsField;
+        this.resourceName = resourceName;
     }
 
     boolean isIgnoreMissing() {
@@ -77,7 +79,10 @@ public final class AttachmentProcessor extends AbstractProcessor {
         Map<String, Object> additionalFields = new HashMap<>();
 
         byte[] input = ingestDocument.getFieldValueAsBytes(field, ignoreMissing);
-
+        String resourceNameInput = null;
+        if (resourceName != null) {
+            resourceNameInput = ingestDocument.getFieldValue(resourceName, String.class, true);
+        }
         if (input == null && ignoreMissing) {
             return ingestDocument;
         } else if (input == null) {
@@ -96,6 +101,9 @@ public final class AttachmentProcessor extends AbstractProcessor {
         }
 
         Metadata metadata = new Metadata();
+        if (resourceNameInput != null) {
+            metadata.set(Metadata.RESOURCE_NAME_KEY, resourceNameInput);
+        }
         String parsedContent = "";
         try {
             parsedContent = TikaImpl.parse(input, metadata, indexedChars);
@@ -195,8 +203,9 @@ public final class AttachmentProcessor extends AbstractProcessor {
 
         @Override
         public AttachmentProcessor create(Map<String, Processor.Factory> registry, String processorTag,
-                                          Map<String, Object> config) throws Exception {
+                                          String description, Map<String, Object> config) throws Exception {
             String field = readStringProperty(TYPE, processorTag, config, "field");
+            String resourceName = readOptionalStringProperty(TYPE, processorTag, config, "resource_name");
             String targetField = readStringProperty(TYPE, processorTag, config, "target_field", "attachment");
             List<String> propertyNames = readOptionalList(TYPE, processorTag, config, "properties");
             int indexedChars = readIntProperty(TYPE, processorTag, config, "indexed_chars", NUMBER_OF_CHARS_INDEXED);
@@ -218,7 +227,8 @@ public final class AttachmentProcessor extends AbstractProcessor {
                 properties = DEFAULT_PROPERTIES;
             }
 
-            return new AttachmentProcessor(processorTag, field, targetField, properties, indexedChars, ignoreMissing, indexedCharsField);
+            return new AttachmentProcessor(processorTag, description, field, targetField, properties, indexedChars, ignoreMissing,
+                indexedCharsField, resourceName);
         }
     }
 

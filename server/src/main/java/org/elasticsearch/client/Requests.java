@@ -54,7 +54,6 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.segments.IndicesSegmentsRequest;
 import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.elasticsearch.action.admin.indices.shards.IndicesShardStoresRequest;
-import org.elasticsearch.action.admin.indices.upgrade.post.UpgradeRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
@@ -256,17 +255,6 @@ public class Requests {
      */
     public static ForceMergeRequest forceMergeRequest(String... indices) {
         return new ForceMergeRequest(indices);
-    }
-
-    /**
-     * Creates an upgrade request.
-     *
-     * @param indices The indices to upgrade. Use {@code null} or {@code _all} to execute against all indices
-     * @return The upgrade request
-     * @see org.elasticsearch.client.IndicesAdminClient#upgrade(UpgradeRequest)
-     */
-    public static UpgradeRequest upgradeRequest(String... indices) {
-        return new UpgradeRequest(indices);
     }
 
     /**
@@ -502,14 +490,14 @@ public class Requests {
     }
 
     /**
-     * Deletes a snapshot
+     * Deletes snapshots
      *
-     * @param snapshot   snapshot name
+     * @param snapshots  snapshot names
      * @param repository repository name
      * @return delete snapshot request
      */
-    public static DeleteSnapshotRequest deleteSnapshotRequest(String repository, String snapshot) {
-        return new DeleteSnapshotRequest(repository, snapshot);
+    public static DeleteSnapshotRequest deleteSnapshotRequest(String repository, String... snapshots) {
+        return new DeleteSnapshotRequest(repository, snapshots);
     }
 
     /**

@@ -20,7 +20,7 @@ package org.elasticsearch.index.analysis;
 
 import org.apache.lucene.analysis.TokenFilter;
 import org.elasticsearch.Version;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.TestEnvironment;
@@ -50,7 +50,7 @@ public class PreConfiguredTokenFilterTests extends ESTestCase {
         IndexSettings indexSettings = IndexSettingsModule.newIndexSettings("test", Settings.EMPTY);
 
         Version version1 = VersionUtils.randomVersion(random());
-        Settings settings1 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version1)
+        Settings settings1 = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, version1)
                 .build();
         TokenFilterFactory tff_v1_1 =
                 pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "singleton", settings1);
@@ -59,7 +59,7 @@ public class PreConfiguredTokenFilterTests extends ESTestCase {
         assertSame(tff_v1_1, tff_v1_2);
 
         Version version2 = randomValueOtherThan(version1, () -> randomFrom(VersionUtils.allVersions()));
-        Settings settings2 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version2)
+        Settings settings2 = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, version2)
                 .build();
 
         TokenFilterFactory tff_v2 =
@@ -77,23 +77,26 @@ public class PreConfiguredTokenFilterTests extends ESTestCase {
                     }
                 });
 
-        IndexSettings indexSettings = IndexSettingsModule.newIndexSettings("test", Settings.EMPTY);
 
         Version version1 = VersionUtils.randomVersion(random());
-        Settings settings1 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version1)
-                .build();
+        IndexSettings indexSettings1 = IndexSettingsModule.newIndexSettings("test", Settings.builder()
+            .put(IndexMetadata.SETTING_VERSION_CREATED, version1)
+            .build());
         TokenFilterFactory tff_v1_1 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", settings1);
+                pctf.get(indexSettings1, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", Settings.EMPTY);
         TokenFilterFactory tff_v1_2 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", settings1);
+                pctf.get(indexSettings1, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", Settings.EMPTY);
         assertSame(tff_v1_1, tff_v1_2);
 
         Version version2 = randomValueOtherThan(version1, () -> randomFrom(VersionUtils.allVersions()));
-        Settings settings2 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version2)
+        IndexSettings indexSettings2 = IndexSettingsModule.newIndexSettings("test", Settings.builder()
+            .put(IndexMetadata.SETTING_VERSION_CREATED, version2)
+            .build());
+        Settings settings2 = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, version2)
                 .build();
 
         TokenFilterFactory tff_v2 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", settings2);
+                pctf.get(indexSettings2, TestEnvironment.newEnvironment(emptyNodeSettings), "elasticsearch_version", settings2);
         assertNotSame(tff_v1_1, tff_v2);
     }
 
@@ -107,24 +110,25 @@ public class PreConfiguredTokenFilterTests extends ESTestCase {
                             }
                         });
 
-        IndexSettings indexSettings = IndexSettingsModule.newIndexSettings("test", Settings.EMPTY);
-
         Version version1 = Version.CURRENT;
-        Settings settings1 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version1)
-                .build();
+        IndexSettings indexSettings1 = IndexSettingsModule.newIndexSettings("test", Settings.builder()
+            .put(IndexMetadata.SETTING_VERSION_CREATED, version1)
+            .build());
+
         TokenFilterFactory tff_v1_1 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", settings1);
+                pctf.get(indexSettings1, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", Settings.EMPTY);
         TokenFilterFactory tff_v1_2 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", settings1);
+                pctf.get(indexSettings1, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", Settings.EMPTY);
         assertSame(tff_v1_1, tff_v1_2);
 
         byte major = VersionUtils.getFirstVersion().major;
         Version version2 = Version.fromString(major - 1 + ".0.0");
-        Settings settings2 = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version2)
-                .build();
+        IndexSettings indexSettings2 = IndexSettingsModule.newIndexSettings("test", Settings.builder()
+            .put(IndexMetadata.SETTING_VERSION_CREATED, version2)
+            .build());
 
         TokenFilterFactory tff_v2 =
-                pctf.get(indexSettings, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", settings2);
+                pctf.get(indexSettings2, TestEnvironment.newEnvironment(emptyNodeSettings), "lucene_version", Settings.EMPTY);
         assertNotSame(tff_v1_1, tff_v2);
     }
 }

@@ -25,16 +25,16 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
+import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValueType;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
-import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,42 +44,55 @@ public final class CardinalityAggregationBuilder
     extends ValuesSourceAggregationBuilder.LeafOnly<ValuesSource, CardinalityAggregationBuilder> {
 
     public static final String NAME = "cardinality";
+    public static final ValuesSourceRegistry.RegistryKey<CardinalityAggregatorSupplier> REGISTRY_KEY =
+        new ValuesSourceRegistry.RegistryKey<>(NAME, CardinalityAggregatorSupplier.class);
 
     private static final ParseField REHASH = new ParseField("rehash").withAllDeprecated("no replacement - values will always be rehashed");
     public static final ParseField PRECISION_THRESHOLD_FIELD = new ParseField("precision_threshold");
 
     public static final ObjectParser<CardinalityAggregationBuilder, String> PARSER =
-            ObjectParser.fromBuilder(NAME, name -> new CardinalityAggregationBuilder(name, null));
+            ObjectParser.fromBuilder(NAME, CardinalityAggregationBuilder::new);
     static {
-        ValuesSourceParserHelper.declareAnyFields(PARSER, true, false);
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, false, false);
         PARSER.declareLong(CardinalityAggregationBuilder::precisionThreshold, CardinalityAggregationBuilder.PRECISION_THRESHOLD_FIELD);
         PARSER.declareLong((b, v) -> {/*ignore*/}, REHASH);
     }
 
-    private Long precisionThreshold = null;
-
-    public CardinalityAggregationBuilder(String name, ValueType targetValueType) {
-        super(name, CoreValuesSourceType.ANY, targetValueType);
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        CardinalityAggregatorFactory.registerAggregators(builder);
     }
 
-    public CardinalityAggregationBuilder(CardinalityAggregationBuilder clone, Builder factoriesBuilder, Map<String, Object> metaData) {
-        super(clone, factoriesBuilder, metaData);
+    private Long precisionThreshold = null;
+
+    public CardinalityAggregationBuilder(String name) {
+        super(name);
+    }
+
+    public CardinalityAggregationBuilder(CardinalityAggregationBuilder clone,
+                                         AggregatorFactories.Builder factoriesBuilder,
+                                         Map<String, Object> metadata) {
+        super(clone, factoriesBuilder, metadata);
         this.precisionThreshold = clone.precisionThreshold;
+    }
+
+    @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.BYTES;
     }
 
     /**
      * Read from a stream.
      */
     public CardinalityAggregationBuilder(StreamInput in) throws IOException {
-        super(in, CoreValuesSourceType.ANY);
+        super(in);
         if (in.readBoolean()) {
             precisionThreshold = in.readLong();
         }
     }
 
     @Override
-    protected AggregationBuilder shallowCopy(Builder factoriesBuilder, Map<String, Object> metaData) {
-        return new CardinalityAggregationBuilder(this, factoriesBuilder, metaData);
+    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metadata) {
+        return new CardinalityAggregationBuilder(this, factoriesBuilder, metadata);
     }
 
     @Override
@@ -119,9 +132,14 @@ public final class CardinalityAggregationBuilder
     }
 
     @Override
-    protected CardinalityAggregatorFactory innerBuild(QueryShardContext queryShardContext, ValuesSourceConfig<ValuesSource> config,
-                                                      AggregatorFactory parent, Builder subFactoriesBuilder) throws IOException {
-        return new CardinalityAggregatorFactory(name, config, precisionThreshold, queryShardContext, parent, subFactoriesBuilder, metaData);
+    protected CardinalityAggregatorFactory innerBuild(AggregationContext context, ValuesSourceConfig config,
+                                                      AggregatorFactory parent,
+                                                      AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
+        CardinalityAggregatorSupplier aggregatorSupplier =
+            context.getValuesSourceRegistry().getAggregator(REGISTRY_KEY, config);
+
+        return new CardinalityAggregatorFactory(name, config, precisionThreshold, context, parent,
+                                                subFactoriesBuilder, metadata, aggregatorSupplier);
     }
 
     @Override
@@ -149,5 +167,10 @@ public final class CardinalityAggregationBuilder
     @Override
     public String getType() {
         return NAME;
+    }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() {
+        return REGISTRY_KEY;
     }
 }

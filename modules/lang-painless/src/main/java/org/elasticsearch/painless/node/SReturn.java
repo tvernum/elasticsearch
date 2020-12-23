@@ -20,66 +20,34 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.ReturnNode;
-import org.elasticsearch.painless.lookup.PainlessLookupUtility;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 /**
  * Represents a return statement.
  */
-public final class SReturn extends AStatement {
+public class SReturn extends AStatement {
 
-    private AExpression expression;
+    private final AExpression valueNode;
 
-    public SReturn(Location location, AExpression expression) {
-        super(location);
+    public SReturn(int identifier, Location location, AExpression valueNode) {
+        super(identifier, location);
 
-        this.expression = expression;
+        this.valueNode = valueNode;
+    }
+
+    public AExpression getValueNode() {
+        return valueNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitReturn(this, scope);
+    }
 
-        if (expression == null) {
-            if (scope.getReturnType() != void.class) {
-                throw location.createError(new ClassCastException("Cannot cast from " +
-                        "[" + scope.getReturnCanonicalTypeName() + "] to " +
-                        "[" + PainlessLookupUtility.typeToCanonicalTypeName(void.class) + "]."));
-            }
-        } else {
-            AExpression.Input expressionInput = new AExpression.Input();
-            expressionInput.expected = scope.getReturnType();
-            expressionInput.internal = true;
-            expression.analyze(scriptRoot, scope, expressionInput);
-            expression.cast();
+    @Override
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        if (valueNode != null) {
+            valueNode.visit(userTreeVisitor, scope);
         }
-
-        output.methodEscape = true;
-        output.loopEscape = true;
-        output.allEscape = true;
-
-        output.statementCount = 1;
-
-        return output;
-    }
-
-    @Override
-    ReturnNode write(ClassNode classNode) {
-        ReturnNode returnNode = new ReturnNode();
-
-        returnNode.setExpressionNode(expression == null ? null : expression.cast(expression.write(classNode)));
-
-        returnNode.setLocation(location);
-
-        return returnNode;
-    }
-
-    @Override
-    public String toString() {
-        return expression == null ? singleLineToString() : singleLineToString(expression);
     }
 }

@@ -26,20 +26,21 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
 import org.elasticsearch.search.aggregations.support.AggregationPath;
-import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.sort.SortOrder;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.function.BiConsumer;
 
 /**
  * An Aggregator.
+ * <p>
+ * Be <strong>careful</strong> when adding methods to this class. If possible
+ * make sure they have sensible default implementations.
  */
-// IMPORTANT: DO NOT add methods to this class unless strictly required.
-// On the other hand, if you can remove methods from it, you are highly welcome!
 public abstract class Aggregator extends BucketCollector implements Releasable {
 
     /**
@@ -62,27 +63,9 @@ public abstract class Aggregator extends BucketCollector implements Releasable {
     }
 
     /**
-     * Returns whether one of the parents is a {@link BucketsAggregator}.
-     */
-    public static boolean descendsFromBucketAggregator(Aggregator parent) {
-        while (parent != null) {
-            if (parent instanceof BucketsAggregator) {
-                return true;
-            }
-            parent = parent.parent();
-        }
-        return false;
-    }
-
-    /**
      * Return the name of this aggregator.
      */
     public abstract String name();
-
-    /**
-     * Return the {@link SearchContext} attached with this {@link Aggregator}.
-     */
-    public abstract SearchContext context();
 
     /**
      * Return the parent aggregator.
@@ -152,14 +135,47 @@ public abstract class Aggregator extends BucketCollector implements Releasable {
     }
 
     /**
-     * Build an aggregation for data that has been collected into {@code bucket}.
+     * Build the results of this aggregation.
+     * @param ordsToCollect the ordinals of the buckets that we want to
+     *        collect from this aggregation
+     * @return the results for each ordinal, in the same order as the array
+     *         of ordinals
      */
-    public abstract InternalAggregation buildAggregation(long bucket) throws IOException;
+    public abstract InternalAggregation[] buildAggregations(long[] ordsToCollect) throws IOException;
+
+    /**
+     * Build the result of this aggregation if it is at the "top level"
+     * of the aggregation tree. If, instead, it is a sub-aggregation of
+     * another aggregation then the aggregation that contains it will call
+     * {@link #buildAggregations(long[])}.
+     */
+    public final InternalAggregation buildTopLevel() throws IOException {
+        assert parent() == null;
+        return buildAggregations(new long[] {0})[0];
+    }
 
     /**
      * Build an empty aggregation.
      */
     public abstract InternalAggregation buildEmptyAggregation();
+
+    /**
+     * Collect debug information to add to the profiling results. This will
+     * only be called if the aggregation is being profiled.
+     * <p>
+     * Well behaved implementations will always call the superclass
+     * implementation just in case it has something interesting. They will
+     * also only add objects which can be serialized with
+     * {@link StreamOutput#writeGenericValue(Object)} and
+     * {@link XContentBuilder#value(Object)}. And they'll have an integration
+     * test. 
+     */
+    public void collectDebugInfo(BiConsumer<String, Object> add) {}
+
+    /**
+     * Get the aggregators running under this one.
+     */
+    public abstract Aggregator[] subAggregators();
 
     /** Aggregation mode for sub aggregations. */
     public enum SubAggCollectionMode implements Writeable {

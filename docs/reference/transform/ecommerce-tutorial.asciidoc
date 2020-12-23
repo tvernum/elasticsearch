@@ -1,28 +1,18 @@
 [role="xpack"]
 [testenv="basic"]
 [[ecommerce-transforms]]
-=== Tutorial: Transforming the eCommerce sample data
+= Tutorial: Transforming the eCommerce sample data
 
 <<transforms,{transforms-cap}>> enable you to retrieve information
 from an {es} index, transform it, and store it in another index. Let's use the
 {kibana-ref}/add-sample-data.html[{kib} sample data] to demonstrate how you can
 pivot and summarize your data with {transforms}.
 
-
-. If the {es} {security-features} are enabled, obtain a user ID with sufficient
-privileges to complete these steps. 
-+
---
-You need `manage_transform` cluster privileges to preview and create 
-{transforms}. Members of the built-in `transform_admin` role have these 
-privileges.
-
-You also need `read` and `view_index_metadata` index privileges on the source
-index and `read`, `create_index`, and `index` privileges on the destination
-index. 
-
-For more information, see <<security-privileges>> and <<built-in-roles>>.
---
+. Verify that your environment is set up properly to use {transforms}. If the
+{es} {security-features} are enabled, to complete this tutorial you need a user
+that has authority to preview and create {transforms}. You must also have
+specific index privileges for the source and destination indices. See
+<<transform-setup>>.
 
 . Choose your _source index_.
 +
@@ -38,7 +28,8 @@ might want to derive from this eCommerce data.
 --
 _Pivoting_ your data involves using at least one field to group it and applying
 at least one aggregation. You can preview what the transformed data will look
-like, so go ahead and play with it!
+like, so go ahead and play with it! You can also enable histogram charts to get
+a better understanding of the distribution of values in your data.
 
 For example, you might want to group the data by product ID and calculate the
 total number of sales for each product and its average price. Alternatively, you
@@ -48,11 +39,11 @@ they purchased. Or you might want to take the currencies or geographies into
 consideration. What are the most interesting ways you can transform and
 interpret this data?
 
-Go to *Management* > *Elasticsearch* > *Transforms* in {kib} and use the
-wizard to create a {transform}:
+Go to *Management* > *Stack Management* > *Data* > *Transforms* in {kib} and use
+the wizard to create a {transform}:
 
 [role="screenshot"]
-image::images/ecommerce-pivot1.jpg["Creating a simple {transform} in {kib}"]
+image::images/ecommerce-pivot1.png["Creating a simple {transform} in {kib}"]
 
 In this case, we grouped the data by customer ID and calculated the sum of
 products each customer purchased.
@@ -69,7 +60,7 @@ We'll accomplish this by using the
 on the `order_id` field:
 
 [role="screenshot"]
-image::images/ecommerce-pivot2.jpg["Adding multiple aggregations to a {transform} in {kib}"]
+image::images/ecommerce-pivot2.png["Adding multiple aggregations to a {transform} in {kib}"]
 
 TIP: If you're interested in a subset of the data, you can optionally include a
 <<request-body-search-query,query>> element. In this
@@ -230,7 +221,7 @@ can stop it.
 You can start, stop, and manage {transforms} in {kib}:
 
 [role="screenshot"]
-image::images/manage-transforms.jpg["Managing {transforms} in {kib}"]
+image::images/manage-transforms.png["Managing {transforms} in {kib}"]
 
 Alternatively, you can use the
 <<start-transform,start {transforms}>> and
@@ -259,7 +250,7 @@ data is ingested.
 For example, use the *Discover* application in {kib}:
 
 [role="screenshot"]
-image::images/ecommerce-results.jpg["Exploring the new index in {kib}"]
+image::images/ecommerce-results.png["Exploring the new index in {kib}"]
 
 --
 
@@ -268,3 +259,7 @@ TIP: If you do not want to keep the {transform}, you can delete it in
 <<delete-transform,delete {transform} API>>. When
 you delete a {transform}, its destination index and {kib} index
 patterns remain.
+
+Now that you've created a simple {transform} for {kib} sample data, consider
+possible use cases for your own data. For more ideas, see
+<<transform-usage>> and <<transform-examples>>.

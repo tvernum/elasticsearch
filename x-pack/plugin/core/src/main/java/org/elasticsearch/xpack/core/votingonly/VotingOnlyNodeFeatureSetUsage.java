@@ -5,6 +5,7 @@
  */
 package org.elasticsearch.xpack.core.votingonly;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.xpack.core.XPackFeatureSet;
 import org.elasticsearch.xpack.core.XPackField;
@@ -16,7 +17,13 @@ public class VotingOnlyNodeFeatureSetUsage extends XPackFeatureSet.Usage {
         super(input);
     }
 
-    public VotingOnlyNodeFeatureSetUsage(boolean available) {
-        super(XPackField.VOTING_ONLY, available, true);
+    public VotingOnlyNodeFeatureSetUsage() {
+        super(XPackField.VOTING_ONLY, true, true);
     }
+
+    @Override
+    public Version getMinimalSupportedVersion() {
+        return Version.V_7_3_0;
+    }
+
 }

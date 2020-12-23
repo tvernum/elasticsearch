@@ -23,24 +23,19 @@ import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.Version;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.geo.ShapeRelation;
 import org.elasticsearch.common.geo.builders.EnvelopeBuilder;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.get.GetResult;
 import org.elasticsearch.test.AbstractQueryTestCase;
-import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.test.geo.RandomShapeGenerator;
 import org.elasticsearch.test.geo.RandomShapeGenerator.ShapeType;
 import org.junit.After;
@@ -48,13 +43,13 @@ import org.locationtech.jts.geom.Coordinate;
 
 import java.io.IOException;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
-public class GeoShapeQueryBuilderTests extends AbstractQueryTestCase<GeoShapeQueryBuilder> {
+public abstract class GeoShapeQueryBuilderTests extends AbstractQueryTestCase<GeoShapeQueryBuilder> {
 
     protected static String indexedShapeId;
     protected static String indexedShapePath;
@@ -62,73 +57,14 @@ public class GeoShapeQueryBuilderTests extends AbstractQueryTestCase<GeoShapeQue
     protected static String indexedShapeRouting;
     protected static ShapeBuilder<?, ?, ?> indexedShapeToReturn;
 
-    protected String fieldName() {
-        return GEO_SHAPE_FIELD_NAME;
-    }
-
-    @Override
-    protected Settings createTestIndexSettings() {
-        // force the new shape impl
-        Version version = VersionUtils.randomIndexCompatibleVersion(random());
-        return Settings.builder()
-                .put(super.createTestIndexSettings())
-                .put(IndexMetaData.SETTING_VERSION_CREATED, version)
-                .build();
-    }
+    protected abstract String fieldName();
 
     @Override
     protected GeoShapeQueryBuilder doCreateTestQueryBuilder() {
         return doCreateTestQueryBuilder(randomBoolean());
     }
 
-    protected GeoShapeQueryBuilder doCreateTestQueryBuilder(boolean indexedShape) {
-        RandomShapeGenerator.ShapeType shapeType =
-            randomFrom(ShapeType.POINT, ShapeType.MULTIPOINT, ShapeType.LINESTRING, ShapeType.MULTILINESTRING, ShapeType.POLYGON);
-        ShapeBuilder<?, ?, ?> shape = RandomShapeGenerator.createShapeWithin(random(), null, shapeType);
-        GeoShapeQueryBuilder builder;
-        clearShapeFields();
-        if (indexedShape == false) {
-            builder = new GeoShapeQueryBuilder(fieldName(), shape);
-        } else {
-            indexedShapeToReturn = shape;
-            indexedShapeId = randomAlphaOfLengthBetween(3, 20);
-            builder = new GeoShapeQueryBuilder(fieldName(), indexedShapeId);
-            if (randomBoolean()) {
-                indexedShapeIndex = randomAlphaOfLengthBetween(3, 20);
-                builder.indexedShapeIndex(indexedShapeIndex);
-            }
-            if (randomBoolean()) {
-                indexedShapePath = randomAlphaOfLengthBetween(3, 20);
-                builder.indexedShapePath(indexedShapePath);
-            }
-            if (randomBoolean()) {
-                indexedShapeRouting = randomAlphaOfLengthBetween(3, 20);
-                builder.indexedShapeRouting(indexedShapeRouting);
-            }
-        }
-        if (randomBoolean()) {
-            QueryShardContext context = createShardContext();
-            if (context.indexVersionCreated().onOrAfter(Version.V_7_5_0)) { // CONTAINS is only supported from version 7.5
-                if (shapeType == ShapeType.LINESTRING || shapeType == ShapeType.MULTILINESTRING) {
-                    builder.relation(randomFrom(ShapeRelation.DISJOINT, ShapeRelation.INTERSECTS, ShapeRelation.CONTAINS));
-                } else {
-                    builder.relation(randomFrom(ShapeRelation.DISJOINT, ShapeRelation.INTERSECTS,
-                        ShapeRelation.WITHIN, ShapeRelation.CONTAINS));
-                }
-            } else {
-                if (shapeType == ShapeType.LINESTRING || shapeType == ShapeType.MULTILINESTRING) {
-                    builder.relation(randomFrom(ShapeRelation.DISJOINT, ShapeRelation.INTERSECTS));
-                } else {
-                    builder.relation(randomFrom(ShapeRelation.DISJOINT, ShapeRelation.INTERSECTS, ShapeRelation.WITHIN));
-                }
-            }
-        }
-
-        if (randomBoolean()) {
-            builder.ignoreUnmapped(randomBoolean());
-        }
-        return builder;
-    }
+    abstract GeoShapeQueryBuilder doCreateTestQueryBuilder(boolean indexedShape);
 
     @Override
     protected GetResponse executeGet(GetRequest getRequest) {
@@ -276,17 +212,17 @@ public class GeoShapeQueryBuilderTests extends AbstractQueryTestCase<GeoShapeQue
             new GeoShapeQueryBuilder("unmapped", shape.buildGeometry());
         failingQueryBuilder.ignoreUnmapped(false);
         QueryShardException e = expectThrows(QueryShardException.class, () -> failingQueryBuilder.toQuery(createShardContext()));
-        assertThat(e.getMessage(), containsString("failed to find geo_shape field [unmapped]"));
+        assertThat(e.getMessage(), containsString("failed to find type for field [unmapped]"));
     }
 
     public void testWrongFieldType() throws IOException {
         ShapeType shapeType = ShapeType.randomType(random());
         ShapeBuilder<?, ?, ?> shape = RandomShapeGenerator.createShapeWithin(random(), null, shapeType);
         final GeoShapeQueryBuilder queryBuilder = randomBoolean() ?
-            new GeoShapeQueryBuilder(STRING_FIELD_NAME, shape) :
-            new GeoShapeQueryBuilder(STRING_FIELD_NAME, shape.buildGeometry());
+            new GeoShapeQueryBuilder(TEXT_FIELD_NAME, shape) :
+            new GeoShapeQueryBuilder(TEXT_FIELD_NAME, shape.buildGeometry());
         QueryShardException e = expectThrows(QueryShardException.class, () -> queryBuilder.toQuery(createShardContext()));
-        assertThat(e.getMessage(), containsString("Field [mapped_string] is not of type [geo_shape] but of type [text]"));
+        assertThat(e.getMessage(), containsString("Field [mapped_string] is of unsupported type [text] for [geo_shape] query"));
     }
 
     public void testSerializationFailsUnlessFetched() throws IOException {

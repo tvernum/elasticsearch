@@ -223,7 +223,7 @@ public class ObjectParserTests extends ESTestCase {
         objectParser.declareField((i, v, c) -> v.test = i.text(), new ParseField("test", "old_test"), ObjectParser.ValueType.STRING);
         objectParser.parse(parser, s, null);
         assertEquals("foo", s.test);
-        assertWarnings("Deprecated field [old_test] used, expected [test] instead");
+        assertWarnings(false, "[foo][1:15] Deprecated field [old_test] used, expected [test] instead");
     }
 
     public void testFailOnValueType() throws IOException {
@@ -331,11 +331,20 @@ public class ObjectParserTests extends ESTestCase {
                 test = value;
             }
         }
-        XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"test\" : \"FOO\" }");
-        ObjectParser<TestStruct, Void> objectParser = new ObjectParser<>("foo");
-        objectParser.declareString((struct, value) -> struct.set(TestEnum.valueOf(value)), new ParseField("test"));
-        TestStruct s = objectParser.parse(parser, new TestStruct(), null);
-        assertEquals(s.test, TestEnum.FOO);
+        {
+            XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"test\" : \"FOO\" }");
+            ObjectParser<TestStruct, Void> objectParser = new ObjectParser<>("foo");
+            objectParser.declareString((struct, value) -> struct.set(TestEnum.valueOf(value)), new ParseField("test"));
+            TestStruct s = objectParser.parse(parser, new TestStruct(), null);
+            assertEquals(s.test, TestEnum.FOO);
+        }
+        {
+            XContentParser parser = createParser(JsonXContent.jsonXContent, "{ \"test\" : \"FOO\" }");
+            ObjectParser<TestStruct, Void> objectParser = new ObjectParser<>("foo");
+            objectParser.declareString((struct, value) -> struct.set(value), TestEnum::valueOf, new ParseField("test"));
+            TestStruct s = objectParser.parse(parser, new TestStruct(), null);
+            assertEquals(s.test, TestEnum.FOO);
+        }
     }
 
     public void testAllVariants() throws IOException {

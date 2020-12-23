@@ -20,94 +20,48 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.TryNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Collections;
 import java.util.List;
-
-import static java.util.Collections.singleton;
+import java.util.Objects;
 
 /**
  * Represents the try block as part of a try-catch block.
  */
-public final class STry extends AStatement {
+public class STry extends AStatement {
 
-    private final SBlock block;
-    private final List<SCatch> catches;
+    private final SBlock blockNode;
+    private final List<SCatch> catchNodes;
 
-    public STry(Location location, SBlock block, List<SCatch> catches) {
-        super(location);
+    public STry(int identifier, Location location, SBlock blockNode, List<SCatch> catchNodes) {
+        super(identifier, location);
 
-        this.block = block;
-        this.catches = Collections.unmodifiableList(catches);
+        this.blockNode = blockNode;
+        this.catchNodes = Collections.unmodifiableList(Objects.requireNonNull(catchNodes));
+    }
+
+    public SBlock getBlockNode() {
+        return blockNode;
+    }
+
+    public List<SCatch> getCatchNodes() {
+        return catchNodes;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        if (block == null) {
-            throw createError(new IllegalArgumentException("Extraneous try statement."));
-        }
-
-        Input blockInput = new Input();
-        blockInput.lastSource = input.lastSource;
-        blockInput.inLoop = input.inLoop;
-        blockInput.lastLoop = input.lastLoop;
-
-        Output blockOutput = block.analyze(scriptRoot, scope.newLocalScope(), blockInput);
-
-        output.methodEscape = blockOutput.methodEscape;
-        output.loopEscape = blockOutput.loopEscape;
-        output.allEscape = blockOutput.allEscape;
-        output.anyContinue = blockOutput.anyContinue;
-        output.anyBreak = blockOutput.anyBreak;
-
-        int statementCount = 0;
-
-        for (SCatch catc : catches) {
-            Input catchInput = new Input();
-            catchInput.lastSource = input.lastSource;
-            catchInput.inLoop = input.inLoop;
-            catchInput.lastLoop = input.lastLoop;
-
-            Output catchOutput = catc.analyze(scriptRoot, scope.newLocalScope(), catchInput);
-
-            output.methodEscape &= catchOutput.methodEscape;
-            output.loopEscape &= catchOutput.loopEscape;
-            output.allEscape &= catchOutput.allEscape;
-            output.anyContinue |= catchOutput.anyContinue;
-            output.anyBreak |= catchOutput.anyBreak;
-
-            statementCount = Math.max(statementCount, catchOutput.statementCount);
-        }
-
-        output.statementCount = blockOutput.statementCount + statementCount;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitTry(this, scope);
     }
 
     @Override
-    TryNode write(ClassNode classNode) {
-        TryNode tryNode = new TryNode();
-
-        for (SCatch catc : catches) {
-            tryNode.addCatchNode(catc.write(classNode));
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        if (blockNode != null) {
+            blockNode.visit(userTreeVisitor, scope);
         }
 
-        tryNode.setBlockNode(block.write(classNode));
-
-        tryNode.setLocation(location);
-
-        return tryNode;
-    }
-
-    @Override
-    public String toString() {
-        return multilineToString(singleton(block), catches);
+        for (SCatch catchNode : catchNodes) {
+            catchNode.visit(userTreeVisitor, scope);
+        }
     }
 }

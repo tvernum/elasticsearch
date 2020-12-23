@@ -142,8 +142,8 @@ class QueryFolder extends RuleExecutor<PhysicalPlan> {
                 EsQueryExec exec = (EsQueryExec) project.child();
                 QueryContainer queryC = exec.queryContainer();
 
-                Map<Attribute, Expression> aliases = new LinkedHashMap<>(queryC.aliases());
-                Map<Attribute, Pipe> processors = new LinkedHashMap<>(queryC.scalarFunctions());
+                AttributeMap.Builder<Expression> aliases = AttributeMap.<Expression>builder().putAll(queryC.aliases());
+                AttributeMap.Builder<Pipe> processors = AttributeMap.<Pipe>builder().putAll(queryC.scalarFunctions());
 
                 for (NamedExpression pj : project.projections()) {
                     if (pj instanceof Alias) {
@@ -161,9 +161,9 @@ class QueryFolder extends RuleExecutor<PhysicalPlan> {
                 }
 
                 QueryContainer clone = new QueryContainer(queryC.query(), queryC.aggs(), queryC.fields(),
-                        new AttributeMap<>(aliases),
+                        aliases.build(),
                         queryC.pseudoFunctions(),
-                        new AttributeMap<>(processors),
+                        processors.build(),
                         queryC.sort(),
                         queryC.limit(),
                         queryC.shouldTrackHits(),
@@ -330,12 +330,12 @@ class QueryFolder extends RuleExecutor<PhysicalPlan> {
 
                                 // interval of exactly 1 year or 1 month
                                 if (value instanceof IntervalYearMonth &&
-                                        (((IntervalYearMonth) value).interval().equals(Period.ofYears(1)) 
+                                        (((IntervalYearMonth) value).interval().equals(Period.ofYears(1))
                                         || ((IntervalYearMonth) value).interval().equals(Period.ofMonths(1)))) {
                                     Period yearMonth = ((IntervalYearMonth) value).interval();
                                     String calendarInterval = yearMonth.equals(Period.ofYears(1)) ? YEAR_INTERVAL : MONTH_INTERVAL;
 
-                                    // When the histogram is `INTERVAL '1' YEAR` or `INTERVAL '1' MONTH`, the interval used in 
+                                    // When the histogram is `INTERVAL '1' YEAR` or `INTERVAL '1' MONTH`, the interval used in
                                     // the ES date_histogram will be a calendar_interval with value "1y" or "1M" respectively.
                                     if (field instanceof FieldAttribute) {
                                         key = new GroupByDateHistogram(aggId, QueryTranslator.nameOf(field), calendarInterval, h.zoneId());
@@ -344,9 +344,9 @@ class QueryFolder extends RuleExecutor<PhysicalPlan> {
                                     }
                                 }
                                 // interval of exactly 1 day
-                                else if (value instanceof IntervalDayTime 
+                                else if (value instanceof IntervalDayTime
                                         && ((IntervalDayTime) value).interval().equals(Duration.ofDays(1))) {
-                                    // When the histogram is `INTERVAL '1' DAY` the interval used in 
+                                    // When the histogram is `INTERVAL '1' DAY` the interval used in
                                     // the ES date_histogram will be a calendar_interval with value "1d"
                                     if (field instanceof FieldAttribute) {
                                         key = new GroupByDateHistogram(aggId, QueryTranslator.nameOf(field), DAY_INTERVAL, h.zoneId());
@@ -421,19 +421,20 @@ class QueryFolder extends RuleExecutor<PhysicalPlan> {
 
             // track aliases defined in the SELECT and used inside GROUP BY
             // SELECT x AS a ... GROUP BY a
-            Map<Attribute, Expression> aliasMap = new LinkedHashMap<>();
             String id = null;
+
+            AttributeMap.Builder<Expression> aliases = AttributeMap.builder();
             for (NamedExpression ne : a.aggregates()) {
                 if (ne instanceof Alias) {
-                    aliasMap.put(ne.toAttribute(), ((Alias) ne).child());
+                    aliases.put(ne.toAttribute(), ((Alias) ne).child());
                 }
             }
 
-            if (aliasMap.isEmpty() == false) {
-                Map<Attribute, Expression> newAliases = new LinkedHashMap<>(queryC.aliases());
-                newAliases.putAll(aliasMap);
-                queryC = queryC.withAliases(new AttributeMap<>(newAliases));
+            if (aliases.build().isEmpty() == false) {
+                aliases.putAll(queryC.aliases());
+                queryC = queryC.withAliases(aliases.build());
             }
+
 
             // build the group aggregation
             // NB: any reference in grouping is already "optimized" by its source so there's no need to look for aliases

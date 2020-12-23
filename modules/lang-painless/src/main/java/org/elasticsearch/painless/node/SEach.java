@@ -20,14 +20,7 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.Scope.Variable;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.ConditionNode;
-import org.elasticsearch.painless.ir.ForEachLoopNode;
-import org.elasticsearch.painless.lookup.PainlessLookupUtility;
-import org.elasticsearch.painless.lookup.def;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
@@ -36,83 +29,47 @@ import java.util.Objects;
  */
 public class SEach extends AStatement {
 
-    private final String type;
-    private final String name;
-    private AExpression expression;
-    private final SBlock block;
+    private final String canonicalTypeName;
+    private final String symbol;
+    private final AExpression iterableNode;
+    private final SBlock blockNode;
 
-    private AStatement sub = null;
+    public SEach(int identifier, Location location, String canonicalTypeName, String symbol, AExpression iterableNode, SBlock blockNode) {
+        super(identifier, location);
 
-    public SEach(Location location, String type, String name, AExpression expression, SBlock block) {
-        super(location);
+        this.canonicalTypeName = Objects.requireNonNull(canonicalTypeName);
+        this.symbol = Objects.requireNonNull(symbol);
+        this.iterableNode = Objects.requireNonNull(iterableNode);
+        this.blockNode = blockNode;
+    }
 
-        this.type = Objects.requireNonNull(type);
-        this.name = Objects.requireNonNull(name);
-        this.expression = Objects.requireNonNull(expression);
-        this.block = block;
+    public String getCanonicalTypeName() {
+        return canonicalTypeName;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public AExpression getIterableNode() {
+        return iterableNode;
+    }
+
+    public SBlock getBlockNode() {
+        return blockNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        AExpression.Output expressionOutput = expression.analyze(scriptRoot, scope, new AExpression.Input());
-        expression.input.expected = expressionOutput.actual;
-        expression.cast();
-
-        Class<?> clazz = scriptRoot.getPainlessLookup().canonicalTypeNameToType(this.type);
-
-        if (clazz == null) {
-            throw createError(new IllegalArgumentException("Not a type [" + this.type + "]."));
-        }
-
-        scope = scope.newLocalScope();
-        Variable variable = scope.defineVariable(location, clazz, name, true);
-
-        if (expressionOutput.actual.isArray()) {
-            sub = new SSubEachArray(location, variable, expression, block);
-        } else if (expressionOutput.actual == def.class || Iterable.class.isAssignableFrom(expressionOutput.actual)) {
-            sub = new SSubEachIterable(location, variable, expression, block);
-        } else {
-            throw createError(new IllegalArgumentException("Illegal for each type " +
-                    "[" + PainlessLookupUtility.typeToCanonicalTypeName(expressionOutput.actual) + "]."));
-        }
-
-        sub.analyze(scriptRoot, scope, input);
-
-        if (block == null) {
-            throw createError(new IllegalArgumentException("Extraneous for each loop."));
-        }
-
-        Input blockInput = new Input();
-        blockInput.beginLoop = true;
-        blockInput.inLoop = true;
-        Output blockOutput = block.analyze(scriptRoot, scope, blockInput);
-        blockOutput.statementCount = Math.max(1, blockOutput.statementCount);
-
-        if (blockOutput.loopEscape && blockOutput.anyContinue == false) {
-            throw createError(new IllegalArgumentException("Extraneous for loop."));
-        }
-
-        output.statementCount = 1;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitEach(this, scope);
     }
 
     @Override
-    ForEachLoopNode write(ClassNode classNode) {
-        ForEachLoopNode forEachLoopNode = new ForEachLoopNode();
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        iterableNode.visit(userTreeVisitor, scope);
 
-        forEachLoopNode.setConditionNode((ConditionNode)sub.write(classNode));
-
-        forEachLoopNode.setLocation(location);
-
-        return forEachLoopNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(type, name, expression, block);
+        if (blockNode != null) {
+            blockNode.visit(userTreeVisitor, scope);
+        }
     }
 }

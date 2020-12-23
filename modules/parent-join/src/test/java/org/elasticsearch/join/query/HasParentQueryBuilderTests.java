@@ -24,10 +24,8 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.compress.CompressedXContent;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.query.IdsQueryBuilder;
@@ -40,13 +38,16 @@ import org.elasticsearch.index.query.QueryShardException;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.query.WrapperQueryBuilder;
 import org.elasticsearch.join.ParentJoinPlugin;
+import org.elasticsearch.join.query.HasChildQueryBuilder.LateParsingQuery;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.test.AbstractQueryTestCase;
+import org.elasticsearch.test.TestGeoShapeFieldMapperPlugin;
 import org.elasticsearch.test.VersionUtils;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,15 +71,7 @@ public class HasParentQueryBuilderTests extends AbstractQueryTestCase<HasParentQ
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singletonList(ParentJoinPlugin.class);
-    }
-
-    @Override
-    protected Settings createTestIndexSettings() {
-        return Settings.builder()
-            .put(super.createTestIndexSettings())
-            .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-            .build();
+        return Arrays.asList(ParentJoinPlugin.class, TestGeoShapeFieldMapperPlugin.class);
     }
 
     @Override
@@ -90,10 +83,10 @@ public class HasParentQueryBuilderTests extends AbstractQueryTestCase<HasParentQ
                     .field(PARENT_DOC, CHILD_DOC)
                 .endObject()
             .endObject()
-            .startObject(STRING_FIELD_NAME)
+            .startObject(TEXT_FIELD_NAME)
                 .field("type", "text")
             .endObject()
-                .startObject(STRING_FIELD_NAME_2)
+                .startObject(KEYWORD_FIELD_NAME)
             .field("type", "keyword")
             .endObject()
             .startObject(INT_FIELD_NAME)
@@ -133,15 +126,15 @@ public class HasParentQueryBuilderTests extends AbstractQueryTestCase<HasParentQ
             hqb.innerHit(new InnerHitBuilder()
                     .setName(randomAlphaOfLengthBetween(1, 10))
                     .setSize(randomIntBetween(0, 100))
-                    .addSort(new FieldSortBuilder(STRING_FIELD_NAME_2).order(SortOrder.ASC)));
+                    .addSort(new FieldSortBuilder(KEYWORD_FIELD_NAME).order(SortOrder.ASC)));
         }
         return hqb;
     }
 
     @Override
     protected void doAssertLuceneQuery(HasParentQueryBuilder queryBuilder, Query query, QueryShardContext context) throws IOException {
-        assertThat(query, instanceOf(HasChildQueryBuilder.LateParsingQuery.class));
-        HasChildQueryBuilder.LateParsingQuery lpq = (HasChildQueryBuilder.LateParsingQuery) query;
+        assertThat(query, instanceOf(LateParsingQuery.class));
+        LateParsingQuery lpq = (LateParsingQuery) query;
         assertEquals(queryBuilder.score() ? ScoreMode.Max : ScoreMode.None, lpq.getScoreMode());
 
         if (queryBuilder.innerHit() != null) {

@@ -43,9 +43,12 @@ import org.elasticsearch.xpack.ql.util.Holder;
 import org.elasticsearch.xpack.ql.util.StringUtils;
 import org.elasticsearch.xpack.sql.expression.Exists;
 import org.elasticsearch.xpack.sql.expression.function.Score;
+import org.elasticsearch.xpack.sql.expression.function.aggregate.Kurtosis;
 import org.elasticsearch.xpack.sql.expression.function.aggregate.Max;
 import org.elasticsearch.xpack.sql.expression.function.aggregate.Min;
+import org.elasticsearch.xpack.sql.expression.function.aggregate.Skewness;
 import org.elasticsearch.xpack.sql.expression.function.aggregate.TopHits;
+import org.elasticsearch.xpack.sql.expression.function.scalar.Cast;
 import org.elasticsearch.xpack.sql.plan.logical.Distinct;
 import org.elasticsearch.xpack.sql.plan.logical.LocalRelation;
 import org.elasticsearch.xpack.sql.plan.logical.Pivot;
@@ -66,6 +69,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import static java.util.stream.Collectors.toMap;
+import static org.elasticsearch.xpack.ql.analyzer.VerifierChecks.checkFilterConditionType;
 import static org.elasticsearch.xpack.ql.common.Failure.fail;
 import static org.elasticsearch.xpack.ql.util.CollectionUtils.combine;
 import static org.elasticsearch.xpack.sql.stats.FeatureMetric.COMMAND;
@@ -176,21 +180,21 @@ public final class Verifier {
 
         if (failures.isEmpty()) {
             Set<Failure> localFailures = new LinkedHashSet<>();
-            final Map<Attribute, Expression> collectRefs = new LinkedHashMap<>();
+            AttributeMap.Builder<Expression> collectRefs = AttributeMap.builder();
 
             checkFullTextSearchInSelect(plan, localFailures);
 
             // collect Attribute sources
             // only Aliases are interesting since these are the only ones that hide expressions
             // FieldAttribute for example are self replicating.
-            plan.forEachUp(p -> p.forEachExpressionsUp(e -> {
+            plan.forEachExpressionsUp(e -> {
                 if (e instanceof Alias) {
                     Alias a = (Alias) e;
                     collectRefs.put(a.toAttribute(), a.child());
                 }
-            }));
+            });
 
-            AttributeMap<Expression> attributeRefs = new AttributeMap<>(collectRefs);
+            AttributeMap<Expression> attributeRefs = collectRefs.build();
 
             // for filtering out duplicated errors
             final Set<LogicalPlan> groupingFailures = new LinkedHashSet<>();
@@ -205,6 +209,7 @@ public final class Verifier {
                     return;
                 }
 
+                checkFilterConditionType(p, localFailures);
                 checkGroupingFunctionInGroupBy(p, localFailures);
                 checkFilterOnAggs(p, localFailures, attributeRefs);
                 checkFilterOnGrouping(p, localFailures, attributeRefs);
@@ -217,6 +222,8 @@ public final class Verifier {
                 checkNestedUsedInGroupByOrHavingOrWhereOrOrderBy(p, localFailures, attributeRefs);
                 checkForGeoFunctionsOnDocValues(p, localFailures);
                 checkPivot(p, localFailures, attributeRefs);
+                checkMatrixStats(p, localFailures);
+                checkCastOnInexact(p, localFailures);
 
                 // everything checks out
                 // mark the plan as analyzed
@@ -846,5 +853,35 @@ public final class Verifier {
             });
 
         }, Pivot.class);
+    }
+
+    private static void checkMatrixStats(LogicalPlan p, Set<Failure> localFailures) {
+        // MatrixStats aggregate functions cannot operates on scalars
+        // https://github.com/elastic/elasticsearch/issues/55344
+        p.forEachExpressions(e -> e.forEachUp((Kurtosis s) -> {
+            if (s.field() instanceof Function) {
+                localFailures.add(fail(s.field(), "[{}()] cannot be used on top of operators or scalars", s.functionName()));
+            }
+        }, Kurtosis.class));
+        p.forEachExpressions(e -> e.forEachUp((Skewness s) -> {
+            if (s.field() instanceof Function) {
+                localFailures.add(fail(s.field(), "[{}()] cannot be used on top of operators or scalars", s.functionName()));
+            }
+        }, Skewness.class));
+    }
+
+    private static void checkCastOnInexact(LogicalPlan p, Set<Failure> localFailures) {
+        p.forEachDown(f -> f.forEachExpressionsUp(e -> e.forEachUp((Cast c) -> {
+            if (c.field() instanceof FieldAttribute) {
+                EsField.Exact exactInfo = ((FieldAttribute) c.field()).getExactInfo();
+                if (exactInfo.hasExact() == false
+                        || ((FieldAttribute) c.field()).exactAttribute().equals(c.field()) == false) {
+                    localFailures.add(fail(c.field(),
+                            "[{}] of data type [{}] cannot be used for [{}()] inside the WHERE clause",
+                            c.field().sourceText(), c.field().dataType().typeName(), c.functionName()));
+                }
+
+            }
+        }, Cast.class)), Filter.class);
     }
 }

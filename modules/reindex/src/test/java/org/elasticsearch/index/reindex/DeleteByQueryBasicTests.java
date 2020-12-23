@@ -26,6 +26,7 @@ import org.elasticsearch.cluster.InternalClusterInfoService;
 import org.elasticsearch.cluster.routing.allocation.DiskThresholdSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.plugins.Plugin;
@@ -41,8 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.elasticsearch.cluster.metadata.IndexMetaData.SETTING_READ_ONLY;
-import static org.elasticsearch.cluster.metadata.IndexMetaData.SETTING_READ_ONLY_ALLOW_DELETE;
+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_READ_ONLY;
+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_READ_ONLY_ALLOW_DELETE;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -53,9 +54,7 @@ import static org.hamcrest.Matchers.hasSize;
 public class DeleteByQueryBasicTests extends ReindexTestCase {
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        List<Class<? extends Plugin>> plugins = new ArrayList<>(super.nodePlugins());
-        plugins.add(InternalSettingsPlugin.class);
-        return plugins;
+        return CollectionUtils.appendToCopy(super.nodePlugins(), InternalSettingsPlugin.class);
     }
 
     public void testBasics() throws Exception {

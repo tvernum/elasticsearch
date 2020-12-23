@@ -35,10 +35,9 @@ import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.Equal
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.GreaterThan;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.GreaterThanOrEqual;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.LessThan;
-import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.LessThanOrEqual;
-import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.NotEquals;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.NullEquals;
 import org.elasticsearch.xpack.ql.expression.predicate.regex.RLike;
+import org.elasticsearch.xpack.ql.expression.predicate.regex.RLikePattern;
 import org.elasticsearch.xpack.ql.index.EsIndex;
 import org.elasticsearch.xpack.ql.optimizer.OptimizerRules.BooleanLiteralsOnTheRight;
 import org.elasticsearch.xpack.ql.optimizer.OptimizerRules.BooleanSimplification;
@@ -120,7 +119,6 @@ import org.elasticsearch.xpack.sql.plan.logical.command.ShowTables;
 import org.elasticsearch.xpack.sql.session.EmptyExecutable;
 
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -128,6 +126,13 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
+import static org.elasticsearch.xpack.ql.TestUtils.equalsOf;
+import static org.elasticsearch.xpack.ql.TestUtils.greaterThanOf;
+import static org.elasticsearch.xpack.ql.TestUtils.greaterThanOrEqualOf;
+import static org.elasticsearch.xpack.ql.TestUtils.lessThanOf;
+import static org.elasticsearch.xpack.ql.TestUtils.lessThanOrEqualOf;
+import static org.elasticsearch.xpack.ql.TestUtils.notEqualsOf;
+import static org.elasticsearch.xpack.ql.TestUtils.nullEqualsOf;
 import static org.elasticsearch.xpack.ql.expression.Literal.FALSE;
 import static org.elasticsearch.xpack.ql.expression.Literal.NULL;
 import static org.elasticsearch.xpack.ql.expression.Literal.TRUE;
@@ -211,9 +216,9 @@ public class OptimizerTests extends ESTestCase {
         // b
         Alias b = new Alias(EMPTY, "b", L(10));
         // WHERE a < 10
-        LogicalPlan p = new Filter(EMPTY, FROM(), new LessThan(EMPTY, a, L(10)));
+        LogicalPlan p = new Filter(EMPTY, FROM(), lessThanOf(a, L(10)));
         // SELECT
-        p = new Project(EMPTY, p, Arrays.asList(a, b));
+        p = new Project(EMPTY, p, asList(a, b));
         // ORDER BY
         p = new OrderBy(EMPTY, p, singletonList(new Order(EMPTY, b, OrderDirection.ASC, null)));
 
@@ -263,14 +268,14 @@ public class OptimizerTests extends ESTestCase {
 
     public void testConstantFoldingIn() {
         In in = new In(EMPTY, ONE,
-            Arrays.asList(ONE, TWO, ONE, THREE, new Sub(EMPTY, THREE, ONE), ONE, FOUR, new Abs(EMPTY, new Sub(EMPTY, TWO, FIVE))));
+            asList(ONE, TWO, ONE, THREE, new Sub(EMPTY, THREE, ONE), ONE, FOUR, new Abs(EMPTY, new Sub(EMPTY, TWO, FIVE))));
         Literal result= (Literal) new ConstantFolding().rule(in);
         assertEquals(true, result.value());
     }
 
     public void testConstantFoldingIn_LeftValueNotFoldable() {
         In in = new In(EMPTY, getFieldAttribute(),
-                Arrays.asList(ONE, TWO, ONE, THREE, new Sub(EMPTY, THREE, ONE), ONE, FOUR, new Abs(EMPTY, new Sub(EMPTY, TWO, FIVE))));
+                asList(ONE, TWO, ONE, THREE, new Sub(EMPTY, THREE, ONE), ONE, FOUR, new Abs(EMPTY, new Sub(EMPTY, TWO, FIVE))));
         Alias as = new Alias(in.source(), in.sourceText(), in);
         Project p = new Project(EMPTY, FROM(), Collections.singletonList(as));
         p = (Project) new ConstantFolding().apply(p);
@@ -281,13 +286,13 @@ public class OptimizerTests extends ESTestCase {
     }
 
     public void testConstantFoldingIn_RightValueIsNull() {
-        In in = new In(EMPTY, getFieldAttribute(), Arrays.asList(NULL, NULL));
+        In in = new In(EMPTY, getFieldAttribute(), asList(NULL, NULL));
         Literal result= (Literal) new ConstantFolding().rule(in);
         assertNull(result.value());
     }
 
     public void testConstantFoldingIn_LeftValueIsNull() {
-        In in = new In(EMPTY, NULL, Arrays.asList(ONE, TWO, THREE));
+        In in = new In(EMPTY, NULL, asList(ONE, TWO, THREE));
         Literal result= (Literal) new ConstantFolding().rule(in);
         assertNull(result.value());
     }
@@ -367,9 +372,9 @@ public class OptimizerTests extends ESTestCase {
         // arithmetic
         assertNullLiteral(rule.rule(new Add(EMPTY, getFieldAttribute(), NULL)));
         // comparison
-        assertNullLiteral(rule.rule(new GreaterThan(EMPTY, getFieldAttribute(), NULL)));
+        assertNullLiteral(rule.rule(greaterThanOf(getFieldAttribute(), NULL)));
         // regex
-        assertNullLiteral(rule.rule(new RLike(EMPTY, NULL, "123")));
+        assertNullLiteral(rule.rule(new RLike(EMPTY, NULL, new RLikePattern("123"))));
     }
 
     public void testNullFoldingOnCast() {
@@ -420,9 +425,9 @@ public class OptimizerTests extends ESTestCase {
         Class<ArbitraryConditionalFunction> clazz =
             (Class<ArbitraryConditionalFunction>) randomFrom(Coalesce.class, Greatest.class, Least.class);
         Constructor<ArbitraryConditionalFunction> ctor = clazz.getConstructor(Source.class, List.class);
-        ArbitraryConditionalFunction conditionalFunction = ctor.newInstance(EMPTY, Arrays.asList(NULL, ONE, TWO));
+        ArbitraryConditionalFunction conditionalFunction = ctor.newInstance(EMPTY, asList(NULL, ONE, TWO));
         assertEquals(conditionalFunction, rule.rule(conditionalFunction));
-        conditionalFunction = ctor.newInstance(EMPTY, Arrays.asList(NULL, NULL, NULL));
+        conditionalFunction = ctor.newInstance(EMPTY, asList(NULL, NULL, NULL));
         assertEquals(conditionalFunction, rule.rule(conditionalFunction));
     }
 
@@ -455,7 +460,7 @@ public class OptimizerTests extends ESTestCase {
     public void testSimplifyCoalesceFirstLiteral() {
         Expression e = new SimplifyConditional()
                 .rule(new Coalesce(EMPTY,
-                        Arrays.asList(NULL, TRUE, FALSE, new Abs(EMPTY, getFieldAttribute()))));
+                        asList(NULL, TRUE, FALSE, new Abs(EMPTY, getFieldAttribute()))));
         assertEquals(Coalesce.class, e.getClass());
         assertEquals(1, e.children().size());
         assertEquals(TRUE, e.children().get(0));
@@ -579,11 +584,11 @@ public class OptimizerTests extends ESTestCase {
         // ELSE 'default'
         // END
 
-        Case c = new Case(EMPTY, Arrays.asList(
-                new IfConditional(EMPTY, new Equals(EMPTY, getFieldAttribute(), ONE), literal("foo1")),
-                new IfConditional(EMPTY, new Equals(EMPTY, ONE, TWO), literal("bar1")),
-                new IfConditional(EMPTY, new Equals(EMPTY, TWO, ONE), literal("bar2")),
-                new IfConditional(EMPTY, new GreaterThan(EMPTY, getFieldAttribute(), ONE), literal("foo2")), literal("default")));
+        Case c = new Case(EMPTY, asList(
+                new IfConditional(EMPTY, equalsOf(getFieldAttribute(), ONE), literal("foo1")),
+                new IfConditional(EMPTY, equalsOf(ONE, TWO), literal("bar1")),
+                new IfConditional(EMPTY, equalsOf(TWO, ONE), literal("bar2")),
+                new IfConditional(EMPTY, greaterThanOf(getFieldAttribute(), ONE), literal("foo2")), literal("default")));
         assertFalse(c.foldable());
         Expression e = new SimplifyCase().rule(c);
         assertEquals(Case.class, e.getClass());
@@ -605,9 +610,9 @@ public class OptimizerTests extends ESTestCase {
         //
         // 'foo2'
 
-        Case c = new Case(EMPTY, Arrays.asList(
-                new IfConditional(EMPTY, new Equals(EMPTY, ONE, TWO), literal("foo1")),
-                new IfConditional(EMPTY, new Equals(EMPTY, ONE, ONE), literal("foo2")), literal("default")));
+        Case c = new Case(EMPTY, asList(
+                new IfConditional(EMPTY, equalsOf(ONE, TWO), literal("foo1")),
+                new IfConditional(EMPTY, equalsOf(ONE, ONE), literal("foo2")), literal("default")));
         assertFalse(c.foldable());
 
         SimplifyCase rule = new SimplifyCase();
@@ -630,8 +635,8 @@ public class OptimizerTests extends ESTestCase {
         //
         // myField (non-foldable)
 
-        Case c = new Case(EMPTY, Arrays.asList(
-                new IfConditional(EMPTY, new Equals(EMPTY, ONE, TWO), literal("foo1")),
+        Case c = new Case(EMPTY, asList(
+                new IfConditional(EMPTY, equalsOf(ONE, TWO), literal("foo1")),
                 getFieldAttribute("myField")));
         assertFalse(c.foldable());
 
@@ -646,7 +651,7 @@ public class OptimizerTests extends ESTestCase {
 
     public void testSimplifyIif_ConditionTrue_FoldableResult() {
         SimplifyCase rule = new SimplifyCase();
-        Iif iif = new Iif(EMPTY, new Equals(EMPTY, ONE, ONE), literal("foo"), literal("bar"));
+        Iif iif = new Iif(EMPTY, equalsOf(ONE, ONE), literal("foo"), literal("bar"));
         assertTrue(iif.foldable());
 
         Expression e = rule.rule(iif);
@@ -660,7 +665,7 @@ public class OptimizerTests extends ESTestCase {
 
     public void testSimplifyIif_ConditionTrue_NonFoldableResult() {
         SimplifyCase rule = new SimplifyCase();
-        Iif iif = new Iif(EMPTY, new Equals(EMPTY, ONE, ONE), getFieldAttribute("myField"), literal("bar"));
+        Iif iif = new Iif(EMPTY, equalsOf(ONE, ONE), getFieldAttribute("myField"), literal("bar"));
         assertFalse(iif.foldable());
 
         Expression e = rule.rule(iif);
@@ -675,7 +680,7 @@ public class OptimizerTests extends ESTestCase {
 
     public void testSimplifyIif_ConditionFalse_FoldableResult() {
         SimplifyCase rule = new SimplifyCase();
-        Iif iif = new Iif(EMPTY, new Equals(EMPTY, ONE, TWO), literal("foo"), literal("bar"));
+        Iif iif = new Iif(EMPTY, equalsOf(ONE, TWO), literal("foo"), literal("bar"));
         assertTrue(iif.foldable());
 
         Expression e = rule.rule(iif);
@@ -689,7 +694,7 @@ public class OptimizerTests extends ESTestCase {
 
     public void testSimplifyIif_ConditionFalse_NonFoldableResult() {
         SimplifyCase rule = new SimplifyCase();
-        Iif iif = new Iif(EMPTY, new Equals(EMPTY, ONE, TWO), literal("foo"), getFieldAttribute("myField"));
+        Iif iif = new Iif(EMPTY, equalsOf(ONE, TWO), literal("foo"), getFieldAttribute("myField"));
         assertFalse(iif.foldable());
 
         Expression e = rule.rule(iif);
@@ -710,15 +715,15 @@ public class OptimizerTests extends ESTestCase {
     }
 
     public void testBinaryComparisonSimplification() {
-        assertEquals(TRUE, new BinaryComparisonSimplification().rule(new Equals(EMPTY, FIVE, FIVE)));
-        assertEquals(TRUE, new BinaryComparisonSimplification().rule(new NullEquals(EMPTY, FIVE, FIVE)));
-        assertEquals(TRUE, new BinaryComparisonSimplification().rule(new NullEquals(EMPTY, NULL, NULL)));
-        assertEquals(FALSE, new BinaryComparisonSimplification().rule(new NotEquals(EMPTY, FIVE, FIVE)));
-        assertEquals(TRUE, new BinaryComparisonSimplification().rule(new GreaterThanOrEqual(EMPTY, FIVE, FIVE)));
-        assertEquals(TRUE, new BinaryComparisonSimplification().rule(new LessThanOrEqual(EMPTY, FIVE, FIVE)));
+        assertEquals(TRUE, new BinaryComparisonSimplification().rule(equalsOf(FIVE, FIVE)));
+        assertEquals(TRUE, new BinaryComparisonSimplification().rule(nullEqualsOf(FIVE, FIVE)));
+        assertEquals(TRUE, new BinaryComparisonSimplification().rule(nullEqualsOf(NULL, NULL)));
+        assertEquals(FALSE, new BinaryComparisonSimplification().rule(notEqualsOf(FIVE, FIVE)));
+        assertEquals(TRUE, new BinaryComparisonSimplification().rule(greaterThanOrEqualOf(FIVE, FIVE)));
+        assertEquals(TRUE, new BinaryComparisonSimplification().rule(lessThanOrEqualOf(FIVE, FIVE)));
 
-        assertEquals(FALSE, new BinaryComparisonSimplification().rule(new GreaterThan(EMPTY, FIVE, FIVE)));
-        assertEquals(FALSE, new BinaryComparisonSimplification().rule(new LessThan(EMPTY, FIVE, FIVE)));
+        assertEquals(FALSE, new BinaryComparisonSimplification().rule(greaterThanOf(FIVE, FIVE)));
+        assertEquals(FALSE, new BinaryComparisonSimplification().rule(lessThanOf(FIVE, FIVE)));
     }
 
     public void testNullEqualsWithNullLiteralBecomesIsNull() {
@@ -727,12 +732,12 @@ public class OptimizerTests extends ESTestCase {
         FieldAttribute fa = getFieldAttribute();
         Source source = new Source(1, 10, "IS_NULL(a)");
 
-        Expression e = bcSimpl.rule(swapLiteralsToRight.rule(new NullEquals(source, fa, NULL)));
+        Expression e = bcSimpl.rule(swapLiteralsToRight.rule(new NullEquals(source, fa, NULL, randomZone())));
         assertEquals(IsNull.class, e.getClass());
         IsNull isNull = (IsNull) e;
         assertEquals(source, isNull.source());
 
-        e = bcSimpl.rule(swapLiteralsToRight.rule(new NullEquals(source, NULL, fa)));
+        e = bcSimpl.rule(swapLiteralsToRight.rule(new NullEquals(source, NULL, fa, randomZone())));
         assertEquals(IsNull.class, e.getClass());
         isNull = (IsNull) e;
         assertEquals(source, isNull.source());
@@ -763,10 +768,10 @@ public class OptimizerTests extends ESTestCase {
     public void testCombineUnbalancedComparisonsMixedWithEqualsIntoRange() {
         FieldAttribute fa = getFieldAttribute();
         IsNotNull isn = new IsNotNull(EMPTY, fa);
-        GreaterThanOrEqual gte = new GreaterThanOrEqual(EMPTY, fa, ONE);
+        GreaterThanOrEqual gte = greaterThanOrEqualOf(fa, ONE);
 
-        Equals eq = new Equals(EMPTY, fa, L(10));
-        LessThan lt = new LessThan(EMPTY, fa, FIVE);
+        Equals eq = equalsOf(fa, L(10));
+        LessThan lt = lessThanOf(fa, FIVE);
 
         And and = new And(EMPTY, new And(EMPTY, isn, gte), new And(EMPTY, lt, eq));
 
@@ -788,8 +793,8 @@ public class OptimizerTests extends ESTestCase {
         Min min2 =  new Min(EMPTY, getFieldAttribute());
 
         OrderBy plan = new OrderBy(EMPTY, new Aggregate(EMPTY, FROM(), emptyList(),
-                Arrays.asList(a("min1", min1), a("min2", min2))),
-            Arrays.asList(
+                asList(a("min1", min1), a("min2", min2))),
+            asList(
                 new Order(EMPTY, min1, OrderDirection.ASC, Order.NullsPosition.LAST),
                 new Order(EMPTY, min2, OrderDirection.ASC, Order.NullsPosition.LAST)));
         LogicalPlan result = new ReplaceMinMaxWithTopHits().apply(plan);
@@ -813,8 +818,8 @@ public class OptimizerTests extends ESTestCase {
         Max max1 = new Max(EMPTY, new FieldAttribute(EMPTY, "str", new EsField("str", KEYWORD, emptyMap(), true)));
         Max max2 =  new Max(EMPTY, getFieldAttribute());
 
-        OrderBy plan = new OrderBy(EMPTY, new Aggregate(EMPTY, FROM(), emptyList(), Arrays.asList(a("max1", max1), a("max2", max2))),
-            Arrays.asList(
+        OrderBy plan = new OrderBy(EMPTY, new Aggregate(EMPTY, FROM(), emptyList(), asList(a("max1", max1), a("max2", max2))),
+            asList(
                 new Order(EMPTY, max1, OrderDirection.ASC, Order.NullsPosition.LAST),
                 new Order(EMPTY, max2, OrderDirection.ASC, Order.NullsPosition.LAST)));
         LogicalPlan result = new ReplaceMinMaxWithTopHits().apply(plan);
@@ -843,8 +848,8 @@ public class OptimizerTests extends ESTestCase {
         Order secondOrderBy = new Order(EMPTY, secondField, OrderDirection.ASC, Order.NullsPosition.LAST);
         
         OrderBy orderByPlan = new OrderBy(EMPTY,
-                new Aggregate(EMPTY, FROM(), Arrays.asList(secondField, firstField), Arrays.asList(secondAlias, firstAlias)),
-                Arrays.asList(firstOrderBy, secondOrderBy));
+                new Aggregate(EMPTY, FROM(), asList(secondField, firstField), asList(secondAlias, firstAlias)),
+                asList(firstOrderBy, secondOrderBy));
         LogicalPlan result = new SortAggregateOnOrderBy().apply(orderByPlan);
         
         assertTrue(result instanceof OrderBy);
@@ -875,8 +880,8 @@ public class OptimizerTests extends ESTestCase {
         Order secondOrderBy = new Order(EMPTY, secondAlias, OrderDirection.ASC, Order.NullsPosition.LAST);
         
         OrderBy orderByPlan = new OrderBy(EMPTY,
-                new Aggregate(EMPTY, FROM(), Arrays.asList(secondAlias, firstAlias), Arrays.asList(secondAlias, firstAlias)),
-                Arrays.asList(firstOrderBy, secondOrderBy));
+                new Aggregate(EMPTY, FROM(), asList(secondAlias, firstAlias), asList(secondAlias, firstAlias)),
+                asList(firstOrderBy, secondOrderBy));
         LogicalPlan result = new SortAggregateOnOrderBy().apply(orderByPlan);
         
         assertTrue(result instanceof OrderBy);
@@ -900,8 +905,8 @@ public class OptimizerTests extends ESTestCase {
     public void testPivotRewrite() {
         FieldAttribute column = getFieldAttribute("pivot");
         FieldAttribute number = getFieldAttribute("number");
-        List<NamedExpression> values = Arrays.asList(new Alias(EMPTY, "ONE", L(1)), new Alias(EMPTY, "TWO", L(2)));
-        List<NamedExpression> aggs = Arrays.asList(new Alias(EMPTY, "AVG", new Avg(EMPTY, number)));
+        List<NamedExpression> values = asList(new Alias(EMPTY, "ONE", L(1)), new Alias(EMPTY, "TWO", L(2)));
+        List<NamedExpression> aggs = asList(new Alias(EMPTY, "AVG", new Avg(EMPTY, number)));
         Pivot pivot = new Pivot(EMPTY, new EsRelation(EMPTY, new EsIndex("table", emptyMap()), false), column, values, aggs);
 
         LogicalPlan result = new RewritePivot().apply(pivot);
@@ -913,7 +918,7 @@ public class OptimizerTests extends ESTestCase {
         assertEquals(In.class, f.condition().getClass());
         In in = (In) f.condition();
         assertEquals(column, in.value());
-        assertEquals(Arrays.asList(L(1), L(2)), in.list());
+        assertEquals(asList(L(1), L(2)), in.list());
     }
 
     /**
@@ -927,7 +932,7 @@ public class OptimizerTests extends ESTestCase {
         FullTextPredicate matchPredicate = new MatchQueryPredicate(EMPTY, matchField, "A", StringUtils.EMPTY);
         FullTextPredicate multiMatchPredicate = new MultiMatchQueryPredicate(EMPTY, "match_field", "A", StringUtils.EMPTY);
         FullTextPredicate stringQueryPredicate = new StringQueryPredicate(EMPTY, "match_field:A", StringUtils.EMPTY);
-        List<FullTextPredicate> predicates = Arrays.asList(matchPredicate, multiMatchPredicate, stringQueryPredicate);
+        List<FullTextPredicate> predicates = asList(matchPredicate, multiMatchPredicate, stringQueryPredicate);
 
         FullTextPredicate left = randomFrom(predicates);
         FullTextPredicate right = randomFrom(predicates);
@@ -940,15 +945,15 @@ public class OptimizerTests extends ESTestCase {
         List<AggregateFunction> aggregates;
         boolean isSimpleStats = randomBoolean();
         if (isSimpleStats) {
-            aggregates = Arrays.asList(new Avg(EMPTY, aggField), new Sum(EMPTY, aggField), new Min(EMPTY, aggField),
+            aggregates = asList(new Avg(EMPTY, aggField), new Sum(EMPTY, aggField), new Min(EMPTY, aggField),
                     new Max(EMPTY, aggField));
         } else {
-            aggregates = Arrays.asList(new StddevPop(EMPTY, aggField), new SumOfSquares(EMPTY, aggField), new VarPop(EMPTY, aggField));
+            aggregates = asList(new StddevPop(EMPTY, aggField), new SumOfSquares(EMPTY, aggField), new VarPop(EMPTY, aggField));
         }
         AggregateFunction firstAggregate = randomFrom(aggregates);
         AggregateFunction secondAggregate = randomValueOtherThan(firstAggregate, () -> randomFrom(aggregates));
         Aggregate aggregatePlan = new Aggregate(EMPTY, filter, singletonList(matchField),
-                Arrays.asList(new Alias(EMPTY, "first", firstAggregate), new Alias(EMPTY, "second", secondAggregate)));
+                asList(new Alias(EMPTY, "first", firstAggregate), new Alias(EMPTY, "second", secondAggregate)));
         LogicalPlan result;
         if (isSimpleStats) {
             result = new ReplaceAggsWithStats().apply(aggregatePlan);
@@ -995,9 +1000,9 @@ public class OptimizerTests extends ESTestCase {
         Alias aAlias = new Alias(EMPTY, "aAlias", a);
         Alias bAlias = new Alias(EMPTY, "bAlias", b);
         
-        Project p = new Project(EMPTY, FROM(), Arrays.asList(aAlias, bAlias));
-        Filter f = new Filter(EMPTY, p,
-                new And(EMPTY, new GreaterThan(EMPTY, aAlias.toAttribute(), L(1)), new GreaterThan(EMPTY, bAlias.toAttribute(), L(2))));
+        Project p = new Project(EMPTY, FROM(), asList(aAlias, bAlias));
+        Filter f = new Filter(EMPTY, p, new And(EMPTY, greaterThanOf(aAlias.toAttribute(), L(1)),
+            greaterThanOf(bAlias.toAttribute(), L(2))));
         
         ReplaceReferenceAttributeWithSource rule = new ReplaceReferenceAttributeWithSource();
         Expression condition = f.condition();
@@ -1016,5 +1021,45 @@ public class OptimizerTests extends ESTestCase {
         assertTrue(and.left() instanceof GreaterThan);
         gt = (GreaterThan) and.left();
         assertEquals(a, gt.left());
+    }
+
+    //
+    // ReplaceSumWithStats rule
+    //
+    public void testSumIsReplacedWithStats() {
+        FieldAttribute fa = getFieldAttribute();
+        Sum sum = new Sum(EMPTY, fa);
+        
+        Alias sumAlias = new Alias(EMPTY, "sum", sum);
+        
+        Aggregate aggregate = new Aggregate(EMPTY, FROM(), emptyList(), asList(sumAlias));
+        LogicalPlan optimizedPlan = new Optimizer().optimize(aggregate);
+        assertTrue(optimizedPlan instanceof Aggregate);
+        Aggregate p = (Aggregate) optimizedPlan; 
+        assertEquals(1, p.aggregates().size());
+        assertTrue(p.aggregates().get(0) instanceof Alias);
+        Alias alias = (Alias) p.aggregates().get(0);
+        assertTrue(alias.child() instanceof InnerAggregate);
+        assertEquals(sum, ((InnerAggregate) alias.child()).inner());
+    }
+
+    /**
+     * Once the root cause of https://github.com/elastic/elasticsearch/issues/45251 is fixed in the <code>sum</code> ES aggregation 
+     * (can differentiate between <code>SUM(all zeroes)</code> and <code>SUM(all nulls)</code>), 
+     * remove the {@link OptimizerTests#testSumIsReplacedWithStats()}, and re-enable the following test.
+     */
+    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/45251")
+    public void testSumIsNotReplacedWithStats() {
+        FieldAttribute fa = getFieldAttribute();
+        Sum sum = new Sum(EMPTY, fa);
+
+        Alias sumAlias = new Alias(EMPTY, "sum", sum);
+
+        Aggregate aggregate = new Aggregate(EMPTY, FROM(), emptyList(), asList(sumAlias));
+        LogicalPlan optimizedPlan = new Optimizer().optimize(aggregate);
+        assertTrue(optimizedPlan instanceof Aggregate);
+        Aggregate p = (Aggregate) optimizedPlan;
+        assertEquals(1, p.aggregates().size());
+        assertEquals(sumAlias, p.aggregates().get(0));
     }
 }

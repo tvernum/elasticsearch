@@ -21,9 +21,11 @@ package org.elasticsearch.index.snapshots.blobstore;
 
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.ParseField;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentParserUtils;
 import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot.FileInfo;
 
 import java.io.IOException;
@@ -95,6 +97,28 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
     }
 
     /**
+     * Create a new instance that has a new snapshot by name {@code target} added which shares all files with the snapshot of name
+     * {@code source}.
+     *
+     * @param source source snapshot name
+     * @param target target snapshot name
+     * @return new instance with added cloned snapshot
+     */
+    public BlobStoreIndexShardSnapshots withClone(String source, String target) {
+        SnapshotFiles sourceFiles = null;
+        for (SnapshotFiles shardSnapshot : shardSnapshots) {
+            if (shardSnapshot.snapshot().equals(source)) {
+                sourceFiles = shardSnapshot;
+                break;
+            }
+        }
+        if (sourceFiles == null) {
+            throw new IllegalArgumentException("unknown source [" + source + "]");
+        }
+        return new BlobStoreIndexShardSnapshots(CollectionUtils.appendToCopy(shardSnapshots, sourceFiles.withSnapshotName(target)));
+    }
+
+    /**
      * Returns list of snapshots
      *
      * @return list of snapshots
@@ -135,6 +159,7 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
 
     static final class ParseFields {
         static final ParseField FILES = new ParseField("files");
+        static final ParseField SHARD_STATE_ID = new ParseField("shard_state_id");
         static final ParseField SNAPSHOTS = new ParseField("snapshots");
     }
 
@@ -207,6 +232,9 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
                 builder.value(fileInfo.name());
             }
             builder.endArray();
+            if (snapshot.shardStateIdentifier() != null) {
+                builder.field(ParseFields.SHARD_STATE_ID.getPreferredName(), snapshot.shardStateIdentifier());
+            }
             builder.endObject();
         }
         builder.endObject();
@@ -219,12 +247,11 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
             token = parser.nextToken();
         }
         Map<String, List<String>> snapshotsMap = new HashMap<>();
+        Map<String, String> historyUUIDs = new HashMap<>();
         Map<String, FileInfo> files = new HashMap<>();
         if (token == XContentParser.Token.START_OBJECT) {
             while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
-                if (token != XContentParser.Token.FIELD_NAME) {
-                    throw new ElasticsearchParseException("unexpected token [{}]", token);
-                }
+                XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, token, parser);
                 String currentFieldName = parser.currentName();
                 token = parser.nextToken();
                 if (token == XContentParser.Token.START_ARRAY) {
@@ -240,25 +267,22 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
                         throw new ElasticsearchParseException("unknown object [{}]", currentFieldName);
                     }
                     while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
-                        if (token != XContentParser.Token.FIELD_NAME) {
-                            throw new ElasticsearchParseException("unknown object [{}]", currentFieldName);
-                        }
+                        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, token, parser);
                         String snapshot = parser.currentName();
-                        if (parser.nextToken() != XContentParser.Token.START_OBJECT) {
-                            throw new ElasticsearchParseException("unknown object [{}]", currentFieldName);
-                        }
+                        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                             if (token == XContentParser.Token.FIELD_NAME) {
                                 currentFieldName = parser.currentName();
-                                if (parser.nextToken() == XContentParser.Token.START_ARRAY) {
-                                    if (ParseFields.FILES.match(currentFieldName, parser.getDeprecationHandler()) == false) {
-                                        throw new ElasticsearchParseException("unknown array [{}]", currentFieldName);
-                                    }
+                                if (ParseFields.FILES.match(currentFieldName, parser.getDeprecationHandler()) &&
+                                    parser.nextToken() == XContentParser.Token.START_ARRAY) {
                                     List<String> fileNames = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                                         fileNames.add(parser.text());
                                     }
                                     snapshotsMap.put(snapshot, fileNames);
+                                } else if (ParseFields.SHARD_STATE_ID.match(currentFieldName, parser.getDeprecationHandler())) {
+                                    parser.nextToken();
+                                    historyUUIDs.put(snapshot, parser.text());
                                 }
                             }
                         }
@@ -277,7 +301,8 @@ public class BlobStoreIndexShardSnapshots implements Iterable<SnapshotFiles>, To
                 assert fileInfo != null;
                 fileInfosBuilder.add(fileInfo);
             }
-            snapshots.add(new SnapshotFiles(entry.getKey(), Collections.unmodifiableList(fileInfosBuilder)));
+            snapshots.add(new SnapshotFiles(entry.getKey(), Collections.unmodifiableList(fileInfosBuilder),
+                historyUUIDs.get(entry.getKey())));
         }
         return new BlobStoreIndexShardSnapshots(files, Collections.unmodifiableList(snapshots));
     }

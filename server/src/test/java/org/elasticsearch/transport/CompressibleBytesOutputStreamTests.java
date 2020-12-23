@@ -23,9 +23,9 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressorFactory;
 import org.elasticsearch.common.io.stream.BytesStream;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
+import org.elasticsearch.common.io.stream.InputStreamStreamInput;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.test.VersionUtils;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -34,11 +34,7 @@ public class CompressibleBytesOutputStreamTests extends ESTestCase {
 
     public void testStreamWithoutCompression() throws IOException {
         BytesStream bStream = new ZeroOutOnCloseStream();
-        if (randomBoolean()) {
-            bStream.setVersion(VersionUtils.randomVersion(random()));
-        }
         CompressibleBytesOutputStream stream = new CompressibleBytesOutputStream(bStream, false);
-        assertEquals(bStream.getVersion(), stream.getVersion());
 
         byte[] expectedBytes = randomBytes(randomInt(30));
         stream.write(expectedBytes);
@@ -66,11 +62,7 @@ public class CompressibleBytesOutputStreamTests extends ESTestCase {
 
     public void testStreamWithCompression() throws IOException {
         BytesStream bStream = new ZeroOutOnCloseStream();
-        if (randomBoolean()) {
-            bStream.setVersion(VersionUtils.randomVersion(random()));
-        }
         CompressibleBytesOutputStream stream = new CompressibleBytesOutputStream(bStream, true);
-        assertEquals(bStream.getVersion(), stream.getVersion());
 
         byte[] expectedBytes = randomBytes(randomInt(30));
         stream.write(expectedBytes);
@@ -80,7 +72,7 @@ public class CompressibleBytesOutputStreamTests extends ESTestCase {
 
         assertTrue(CompressorFactory.COMPRESSOR.isCompressed(bytesRef));
 
-        StreamInput streamInput = CompressorFactory.COMPRESSOR.streamInput(bytesRef.streamInput());
+        StreamInput streamInput = new InputStreamStreamInput(CompressorFactory.COMPRESSOR.threadLocalInputStream(bytesRef.streamInput()));
         byte[] actualBytes = new byte[expectedBytes.length];
         streamInput.readBytes(actualBytes, 0, expectedBytes.length);
 
@@ -97,17 +89,14 @@ public class CompressibleBytesOutputStreamTests extends ESTestCase {
 
     public void testCompressionWithCallingMaterializeFails() throws IOException {
         BytesStream bStream = new ZeroOutOnCloseStream();
-        if (randomBoolean()) {
-            bStream.setVersion(VersionUtils.randomVersion(random()));
-        }
         CompressibleBytesOutputStream stream = new CompressibleBytesOutputStream(bStream, true);
-        assertEquals(bStream.getVersion(), stream.getVersion());
 
         byte[] expectedBytes = randomBytes(between(1, 30));
         stream.write(expectedBytes);
 
 
-        StreamInput streamInput = CompressorFactory.COMPRESSOR.streamInput(bStream.bytes().streamInput());
+        StreamInput streamInput =
+                new InputStreamStreamInput(CompressorFactory.COMPRESSOR.threadLocalInputStream(bStream.bytes().streamInput()));
         byte[] actualBytes = new byte[expectedBytes.length];
         EOFException e = expectThrows(EOFException.class, () -> streamInput.readBytes(actualBytes, 0, expectedBytes.length));
         assertEquals("Unexpected end of ZLIB input stream", e.getMessage());
@@ -127,8 +116,10 @@ public class CompressibleBytesOutputStreamTests extends ESTestCase {
 
         @Override
         public void close() {
-            int size = (int) bytes.size();
-            bytes.set(0, new byte[size], 0, size);
+            if (bytes != null) {
+                int size = (int) bytes.size();
+                bytes.set(0, new byte[size], 0, size);
+            }
         }
     }
 }

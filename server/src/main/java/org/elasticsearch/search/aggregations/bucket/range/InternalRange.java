@@ -22,11 +22,9 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.DocValueFormat;
-import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValueType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceType;
@@ -114,7 +112,7 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
         }
 
         @Override
-        public Aggregations getAggregations() {
+        public InternalAggregations getAggregations() {
             return aggregations;
         }
 
@@ -197,9 +195,8 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
         }
 
         @SuppressWarnings("unchecked")
-        public R create(String name, List<B> ranges, DocValueFormat format, boolean keyed, List<PipelineAggregator> pipelineAggregators,
-                Map<String, Object> metaData) {
-            return (R) new InternalRange<B, R>(name, ranges, format, keyed, pipelineAggregators, metaData);
+        public R create(String name, List<B> ranges, DocValueFormat format, boolean keyed, Map<String, Object> metadata) {
+            return (R) new InternalRange<B, R>(name, ranges, format, keyed, metadata);
         }
 
         @SuppressWarnings("unchecked")
@@ -210,8 +207,7 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
 
         @SuppressWarnings("unchecked")
         public R create(List<B> ranges, R prototype) {
-            return (R) new InternalRange<B, R>(prototype.name, ranges, prototype.format, prototype.keyed, prototype.pipelineAggregators(),
-                    prototype.metaData);
+            return (R) new InternalRange<B, R>(prototype.name, ranges, prototype.format, prototype.keyed, prototype.metadata);
         }
 
         @SuppressWarnings("unchecked")
@@ -225,10 +221,8 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
     protected final DocValueFormat format;
     protected final boolean keyed;
 
-    public InternalRange(String name, List<B> ranges, DocValueFormat format, boolean keyed,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData) {
-        super(name, pipelineAggregators, metaData);
+    public InternalRange(String name, List<B> ranges, DocValueFormat format, boolean keyed, Map<String, Object> metadata) {
+        super(name, metadata);
         this.ranges = ranges;
         this.format = format;
         this.keyed = keyed;
@@ -246,7 +240,7 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
         for (int i = 0; i < size; i++) {
             String key = in.readString();
             ranges.add(getFactory().createBucket(key, in.readDouble(), in.readDouble(), in.readVLong(),
-                    new InternalAggregations(in), keyed, format));
+                    InternalAggregations.readFrom(in), keyed, format));
         }
         this.ranges = ranges;
     }
@@ -306,7 +300,7 @@ public class InternalRange<B extends InternalRange.Bucket, R extends InternalRan
         for (int i = 0; i < this.ranges.size(); ++i) {
             ranges.add((B) reduceBucket(rangeList[i], reduceContext));
         }
-        return getFactory().create(name, ranges, format, keyed, pipelineAggregators(), getMetaData());
+        return getFactory().create(name, ranges, format, keyed, getMetadata());
     }
 
     @Override

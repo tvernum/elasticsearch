@@ -5,9 +5,10 @@
  */
 package org.elasticsearch.xpack.sql.cli;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.common.UUIDs;
-import org.elasticsearch.test.ESTestCase;
+import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.xpack.sql.cli.command.CliSession;
 import org.elasticsearch.xpack.sql.client.ClientException;
 import org.elasticsearch.xpack.sql.client.ClientVersion;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class CliSessionTests extends ESTestCase {
+public class CliSessionTests extends SqlCliTestCase {
 
     public void testProperConnection() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
@@ -47,7 +48,8 @@ public class CliSessionTests extends ESTestCase {
 
     public void testWrongServerVersion() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
-        SqlVersion version = new SqlVersion((int)SqlVersion.V_7_7_0.major, SqlVersion.V_7_7_0.minor - 1, 0);
+        Version v = VersionUtils.randomVersionBetween(random(), null, VersionUtils.getPreviousVersion(Version.V_7_7_0));
+        SqlVersion version = new SqlVersion(v.major, v.minor, v.revision);
         when(httpClient.serverInfo()).thenReturn(new MainResponse(randomAlphaOfLength(5), version.toString(),
                 ClusterName.DEFAULT.value(), UUIDs.randomBase64UUID()));
         CliSession cliSession = new CliSession(httpClient);
@@ -61,18 +63,9 @@ public class CliSessionTests extends ESTestCase {
 
     public void testHigherServerVersion() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
-        byte minor;
-        byte major;
-        if (randomBoolean()) {
-            minor = ClientVersion.CURRENT.minor;
-            major = (byte) (ClientVersion.CURRENT.major + 1);
-        } else {
-            minor = (byte) (ClientVersion.CURRENT.minor + 1);
-            major = ClientVersion.CURRENT.major;
-
-        }
-        when(httpClient.serverInfo()).thenReturn(new MainResponse(randomAlphaOfLength(5),
-            SqlVersion.fromString(major + "." + minor + ".23").toString(),
+        Version v = VersionUtils.randomVersionBetween(random(), Version.V_7_7_0, null);
+        SqlVersion version = new SqlVersion(v.major, v.minor, v.revision);
+        when(httpClient.serverInfo()).thenReturn(new MainResponse(randomAlphaOfLength(5), version.toString(),
             ClusterName.DEFAULT.value(), UUIDs.randomBase64UUID()));
         CliSession cliSession = new CliSession(httpClient);
         cliSession.checkConnection();

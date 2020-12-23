@@ -20,84 +20,34 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.ExpressionNode;
-import org.elasticsearch.painless.ir.ReturnNode;
-import org.elasticsearch.painless.ir.StatementExpressionNode;
-import org.elasticsearch.painless.ir.StatementNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
 /**
  * Represents the top-level node for an expression as a statement.
  */
-public final class SExpression extends AStatement {
+public class SExpression extends AStatement {
 
-    private AExpression expression;
+    private final AExpression statementNode;
 
-    public SExpression(Location location, AExpression expression) {
-        super(location);
+    public SExpression(int identifier, Location location, AExpression statementNode) {
+        super(identifier, location);
 
-        this.expression = Objects.requireNonNull(expression);
+        this.statementNode = Objects.requireNonNull(statementNode);
+    }
+
+    public AExpression getStatementNode() {
+        return statementNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-
-        Class<?> rtnType = scope.getReturnType();
-        boolean isVoid = rtnType == void.class;
-
-        AExpression.Input expressionInput = new AExpression.Input();
-        expressionInput.read = input.lastSource && !isVoid;
-        AExpression.Output expressionOutput = expression.analyze(scriptRoot, scope, expressionInput);
-
-        if ((input.lastSource == false || isVoid) && expressionOutput.statement == false) {
-            throw createError(new IllegalArgumentException("Not a statement."));
-        }
-
-        boolean rtn = input.lastSource && isVoid == false && expressionOutput.actual != void.class;
-
-        expression.input.expected = rtn ? rtnType : expressionOutput.actual;
-        expression.input.internal = rtn;
-        expression.cast();
-
-        output = new Output();
-        output.methodEscape = rtn;
-        output.loopEscape = rtn;
-        output.allEscape = rtn;
-        output.statementCount = 1;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitExpression(this, scope);
     }
 
     @Override
-    StatementNode write(ClassNode classNode) {
-        ExpressionNode expressionNode = expression.cast(expression.write(classNode));
-
-        if (output.methodEscape) {
-            ReturnNode returnNode = new ReturnNode();
-
-            returnNode.setExpressionNode(expressionNode);
-
-            returnNode.setLocation(location);
-
-            return returnNode;
-        } else {
-            StatementExpressionNode statementExpressionNode = new StatementExpressionNode();
-
-            statementExpressionNode.setExpressionNode(expressionNode);
-
-            statementExpressionNode.setLocation(location);
-
-            return statementExpressionNode;
-        }
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(expression);
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        statementNode.visit(userTreeVisitor, scope);
     }
 }

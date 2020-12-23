@@ -20,74 +20,44 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.IfNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
 /**
  * Represents an if block.
  */
-public final class SIf extends AStatement {
+public class SIf extends AStatement {
 
-    AExpression condition;
-    final SBlock ifblock;
+    private final AExpression conditionNode;
+    private final SBlock ifBlockNode;
 
-    public SIf(Location location, AExpression condition, SBlock ifblock) {
-        super(location);
+    public SIf(int identifier, Location location, AExpression conditionNode, SBlock ifBlockNode) {
+        super(identifier, location);
 
-        this.condition = Objects.requireNonNull(condition);
-        this.ifblock = ifblock;
+        this.conditionNode = Objects.requireNonNull(conditionNode);
+        this.ifBlockNode = ifBlockNode;
+    }
+
+    public AExpression getConditionNode() {
+        return conditionNode;
+    }
+
+    public SBlock getIfBlockNode() {
+        return ifBlockNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitIf(this, scope);
+    }
 
-        AExpression.Input conditionInput = new AExpression.Input();
-        conditionInput.expected = boolean.class;
-        condition.analyze(scriptRoot, scope, conditionInput);
-        condition.cast();
+    @Override
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        conditionNode.visit(userTreeVisitor, scope);
 
-        if (condition instanceof EBoolean) {
-            throw createError(new IllegalArgumentException("Extraneous if statement."));
+        if (ifBlockNode != null) {
+            ifBlockNode.visit(userTreeVisitor, scope);
         }
-
-        if (ifblock == null) {
-            throw createError(new IllegalArgumentException("Extraneous if statement."));
-        }
-
-        Input ifblockInput = new Input();
-        ifblockInput.lastSource = input.lastSource;
-        ifblockInput.inLoop = input.inLoop;
-        ifblockInput.lastLoop = input.lastLoop;
-
-        Output ifblockOutput = ifblock.analyze(scriptRoot, scope.newLocalScope(), ifblockInput);
-
-        output.anyContinue = ifblockOutput.anyContinue;
-        output.anyBreak = ifblockOutput.anyBreak;
-        output.statementCount = ifblockOutput.statementCount;
-
-        return output;
-    }
-
-    @Override
-    IfNode write(ClassNode classNode) {
-        IfNode ifNode = new IfNode();
-
-        ifNode.setConditionNode(condition.cast(condition.write(classNode)));
-        ifNode.setBlockNode(ifblock.write(classNode));
-
-        ifNode.setLocation(location);
-
-        return ifNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(condition, ifblock);
     }
 }

@@ -25,7 +25,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.oneOf;
 
 public class IndexingIT extends ESRestTestCase {
 
@@ -89,8 +90,8 @@ public class IndexingIT extends ESRestTestCase {
         final List<String> bwcNamesList = nodes.getBWCNodes().stream().map(Node::getNodeName).collect(Collectors.toList());
         final String bwcNames = bwcNamesList.stream().collect(Collectors.joining(","));
         Settings.Builder settings = Settings.builder()
-                .put(IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), 1)
-                .put(IndexMetaData.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 2)
+                .put(IndexMetadata.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), 1)
+                .put(IndexMetadata.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 2)
                 .put("index.routing.allocation.include._name", bwcNames);
         final String index = "indexversionprop";
         final int minUpdates = 5;
@@ -175,8 +176,8 @@ public class IndexingIT extends ESRestTestCase {
         final List<String> bwcNamesList = nodes.getBWCNodes().stream().map(Node::getNodeName).collect(Collectors.toList());
         final String bwcNames = bwcNamesList.stream().collect(Collectors.joining(","));
         Settings.Builder settings = Settings.builder()
-            .put(IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), 1)
-            .put(IndexMetaData.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 2)
+            .put(IndexMetadata.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), 1)
+            .put(IndexMetadata.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 2)
             .put("index.routing.allocation.include._name", bwcNames);
 
         final String index = "test";
@@ -254,8 +255,8 @@ public class IndexingIT extends ESRestTestCase {
 
         // Allocating shards on the BWC nodes to makes sure that taking snapshot happens on those nodes.
         Settings.Builder settings = Settings.builder()
-            .put(IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), between(5, 10))
-            .put(IndexMetaData.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 1)
+            .put(IndexMetadata.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), between(5, 10))
+            .put(IndexMetadata.INDEX_NUMBER_OF_REPLICAS_SETTING.getKey(), 1)
             .put("index.routing.allocation.include._name", bwcNames);
 
         final String index = "test-snapshot-index";
@@ -291,8 +292,8 @@ public class IndexingIT extends ESRestTestCase {
         int totalShards = numShards * (numOfReplicas + 1);
         final String index = "test_synced_flush";
         createIndex(index, Settings.builder()
-            .put(IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), numShards)
-            .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, numOfReplicas)
+            .put(IndexMetadata.INDEX_NUMBER_OF_SHARDS_SETTING.getKey(), numShards)
+            .put(IndexMetadata.SETTING_NUMBER_OF_REPLICAS, numOfReplicas)
             .put("index.routing.allocation.include._name", newNodes).build());
         ensureGreen(index);
         indexDocs(index, randomIntBetween(0, 100), between(1, 100));
@@ -303,7 +304,10 @@ public class IndexingIT extends ESRestTestCase {
                 ResponseException responseException = expectThrows(ResponseException.class, () -> oldNodeClient.performRequest(request));
                 assertThat(responseException.getResponse().getStatusLine().getStatusCode(), equalTo(RestStatus.CONFLICT.getStatus()));
                 assertThat(responseException.getResponse().getWarnings(),
-                    contains("Synced flush is deprecated and will be removed in 8.0. Use flush at _/flush or /{index}/_flush instead."));
+                    contains(
+                        oneOf("Synced flush is deprecated and will be removed in 8.0. Use flush at _/flush or /{index}/_flush instead.",
+                            "Synced flush is deprecated and will be removed in 8.0. Use flush at /_flush or /{index}/_flush instead.")
+                    ));
                 Map<String, Object> result = ObjectPath.createFromResponse(responseException.getResponse()).evaluate("_shards");
                 assertThat(result.get("total"), equalTo(totalShards));
                 assertThat(result.get("successful"), equalTo(0));
@@ -391,6 +395,7 @@ public class IndexingIT extends ESRestTestCase {
             seqNoStats = new SeqNoStats(maxSeqNo, localCheckpoint, globalCheckpoint);
             shards.add(new Shard(node, primary, seqNoStats));
         }
+        logger.info("shards {}", shards);
         return shards;
     }
 

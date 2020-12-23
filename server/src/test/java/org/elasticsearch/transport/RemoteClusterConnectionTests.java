@@ -80,6 +80,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -346,6 +347,7 @@ public class RemoteClusterConnectionTests extends ESTestCase {
 
     public void testRemoteConnectionInfo() throws IOException {
         List<String> remoteAddresses = Collections.singletonList("seed:1");
+        String serverName = "the_server_name";
 
         RemoteConnectionInfo.ModeInfo modeInfo1;
         RemoteConnectionInfo.ModeInfo modeInfo2;
@@ -354,8 +356,8 @@ public class RemoteClusterConnectionTests extends ESTestCase {
             modeInfo1 = new SniffConnectionStrategy.SniffModeInfo(remoteAddresses, 4, 4);
             modeInfo2 = new SniffConnectionStrategy.SniffModeInfo(remoteAddresses, 4, 3);
         } else {
-            modeInfo1 = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), 18, 18);
-            modeInfo2 = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), 18, 17);
+            modeInfo1 = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), serverName, 18, 18);
+            modeInfo2 = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), serverName,18, 17);
         }
 
         RemoteConnectionInfo stats =
@@ -395,6 +397,7 @@ public class RemoteClusterConnectionTests extends ESTestCase {
 
     public void testRenderConnectionInfoXContent() throws IOException {
         List<String> remoteAddresses = Arrays.asList("seed:1", "seed:2");
+        String serverName = "the_server_name";
 
         RemoteConnectionInfo.ModeInfo modeInfo;
 
@@ -402,7 +405,7 @@ public class RemoteClusterConnectionTests extends ESTestCase {
         if (sniff) {
             modeInfo = new SniffConnectionStrategy.SniffModeInfo(remoteAddresses, 3, 2);
         } else {
-            modeInfo = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), 18, 16);
+            modeInfo = new ProxyConnectionStrategy.ProxyModeInfo(remoteAddresses.get(0), serverName,18, 16);
         }
 
         RemoteConnectionInfo stats = new RemoteConnectionInfo("test_cluster", modeInfo, TimeValue.timeValueMinutes(30), true);
@@ -418,8 +421,8 @@ public class RemoteClusterConnectionTests extends ESTestCase {
                 "\"skip_unavailable\":true}}", Strings.toString(builder));
         } else {
             assertEquals("{\"test_cluster\":{\"connected\":true,\"mode\":\"proxy\",\"proxy_address\":\"seed:1\"," +
-                "\"num_proxy_sockets_connected\":16,\"max_proxy_socket_connections\":18,\"initial_connect_timeout\":\"30m\"," +
-                "\"skip_unavailable\":true}}", Strings.toString(builder));
+                "\"server_name\":\"the_server_name\",\"num_proxy_sockets_connected\":16,\"max_proxy_socket_connections\":18,"+
+                "\"initial_connect_timeout\":\"30m\",\"skip_unavailable\":true}}", Strings.toString(builder));
         }
     }
 
@@ -455,6 +458,35 @@ public class RemoteClusterConnectionTests extends ESTestCase {
                     assertEquals(seedNode, function.apply(seedNode.getId()));
                     assertNull(function.apply(seedNode.getId() + "foo"));
                     assertTrue(connection.assertNoRunningConnections());
+                }
+            }
+        }
+    }
+
+    public void testNoChannelsExceptREG() throws Exception {
+        List<DiscoveryNode> knownNodes = new CopyOnWriteArrayList<>();
+        try (MockTransportService seedTransport = startTransport("seed_node", knownNodes, Version.CURRENT)) {
+            DiscoveryNode seedNode = seedTransport.getLocalDiscoNode();
+            knownNodes.add(seedTransport.getLocalDiscoNode());
+            try (MockTransportService service = MockTransportService.createNewService(Settings.EMPTY, Version.CURRENT, threadPool, null)) {
+                service.start();
+                service.acceptIncomingRequests();
+                String clusterAlias = "test-cluster";
+                Settings settings = buildRandomSettings(clusterAlias, addresses(seedNode));
+
+                try (RemoteClusterConnection connection = new RemoteClusterConnection(settings, clusterAlias, service)) {
+                    PlainActionFuture<Void> plainActionFuture = new PlainActionFuture<>();
+                    connection.ensureConnected(plainActionFuture);
+                    plainActionFuture.get(10, TimeUnit.SECONDS);
+
+                    for (TransportRequestOptions.Type type : TransportRequestOptions.Type.values()) {
+                        if (type != TransportRequestOptions.Type.REG) {
+                            assertThat(expectThrows(IllegalStateException.class,
+                                    () -> connection.getConnection().sendRequest(randomNonNegativeLong(),
+                                    "arbitrary", TransportRequest.Empty.INSTANCE, TransportRequestOptions.of(null, type))).getMessage(),
+                                    allOf(containsString("can't select"), containsString(type.toString())));
+                        }
+                    }
                 }
             }
         }
@@ -557,7 +589,7 @@ public class RemoteClusterConnectionTests extends ESTestCase {
                 String clusterAlias = "test-cluster";
                 Settings settings = buildRandomSettings(clusterAlias, addresses(seedNode));
                 try (RemoteClusterConnection connection = new RemoteClusterConnection(settings, clusterAlias, service)) {
-                    PlainActionFuture.get(fut -> connection.ensureConnected(ActionListener.map(fut, x -> null)));
+                    PlainActionFuture.get(fut -> connection.ensureConnected(fut.map(x -> null)));
                     for (int i = 0; i < 10; i++) {
                         //always a direct connection as the remote node is already connected
                         Transport.Connection remoteConnection = connection.getConnection(seedNode);

@@ -20,12 +20,12 @@
 package org.elasticsearch.gradle.test
 
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.elasticsearch.gradle.AntFixtureStop
 import org.elasticsearch.gradle.AntTask
-import org.elasticsearch.gradle.LoggedExec
 import org.gradle.api.GradleException
-import org.gradle.api.Task
-import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.TaskProvider
+
 /**
  * A fixture for integration tests which runs in a separate process launched by Ant.
  */
@@ -79,7 +79,7 @@ class AntFixture extends AntTask implements Fixture {
         return tmpFile.exists()
     }
 
-    private final Task stopTask
+    private final TaskProvider<AntFixtureStop> stopTask
 
     AntFixture() {
         stopTask = createStopTask()
@@ -88,13 +88,16 @@ class AntFixture extends AntTask implements Fixture {
 
     @Override
     @Internal
-    Task getStopTask() {
+    TaskProvider<AntFixtureStop> getStopTask() {
         return stopTask
     }
 
     @Override
     protected void runAnt(AntBuilder ant) {
-        project.delete(baseDir) // reset everything
+        // reset everything
+        getFileSystemOperations().delete {
+            it.delete(baseDir)
+        }
         cwd.mkdirs()
         final String realExecutable
         final List<Object> realArgs = new ArrayList<>()
@@ -222,24 +225,13 @@ class AntFixture extends AntTask implements Fixture {
     }
 
     /** Adds a task to kill an elasticsearch node with the given pidfile */
-    private Task createStopTask() {
+    private TaskProvider<AntFixtureStop> createStopTask() {
         final AntFixture fixture = this
-        final Object pid = "${ -> fixture.pid }"
-        Exec stop = project.tasks.create(name: "${name}#stop", type: LoggedExec)
-        stop.onlyIf { fixture.pidFile.exists() }
-        stop.doFirst {
-            logger.info("Shutting down ${fixture.name} with pid ${pid}")
+        TaskProvider<AntFixtureStop> stop = project.tasks.register("${name}#stop", AntFixtureStop)
+        stop.configure {
+            it.fixture = fixture
         }
-        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-            stop.executable = 'Taskkill'
-            stop.args('/PID', pid, '/F')
-        } else {
-            stop.executable = 'kill'
-            stop.args('-9', pid)
-        }
-        stop.doLast {
-            project.delete(fixture.pidFile)
-        }
+        fixture.finalizedBy(stop)
         return stop
     }
 

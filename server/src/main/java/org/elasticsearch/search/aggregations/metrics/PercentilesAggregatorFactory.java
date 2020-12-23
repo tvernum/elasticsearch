@@ -19,15 +19,15 @@
 
 package org.elasticsearch.search.aggregations.metrics;
 
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
-import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,41 +37,50 @@ import java.util.Map;
  * This factory is used to generate both TDigest and HDRHisto aggregators, depending
  * on the selected method
  */
-class PercentilesAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource> {
+class PercentilesAggregatorFactory extends ValuesSourceAggregatorFactory {
 
+    private final PercentilesAggregatorSupplier aggregatorSupplier;
     private final double[] percents;
     private final PercentilesConfig percentilesConfig;
     private final boolean keyed;
 
-    PercentilesAggregatorFactory(String name, ValuesSourceConfig<ValuesSource> config, double[] percents,
-                                 PercentilesConfig percentilesConfig, boolean keyed, QueryShardContext queryShardContext,
+    static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        builder.register(
+            PercentilesAggregationBuilder.REGISTRY_KEY,
+            List.of(CoreValuesSourceType.NUMERIC, CoreValuesSourceType.DATE, CoreValuesSourceType.BOOLEAN),
+            (name, valuesSource, context, parent, percents, percentilesConfig, keyed, formatter, metadata) -> percentilesConfig
+                .createPercentilesAggregator(name, valuesSource, context, parent, percents, keyed, formatter, metadata),
+                true);
+    }
+
+    PercentilesAggregatorFactory(String name, ValuesSourceConfig config, double[] percents,
+                                 PercentilesConfig percentilesConfig, boolean keyed, AggregationContext context,
                                  AggregatorFactory parent, AggregatorFactories.Builder subFactoriesBuilder,
-                                 Map<String, Object> metaData) throws IOException {
-        super(name, config, queryShardContext, parent, subFactoriesBuilder, metaData);
+                                 Map<String, Object> metadata,
+                                 PercentilesAggregatorSupplier aggregatorSupplier) throws IOException {
+        super(name, config, context, parent, subFactoriesBuilder, metadata);
+        this.aggregatorSupplier = aggregatorSupplier;
         this.percents = percents;
         this.percentilesConfig = percentilesConfig;
         this.keyed = keyed;
     }
 
     @Override
-    protected Aggregator createUnmapped(SearchContext searchContext,
-                                        Aggregator parent,
-                                        List<PipelineAggregator> pipelineAggregators,
-                                        Map<String, Object> metaData) throws IOException {
+    protected Aggregator createUnmapped(Aggregator parent,
+                                        Map<String, Object> metadata) throws IOException {
 
-        return percentilesConfig.createPercentilesAggregator(name, null, searchContext, parent, percents, keyed,
-            config.format(), pipelineAggregators, metaData);
+        return percentilesConfig.createPercentilesAggregator(name, null, context, parent, percents, keyed,
+            config.format(), metadata);
     }
 
     @Override
-    protected Aggregator doCreateInternal(ValuesSource valuesSource,
-                                          SearchContext searchContext,
-                                          Aggregator parent,
-                                          boolean collectsFromSingleBucket,
-                                          List<PipelineAggregator> pipelineAggregators,
-                                          Map<String, Object> metaData) throws IOException {
-
-        return percentilesConfig.createPercentilesAggregator(name, valuesSource, searchContext, parent, percents, keyed,
-                config.format(), pipelineAggregators, metaData);
+    protected Aggregator doCreateInternal(
+        Aggregator parent,
+        CardinalityUpperBound bucketCardinality,
+        Map<String, Object> metadata
+    ) throws IOException {
+        return aggregatorSupplier
+            .build(name, config.getValuesSource(), context, parent,
+                   percents, percentilesConfig, keyed, config.format(), metadata);
     }
 }

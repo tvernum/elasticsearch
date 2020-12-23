@@ -24,18 +24,17 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryRewriteContext;
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.AbstractAggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValueType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
-import org.elasticsearch.search.aggregations.support.ValuesSource.Bytes;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
@@ -50,16 +49,16 @@ import java.util.Objects;
  * doesn't support any "server" side things like
  * {@linkplain Writeable#writeTo(StreamOutput)},
  * {@linkplain AggregationBuilder#rewrite(QueryRewriteContext)}, or
- * {@linkplain AbstractAggregationBuilder#build(QueryShardContext, AggregatorFactory)}.
+ * {@linkplain AbstractAggregationBuilder#build(AggregationContext, AggregatorFactory)}.
  */
-public class StringStatsAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource.Bytes, StringStatsAggregationBuilder> {
+public class StringStatsAggregationBuilder extends ValuesSourceAggregationBuilder<StringStatsAggregationBuilder> {
     public static final String NAME = "string_stats";
     private static final ParseField SHOW_DISTRIBUTION_FIELD = new ParseField("show_distribution");
 
     private boolean showDistribution = false;
 
     public StringStatsAggregationBuilder(String name) {
-        super(name, CoreValuesSourceType.BYTES, ValueType.STRING);
+        super(name);
     }
 
     /**
@@ -72,8 +71,19 @@ public class StringStatsAggregationBuilder extends ValuesSourceAggregationBuilde
     }
 
     @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.BYTES;
+    }
+
+    @Override
     public String getType() {
         return NAME;
+    }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() {
+        // This would be called from the same thing that calls innerBuild, which also throws.  So it's "safe" to throw here.
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -87,13 +97,18 @@ public class StringStatsAggregationBuilder extends ValuesSourceAggregationBuilde
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<Bytes> innerBuild(QueryShardContext queryShardContext, ValuesSourceConfig<Bytes> config,
-            AggregatorFactory parent, Builder subFactoriesBuilder) throws IOException {
+    public BucketCardinality bucketCardinality() {
+        return BucketCardinality.NONE;
+    }
+
+    @Override
+    protected ValuesSourceAggregatorFactory innerBuild(AggregationContext context, ValuesSourceConfig config,
+        AggregatorFactory parent, Builder subFactoriesBuilder) throws IOException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected AggregationBuilder shallowCopy(Builder factoriesBuilder, Map<String, Object> metaData) {
+    protected AggregationBuilder shallowCopy(Builder factoriesBuilder, Map<String, Object> metadata) {
         throw new UnsupportedOperationException();
     }
 

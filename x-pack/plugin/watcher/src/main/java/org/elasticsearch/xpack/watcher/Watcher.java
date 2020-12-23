@@ -17,7 +17,8 @@ import org.elasticsearch.bootstrap.BootstrapCheck;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.OriginSettingClient;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
-import org.elasticsearch.cluster.metadata.IndexTemplateMetaData;
+import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
+import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.Booleans;
@@ -41,13 +42,14 @@ import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.index.IndexModule;
 import org.elasticsearch.indices.SystemIndexDescriptor;
 import org.elasticsearch.license.XPackLicenseState;
-import org.elasticsearch.node.Node;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.ReloadablePlugin;
 import org.elasticsearch.plugins.ScriptPlugin;
 import org.elasticsearch.plugins.SystemIndexPlugin;
+import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
+import org.elasticsearch.script.ScriptCache;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.TemplateScript;
@@ -69,6 +71,7 @@ import org.elasticsearch.xpack.core.watcher.execution.TriggeredWatchStoreField;
 import org.elasticsearch.xpack.core.watcher.history.HistoryStoreField;
 import org.elasticsearch.xpack.core.watcher.input.none.NoneInput;
 import org.elasticsearch.xpack.core.watcher.transform.TransformRegistry;
+import org.elasticsearch.xpack.core.watcher.transport.actions.QueryWatchesAction;
 import org.elasticsearch.xpack.core.watcher.transport.actions.ack.AckWatchAction;
 import org.elasticsearch.xpack.core.watcher.transport.actions.activate.ActivateWatchAction;
 import org.elasticsearch.xpack.core.watcher.transport.actions.delete.DeleteWatchAction;
@@ -141,6 +144,7 @@ import org.elasticsearch.xpack.watcher.rest.action.RestActivateWatchAction.Deact
 import org.elasticsearch.xpack.watcher.rest.action.RestDeleteWatchAction;
 import org.elasticsearch.xpack.watcher.rest.action.RestExecuteWatchAction;
 import org.elasticsearch.xpack.watcher.rest.action.RestGetWatchAction;
+import org.elasticsearch.xpack.watcher.rest.action.RestQueryWatchesAction;
 import org.elasticsearch.xpack.watcher.rest.action.RestPutWatchAction;
 import org.elasticsearch.xpack.watcher.rest.action.RestWatchServiceAction;
 import org.elasticsearch.xpack.watcher.rest.action.RestWatcherStatsAction;
@@ -151,14 +155,15 @@ import org.elasticsearch.xpack.watcher.transform.script.ScriptTransformFactory;
 import org.elasticsearch.xpack.watcher.transform.script.WatcherTransformScript;
 import org.elasticsearch.xpack.watcher.transform.search.SearchTransform;
 import org.elasticsearch.xpack.watcher.transform.search.SearchTransformFactory;
-import org.elasticsearch.xpack.watcher.transport.actions.ack.TransportAckWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.activate.TransportActivateWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.delete.TransportDeleteWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.execute.TransportExecuteWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.get.TransportGetWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.put.TransportPutWatchAction;
-import org.elasticsearch.xpack.watcher.transport.actions.service.TransportWatcherServiceAction;
-import org.elasticsearch.xpack.watcher.transport.actions.stats.TransportWatcherStatsAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportQueryWatchesAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportAckWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportActivateWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportDeleteWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportExecuteWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportGetWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportPutWatchAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportWatcherServiceAction;
+import org.elasticsearch.xpack.watcher.transport.actions.TransportWatcherStatsAction;
 import org.elasticsearch.xpack.watcher.trigger.TriggerEngine;
 import org.elasticsearch.xpack.watcher.trigger.TriggerService;
 import org.elasticsearch.xpack.watcher.trigger.manual.ManualTriggerEngine;
@@ -177,8 +182,6 @@ import org.elasticsearch.xpack.watcher.watch.WatchParser;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Clock;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -209,6 +212,8 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
             Setting.boolSetting("xpack.watcher.encrypt_sensitive_data", false, Setting.Property.NodeScope);
     public static final Setting<TimeValue> MAX_STOP_TIMEOUT_SETTING =
             Setting.timeSetting("xpack.watcher.stop.timeout", TimeValue.timeValueSeconds(30), Setting.Property.NodeScope);
+    public static final Setting<Boolean> USE_ILM_INDEX_MANAGEMENT =
+        Setting.boolSetting("xpack.watcher.use_ilm_index_management", true, NodeScope);
     private static final Setting<Integer> SETTING_BULK_ACTIONS =
         Setting.intSetting("xpack.watcher.bulk.actions", 1, 1, 10000, NodeScope);
     private static final Setting<Integer> SETTING_BULK_CONCURRENT_REQUESTS =
@@ -220,7 +225,8 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
             new ByteSizeValue(1, ByteSizeUnit.MB), new ByteSizeValue(10, ByteSizeUnit.MB), NodeScope);
 
     public static final ScriptContext<TemplateScript.Factory> SCRIPT_TEMPLATE_CONTEXT
-        = new ScriptContext<>("xpack_template", TemplateScript.Factory.class);
+        = new ScriptContext<>("xpack_template", TemplateScript.Factory.class,
+        200, TimeValue.timeValueMillis(0), ScriptCache.UNLIMITED_COMPILATION_RATE.asTuple());
 
     private static final Logger logger = LogManager.getLogger(Watcher.class);
     private WatcherIndexingListener listener;
@@ -250,7 +256,8 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
                                                ResourceWatcherService resourceWatcherService, ScriptService scriptService,
                                                NamedXContentRegistry xContentRegistry, Environment environment,
                                                NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
-                                               IndexNameExpressionResolver expressionResolver) {
+                                               IndexNameExpressionResolver expressionResolver,
+                                               Supplier<RepositoriesService> repositoriesServiceSupplier) {
         if (enabled == false) {
             return Collections.emptyList();
         }
@@ -266,7 +273,9 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
             throw new UncheckedIOException(e);
         }
 
-        new WatcherIndexTemplateRegistry(environment.settings(), clusterService, threadPool, client, xContentRegistry);
+        WatcherIndexTemplateRegistry templateRegistry = new WatcherIndexTemplateRegistry(environment.settings(),
+            clusterService, threadPool, client, xContentRegistry);
+        templateRegistry.initialize();
 
         final SSLService sslService = getSslService();
         // http client
@@ -419,7 +428,7 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
         final WatcherLifeCycleService watcherLifeCycleService =
                 new WatcherLifeCycleService(clusterService, watcherService);
 
-        listener = new WatcherIndexingListener(watchParser, getClock(), triggerService);
+        listener = new WatcherIndexingListener(watchParser, getClock(), triggerService, watcherLifeCycleService.getState());
         clusterService.addListener(listener);
 
         // note: clock is needed here until actions can be constructed directly instead of by guice
@@ -451,6 +460,7 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
         settings.add(Setting.intSetting("xpack.watcher.watch.scroll.size", 0, Setting.Property.NodeScope));
         settings.add(ENCRYPT_SENSITIVE_DATA_SETTING);
         settings.add(WatcherField.ENCRYPTION_KEY_SETTING);
+        settings.add(USE_ILM_INDEX_MANAGEMENT);
 
         settings.add(Setting.simpleString("xpack.watcher.internal.ops.search.default_timeout", Setting.Property.NodeScope));
         settings.add(Setting.simpleString("xpack.watcher.internal.ops.bulk.default_timeout", Setting.Property.NodeScope));
@@ -521,12 +531,12 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
      * @return A number between 5 and the number of processors
      */
     static int getWatcherThreadPoolSize(final Settings settings) {
-        return getWatcherThreadPoolSize(Node.NODE_DATA_SETTING.get(settings), EsExecutors.numberOfProcessors(settings));
+        return getWatcherThreadPoolSize(DiscoveryNode.isDataNode(settings), EsExecutors.allocatedProcessors(settings));
     }
 
-    static int getWatcherThreadPoolSize(final boolean isDataNode, final int numberOfProcessors) {
+    static int getWatcherThreadPoolSize(final boolean isDataNode, final int allocatedProcessors) {
         if (isDataNode) {
-            final long size = Math.max(Math.min(5 * numberOfProcessors, 50), numberOfProcessors);
+            final long size = Math.max(Math.min(5 * allocatedProcessors, 50), allocatedProcessors);
             return Math.toIntExact(size);
         } else {
             return 1;
@@ -548,6 +558,7 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
                 new ActionHandler<>(ActivateWatchAction.INSTANCE, TransportActivateWatchAction.class),
                 new ActionHandler<>(WatcherServiceAction.INSTANCE, TransportWatcherServiceAction.class),
                 new ActionHandler<>(ExecuteWatchAction.INSTANCE, TransportExecuteWatchAction.class),
+                new ActionHandler<>(QueryWatchesAction.INSTANCE, TransportQueryWatchesAction.class),
                 usageAction,
                 infoAction);
     }
@@ -569,7 +580,8 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
                 new RestAckWatchAction(),
                 new RestActivateWatchAction(),
                 new DeactivateRestHandler(),
-                new RestExecuteWatchAction());
+                new RestExecuteWatchAction(),
+                new RestQueryWatchesAction());
     }
 
     @Override
@@ -592,7 +604,7 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
 
         String errorMessage = LoggerMessageFormat.format("the [action.auto_create_index] setting value [{}] is too" +
                 " restrictive. disable [action.auto_create_index] or set it to " +
-                "[{},{},{}*]", (Object) value, Watch.INDEX, TriggeredWatchStoreField.INDEX_NAME, HistoryStoreField.INDEX_PREFIX);
+                "[{},{}]", (Object) value, Watch.INDEX, TriggeredWatchStoreField.INDEX_NAME);
         if (Booleans.isFalse(value)) {
             throw new IllegalArgumentException(errorMessage);
         }
@@ -605,15 +617,6 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
         List<String> indices = new ArrayList<>();
         indices.add(".watches");
         indices.add(".triggered_watches");
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusDays(1)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(1)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(2)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(3)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(4)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(5)));
-        indices.add(HistoryStoreField.getHistoryIndexNameForTime(now.plusMonths(6)));
         for (String index : indices) {
             boolean matched = false;
             for (String match : matches) {
@@ -646,7 +649,7 @@ public class Watcher extends Plugin implements SystemIndexPlugin, ScriptPlugin, 
 
     // These are all old templates from pre 6.0 era, that need to be deleted
     @Override
-    public UnaryOperator<Map<String, IndexTemplateMetaData>> getIndexTemplateMetaDataUpgrader() {
+    public UnaryOperator<Map<String, IndexTemplateMetadata>> getIndexTemplateMetadataUpgrader() {
         return map -> {
             map.keySet().removeIf(name -> name.startsWith("watch_history_"));
             return map;

@@ -19,6 +19,7 @@
 
 package org.elasticsearch.rest.action.cat;
 
+import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.TaskGroup;
 import org.elasticsearch.client.node.NodeClient;
@@ -31,6 +32,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.action.RestResponseListener;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.tasks.TaskInfo;
 
 import java.time.Instant;
@@ -70,8 +72,9 @@ public class RestTasksAction extends AbstractCatAction {
 
     @Override
     public RestChannelConsumer doCatRequest(final RestRequest request, final NodeClient client) {
+        final ListTasksRequest listTasksRequest = generateListTasksRequest(request);
         return channel ->
-                client.admin().cluster().listTasks(generateListTasksRequest(request), new RestResponseListener<ListTasksResponse>(channel) {
+                client.admin().cluster().listTasks(listTasksRequest, new RestResponseListener<>(channel) {
             @Override
             public RestResponse buildResponse(ListTasksResponse listTasksResponse) throws Exception {
                 return RestTable.buildResponse(buildTable(request, listTasksResponse), channel);
@@ -116,6 +119,7 @@ public class RestTasksAction extends AbstractCatAction {
         table.addCell("port", "default:false;alias:po;desc:bound transport port");
         table.addCell("node", "default:true;alias:n;desc:node name");
         table.addCell("version", "default:false;alias:v;desc:es version");
+        table.addCell("x_opaque_id", "default:false;alias:x;desc:X-Opaque-ID header");
 
         // Task detailed info
         if (detailed) {
@@ -144,7 +148,7 @@ public class RestTasksAction extends AbstractCatAction {
         table.addCell(taskInfo.getStartTime());
         table.addCell(FORMATTER.format(Instant.ofEpochMilli(taskInfo.getStartTime())));
         table.addCell(taskInfo.getRunningTimeNanos());
-        table.addCell(TimeValue.timeValueNanos(taskInfo.getRunningTimeNanos()).toString());
+        table.addCell(TimeValue.timeValueNanos(taskInfo.getRunningTimeNanos()));
 
         // Node information. Note that the node may be null because it has left the cluster between when we got this response and now.
         table.addCell(fullId ? nodeId : Strings.substring(nodeId, 0, 4));
@@ -152,6 +156,7 @@ public class RestTasksAction extends AbstractCatAction {
         table.addCell(node.getAddress().address().getPort());
         table.addCell(node == null ? "-" : node.getName());
         table.addCell(node == null ? "-" : node.getVersion().toString());
+        table.addCell(taskInfo.getHeaders().getOrDefault(Task.X_OPAQUE_ID, "-"));
 
         if (detailed) {
             table.addCell(taskInfo.getDescription());

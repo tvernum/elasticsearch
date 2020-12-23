@@ -67,6 +67,8 @@ import org.elasticsearch.search.aggregations.bucket.composite.CompositeValuesSou
 import org.elasticsearch.search.aggregations.bucket.composite.TermsValuesSourceBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.Range;
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.RareTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.RareTermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.matrix.stats.MatrixStats;
@@ -98,6 +100,7 @@ import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertFirs
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSecondHit;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertToXContentEquivalent;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.hasId;
+import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
@@ -257,7 +260,8 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
     public void testSearchWithTermsAgg() throws IOException {
         SearchRequest searchRequest = new SearchRequest();
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.aggregation(new TermsAggregationBuilder("agg1", ValueType.STRING).field("type.keyword"));
+        searchSourceBuilder.aggregation(new TermsAggregationBuilder("agg1").userValueTypeHint(ValueType.STRING)
+            .field("type.keyword"));
         searchSourceBuilder.size(0);
         searchRequest.source(searchSourceBuilder);
         SearchResponse searchResponse = execute(searchRequest, highLevelClient()::search, highLevelClient()::searchAsync);
@@ -273,6 +277,26 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
         assertEquals(3, type1.getDocCount());
         assertEquals(0, type1.getAggregations().asList().size());
         Terms.Bucket type2 = termsAgg.getBucketByKey("type2");
+        assertEquals(2, type2.getDocCount());
+        assertEquals(0, type2.getAggregations().asList().size());
+    }
+
+    public void testSearchWithRareTermsAgg() throws IOException {
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.aggregation(new RareTermsAggregationBuilder("agg1").userValueTypeHint(ValueType.STRING)
+            .field("type.keyword").maxDocCount(2));
+        searchSourceBuilder.size(0);
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse = execute(searchRequest, highLevelClient()::search, highLevelClient()::searchAsync);
+        assertSearchHeader(searchResponse);
+        assertNull(searchResponse.getSuggest());
+        assertEquals(Collections.emptyMap(), searchResponse.getProfileResults());
+        assertEquals(0, searchResponse.getHits().getHits().length);
+        RareTerms termsAgg = searchResponse.getAggregations().get("agg1");
+        assertEquals("agg1", termsAgg.getName());
+        assertEquals(1, termsAgg.getBuckets().size());
+        RareTerms.Bucket type2 = termsAgg.getBucketByKey("type2");
         assertEquals(2, type2.getDocCount());
         assertEquals(0, type2.getAggregations().asList().size());
     }
@@ -349,7 +373,7 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
     public void testSearchWithTermsAndRangeAgg() throws IOException {
         SearchRequest searchRequest = new SearchRequest("index");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        TermsAggregationBuilder agg = new TermsAggregationBuilder("agg1", ValueType.STRING).field("type.keyword");
+        TermsAggregationBuilder agg = new TermsAggregationBuilder("agg1").userValueTypeHint(ValueType.STRING).field("type.keyword");
         agg.subAggregation(new RangeAggregationBuilder("subagg").field("num")
                 .addRange("first", 0, 30).addRange("second", 31, 200));
         searchSourceBuilder.aggregation(agg);
@@ -403,7 +427,7 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
     public void testSearchWithTermsAndWeightedAvg() throws IOException {
         SearchRequest searchRequest = new SearchRequest("index");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        TermsAggregationBuilder agg = new TermsAggregationBuilder("agg1", ValueType.STRING).field("type.keyword");
+        TermsAggregationBuilder agg = new TermsAggregationBuilder("agg1").userValueTypeHint(ValueType.STRING).field("type.keyword");
         agg.subAggregation(new WeightedAvgAggregationBuilder("subagg")
             .value(new MultiValuesSourceFieldConfig.Builder().setFieldName("num").build())
             .weight(new MultiValuesSourceFieldConfig.Builder().setFieldName("num2").build())
@@ -529,10 +553,12 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
         client().performRequest(answerDoc2);
         client().performRequest(new Request(HttpPost.METHOD_NAME, "/_refresh"));
 
-        TermsAggregationBuilder leafTermAgg = new TermsAggregationBuilder("top-names", ValueType.STRING)
+        TermsAggregationBuilder leafTermAgg = new TermsAggregationBuilder("top-names")
+                .userValueTypeHint(ValueType.STRING)
                 .field("owner.display_name.keyword").size(10);
         ChildrenAggregationBuilder childrenAgg = new ChildrenAggregationBuilder("to-answers", "answer").subAggregation(leafTermAgg);
-        TermsAggregationBuilder termsAgg = new TermsAggregationBuilder("top-tags", ValueType.STRING).field("tags.keyword")
+        TermsAggregationBuilder termsAgg = new TermsAggregationBuilder("top-tags").userValueTypeHint(ValueType.STRING)
+                .field("tags.keyword")
                 .size(10).subAggregation(childrenAgg);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(0).aggregation(termsAgg);
@@ -744,15 +770,18 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
     public void testMultiSearch_withAgg() throws Exception {
         MultiSearchRequest multiSearchRequest = new MultiSearchRequest();
         SearchRequest searchRequest1 = new SearchRequest("index1");
-        searchRequest1.source().size(0).aggregation(new TermsAggregationBuilder("name", ValueType.STRING).field("field.keyword")
+        searchRequest1.source().size(0).aggregation(new TermsAggregationBuilder("name").userValueTypeHint(ValueType.STRING)
+                .field("field.keyword")
                 .order(BucketOrder.key(true)));
         multiSearchRequest.add(searchRequest1);
         SearchRequest searchRequest2 = new SearchRequest("index2");
-        searchRequest2.source().size(0).aggregation(new TermsAggregationBuilder("name", ValueType.STRING).field("field.keyword")
+        searchRequest2.source().size(0).aggregation(new TermsAggregationBuilder("name").userValueTypeHint(ValueType.STRING)
+                .field("field.keyword")
                 .order(BucketOrder.key(true)));
         multiSearchRequest.add(searchRequest2);
         SearchRequest searchRequest3 = new SearchRequest("index3");
-        searchRequest3.source().size(0).aggregation(new TermsAggregationBuilder("name", ValueType.STRING).field("field.keyword")
+        searchRequest3.source().size(0).aggregation(new TermsAggregationBuilder("name").userValueTypeHint(ValueType.STRING)
+                .field("field.keyword")
                 .order(BucketOrder.key(true)));
         multiSearchRequest.add(searchRequest3);
 
@@ -1221,7 +1250,7 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
         FieldCapabilitiesResponse response = execute(request,
             highLevelClient()::fieldCaps, highLevelClient()::fieldCapsAsync);
 
-        assertEquals(new String[] {"index1", "index2"}, response.getIndices());
+        assertThat(response.getIndices(), arrayContaining("index1", "index2"));
 
         // Check the capabilities for the 'rating' field.
         assertTrue(response.get().containsKey("rating"));
@@ -1293,14 +1322,6 @@ public class SearchIT extends ESRestHighLevelClientTestCase {
         CountRequest countRequest = new CountRequest();
         CountResponse countResponse = execute(countRequest, highLevelClient()::count, highLevelClient()::countAsync);
         assertCountHeader(countResponse);
-        // add logging to get more info about why https://github.com/elastic/elasticsearch/issues/35644 is failing
-        // TODO remove this once #35644 is fixed
-        if (countResponse.getCount() != 12) {
-            SearchRequest searchRequest = new SearchRequest();
-            searchRequest.source(new SearchSourceBuilder().size(20));
-            SearchResponse searchResponse = execute(searchRequest, highLevelClient()::search, highLevelClient()::searchAsync);
-            logger.info("Unexpected hit count, was expecting 12 hits but got: " + searchResponse.toString());
-        }
         assertEquals(12, countResponse.getCount());
     }
 

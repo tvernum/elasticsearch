@@ -19,6 +19,7 @@ import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.license.License;
@@ -68,7 +69,7 @@ public class ClusterStatsCollectorTests extends BaseCollectorTestCase {
     public void testShouldCollectReturnsFalseIfNotMaster() {
         final ClusterStatsCollector collector =
                 new ClusterStatsCollector(Settings.EMPTY, clusterService, licenseState, client, licenseService,
-                    new IndexNameExpressionResolver());
+                    new IndexNameExpressionResolver(new ThreadContext(Settings.EMPTY)));
 
         assertThat(collector.shouldCollect(false), is(false));
     }
@@ -76,7 +77,7 @@ public class ClusterStatsCollectorTests extends BaseCollectorTestCase {
     public void testShouldCollectReturnsTrue() {
         final ClusterStatsCollector collector =
                 new ClusterStatsCollector(Settings.EMPTY, clusterService, licenseState, client, licenseService,
-                    new IndexNameExpressionResolver());
+                    new IndexNameExpressionResolver(new ThreadContext(Settings.EMPTY)));
 
         assertThat(collector.shouldCollect(true), is(true));
     }
@@ -206,7 +207,7 @@ public class ClusterStatsCollectorTests extends BaseCollectorTestCase {
             .thenReturn(indices);
 
         final XPackUsageResponse xPackUsageResponse = new XPackUsageResponse(
-            singletonList(new MonitoringFeatureSetUsage(true, true, false, null)));
+            singletonList(new MonitoringFeatureSetUsage(false, null)));
 
         @SuppressWarnings("unchecked")
         final ActionFuture<XPackUsageResponse> xPackUsageFuture = (ActionFuture<XPackUsageResponse>) mock(ActionFuture.class);
@@ -258,8 +259,8 @@ public class ClusterStatsCollectorTests extends BaseCollectorTestCase {
         assertThat(document.getClusterState().stateUUID(), equalTo(clusterState.stateUUID()));
 
         verify(clusterService, times(1)).getClusterName();
-        verify(clusterState, times(1)).metaData();
-        verify(metaData, times(1)).clusterUUID();
+        verify(clusterState, times(1)).metadata();
+        verify(metadata, times(1)).clusterUUID();
         verify(licenseService, times(1)).getLicense();
         verify(clusterAdminClient).prepareClusterStats();
         verify(client).execute(same(XPackUsageAction.INSTANCE), any(XPackUsageRequest.class));
@@ -305,7 +306,7 @@ public class ClusterStatsCollectorTests extends BaseCollectorTestCase {
             when(client.admin()).thenReturn(adminClient);
 
             final XPackUsageResponse xPackUsageResponse = new XPackUsageResponse(
-                singletonList(new MonitoringFeatureSetUsage(true, true, false, null)));
+                singletonList(new MonitoringFeatureSetUsage(false, null)));
             @SuppressWarnings("unchecked")
             final ActionFuture<XPackUsageResponse> xPackUsageFuture = (ActionFuture<XPackUsageResponse>) mock(ActionFuture.class);
             when(client.execute(same(XPackUsageAction.INSTANCE), any(XPackUsageRequest.class))).thenReturn(xPackUsageFuture);

@@ -1,8 +1,3 @@
-setup:
-  - skip:
-      version: "all"
-      reason:  "Until backport of https://github.com/elastic/elasticsearch/pull/52763"
-
 ---
 "Get old outlier_detection job":
 
@@ -34,7 +29,6 @@ setup:
 
 ---
 "Start and stop old outlier_detection job":
-
   - do:
       ml.start_data_frame_analytics:
         id: "old_cluster_outlier_detection_job"
@@ -124,7 +118,6 @@ setup:
 
 ---
 "Put an outlier_detection job on the mixed cluster":
-
   - do:
       ml.put_data_frame_analytics:
         id: "mixed_cluster_outlier_detection_job"
@@ -175,7 +168,7 @@ setup:
   - match: { data_frame_analytics.0.state: "stopped" }
 
 ---
-"Put and delete a job":
+"Put and delete jobs":
 
   - do:
       ml.put_data_frame_analytics:
@@ -189,6 +182,56 @@ setup:
               "index": "mixed_cluster_job_to_delete_results"
             },
             "analysis": {"outlier_detection":{}}
+          }
+  - match: { id: "mixed_cluster_job_to_delete" }
+
+  - do:
+      ml.delete_data_frame_analytics:
+        id: mixed_cluster_job_to_delete
+  - match: { acknowledged: true }
+
+  - do:
+      ml.put_data_frame_analytics:
+        id: "mixed_cluster_job_to_delete"
+        body: >
+          {
+            "source": {
+              "index": "bwc_ml_classification_job_source",
+              "query": {"term" : { "user.keyword" : "Kimchy" }}
+            },
+            "dest": {
+              "index": "old_cluster_classification_job_results"
+            },
+            "analysis": {
+              "classification":{
+                "dependent_variable": "foo"
+              }
+            }
+          }
+  - match: { id: "mixed_cluster_job_to_delete" }
+
+  - do:
+      ml.delete_data_frame_analytics:
+        id: mixed_cluster_job_to_delete
+  - match: { acknowledged: true }
+
+  - do:
+      ml.put_data_frame_analytics:
+        id: "mixed_cluster_job_to_delete"
+        body: >
+          {
+            "source": {
+              "index": "bwc_ml_regression_job_source",
+              "query": {"term" : { "user.keyword" : "Kimchy" }}
+            },
+            "dest": {
+              "index": "old_cluster_regression_job_results"
+            },
+            "analysis": {
+              "regression":{
+                "dependent_variable": "foo"
+              }
+            }
           }
   - match: { id: "mixed_cluster_job_to_delete" }
 

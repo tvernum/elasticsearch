@@ -219,6 +219,7 @@ public class ClusterConnectionManager implements ConnectionManager {
         return connectedNodes.size();
     }
 
+    @Override
     public Set<DiscoveryNode> getAllConnectedNodes() {
         return Collections.unmodifiableSet(connectedNodes.keySet());
     }
@@ -250,7 +251,7 @@ public class ClusterConnectionManager implements ConnectionManager {
 
     private void internalOpenConnection(DiscoveryNode node, ConnectionProfile connectionProfile,
                                         ActionListener<Transport.Connection> listener) {
-        transport.openConnection(node, connectionProfile, ActionListener.map(listener, connection -> {
+        transport.openConnection(node, connectionProfile, listener.map(connection -> {
             assert Transports.assertNotTransportThread("internalOpenConnection success");
             try {
                 connectionListener.onConnectionOpened(connection);

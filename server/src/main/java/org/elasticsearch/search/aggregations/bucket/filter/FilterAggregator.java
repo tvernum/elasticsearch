@@ -24,16 +24,15 @@ import org.apache.lucene.util.Bits;
 import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregator;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
-import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -47,10 +46,11 @@ public class FilterAggregator extends BucketsAggregator implements SingleBucketA
     public FilterAggregator(String name,
                             Supplier<Weight> filter,
                             AggregatorFactories factories,
-                            SearchContext context,
-                            Aggregator parent, List<PipelineAggregator> pipelineAggregators,
-                            Map<String, Object> metaData) throws IOException {
-        super(name, factories, context, parent, pipelineAggregators, metaData);
+                            AggregationContext context,
+                            Aggregator parent,
+                            CardinalityUpperBound cardinality,
+                            Map<String, Object> metadata) throws IOException {
+        super(name, factories, context, parent, cardinality, metadata);
         this.filter = filter;
     }
 
@@ -70,14 +70,14 @@ public class FilterAggregator extends BucketsAggregator implements SingleBucketA
     }
 
     @Override
-    public InternalAggregation buildAggregation(long owningBucketOrdinal) throws IOException {
-        return new InternalFilter(name, bucketDocCount(owningBucketOrdinal), bucketAggregations(owningBucketOrdinal), pipelineAggregators(),
-                metaData());
+    public InternalAggregation[] buildAggregations(long[] owningBucketOrds) throws IOException {
+        return buildAggregationsForSingleBucket(owningBucketOrds, (owningBucketOrd, subAggregationResults) ->
+            new InternalFilter(name, bucketDocCount(owningBucketOrd), subAggregationResults, metadata()));
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalFilter(name, 0, buildEmptySubAggregations(), pipelineAggregators(), metaData());
+        return new InternalFilter(name, 0, buildEmptySubAggregations(), metadata());
     }
 }
 

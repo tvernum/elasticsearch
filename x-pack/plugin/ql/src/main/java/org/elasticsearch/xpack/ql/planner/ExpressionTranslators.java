@@ -12,6 +12,7 @@ import org.elasticsearch.xpack.ql.expression.Expression;
 import org.elasticsearch.xpack.ql.expression.Expressions;
 import org.elasticsearch.xpack.ql.expression.FieldAttribute;
 import org.elasticsearch.xpack.ql.expression.function.scalar.ScalarFunction;
+import org.elasticsearch.xpack.ql.expression.function.scalar.string.StartsWith;
 import org.elasticsearch.xpack.ql.expression.predicate.Range;
 import org.elasticsearch.xpack.ql.expression.predicate.fulltext.MatchQueryPredicate;
 import org.elasticsearch.xpack.ql.expression.predicate.fulltext.MultiMatchQueryPredicate;
@@ -19,50 +20,66 @@ import org.elasticsearch.xpack.ql.expression.predicate.fulltext.StringQueryPredi
 import org.elasticsearch.xpack.ql.expression.predicate.logical.And;
 import org.elasticsearch.xpack.ql.expression.predicate.logical.Not;
 import org.elasticsearch.xpack.ql.expression.predicate.logical.Or;
+import org.elasticsearch.xpack.ql.expression.predicate.nulls.IsNotNull;
+import org.elasticsearch.xpack.ql.expression.predicate.nulls.IsNull;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.BinaryComparison;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.Equals;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.GreaterThan;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.GreaterThanOrEqual;
+import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.In;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.LessThan;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.LessThanOrEqual;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.NotEquals;
 import org.elasticsearch.xpack.ql.expression.predicate.operator.comparison.NullEquals;
 import org.elasticsearch.xpack.ql.expression.predicate.regex.Like;
-import org.elasticsearch.xpack.ql.expression.predicate.regex.LikePattern;
 import org.elasticsearch.xpack.ql.expression.predicate.regex.RLike;
 import org.elasticsearch.xpack.ql.expression.predicate.regex.RegexMatch;
 import org.elasticsearch.xpack.ql.querydsl.query.BoolQuery;
+import org.elasticsearch.xpack.ql.querydsl.query.ExistsQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.MatchQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.MultiMatchQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.NotQuery;
+import org.elasticsearch.xpack.ql.querydsl.query.PrefixQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.Query;
 import org.elasticsearch.xpack.ql.querydsl.query.QueryStringQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.RangeQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.RegexQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.ScriptQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.TermQuery;
+import org.elasticsearch.xpack.ql.querydsl.query.TermsQuery;
 import org.elasticsearch.xpack.ql.querydsl.query.WildcardQuery;
 import org.elasticsearch.xpack.ql.tree.Source;
+import org.elasticsearch.xpack.ql.type.DataType;
+import org.elasticsearch.xpack.ql.type.DataTypes;
 import org.elasticsearch.xpack.ql.util.Check;
+import org.elasticsearch.xpack.ql.util.CollectionUtils;
 import org.elasticsearch.xpack.ql.util.Holder;
 
 import java.time.OffsetTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAccessor;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+
+import static org.elasticsearch.xpack.ql.type.DataTypes.DATETIME;
 
 public final class ExpressionTranslators {
 
     public static final String DATE_FORMAT = "strict_date_time";
     public static final String TIME_FORMAT = "strict_hour_minute_second_millis";
 
-    
+
     public static final List<ExpressionTranslator<?>> QUERY_TRANSLATORS = List.of(
             new BinaryComparisons(),
             new Ranges(),
             new BinaryLogic(),
+            new IsNulls(),
+            new IsNotNulls(),
             new Nots(),
             new Likes(),
+            new InComparisons(),
             new StringQueries(),
             new Matches(),
             new MultiMatches(),
@@ -85,6 +102,13 @@ public final class ExpressionTranslators {
         throw new QlIllegalArgumentException("Don't know how to translate {} {}", e.nodeName(), e);
     }
 
+    public static Object valueOf(Expression e) {
+        if (e.foldable()) {
+            return e.fold();
+        }
+        throw new QlIllegalArgumentException("Cannot determine value for {}", e);
+    }
+
     // TODO: see whether escaping is needed
     @SuppressWarnings("rawtypes")
     public static class Likes extends ExpressionTranslator<RegexMatch> {
@@ -100,19 +124,17 @@ public final class ExpressionTranslators {
 
             if (e.field() instanceof FieldAttribute) {
                 targetFieldName = handler.nameOf(((FieldAttribute) e.field()).exactAttribute());
+                if (e instanceof Like) {
+                    Like l = (Like) e;
+                    q = new WildcardQuery(e.source(), targetFieldName, l.pattern().asLuceneWildcard(), l.caseInsensitive());
+                }
+
+                if (e instanceof RLike) {
+                    String pattern = ((RLike) e).pattern().asJavaRegex();
+                    q = new RegexQuery(e.source(), targetFieldName, pattern);
+                }
             } else {
-                throw new QlIllegalArgumentException("Scalar function [{}] not allowed (yet) as argument for " + e.sourceText(),
-                        Expressions.name(e.field()));
-            }
-
-            if (e instanceof Like) {
-                LikePattern p = ((Like) e).pattern();
-                q = new WildcardQuery(e.source(), targetFieldName, p.asLuceneWildcard());
-            }
-
-            if (e instanceof RLike) {
-                String pattern = ((RLike) e).pattern();
-                q = new RegexQuery(e.source(), targetFieldName, pattern);
+                q = new ScriptQuery(e.source(), e.asScript());
             }
 
             return wrapIfNested(q, e.field());
@@ -188,6 +210,46 @@ public final class ExpressionTranslators {
         }
     }
 
+    public static class IsNotNulls extends ExpressionTranslator<IsNotNull> {
+
+        @Override
+        protected Query asQuery(IsNotNull isNotNull, TranslatorHandler handler) {
+            return doTranslate(isNotNull, handler);
+        }
+
+        public static Query doTranslate(IsNotNull isNotNull, TranslatorHandler handler) {
+            Query query = null;
+
+            if (isNotNull.field() instanceof FieldAttribute) {
+                query = new ExistsQuery(isNotNull.source(), handler.nameOf(isNotNull.field()));
+            } else {
+                query = new ScriptQuery(isNotNull.source(), isNotNull.asScript());
+            }
+
+            return handler.wrapFunctionQuery(isNotNull, isNotNull.field(), query);
+        }
+    }
+
+    public static class IsNulls extends ExpressionTranslator<IsNull> {
+
+        @Override
+        protected Query asQuery(IsNull isNull, TranslatorHandler handler) {
+            return doTranslate(isNull, handler);
+        }
+
+        public static Query doTranslate(IsNull isNull, TranslatorHandler handler) {
+            Query query = null;
+
+            if (isNull.field() instanceof FieldAttribute) {
+                query = new NotQuery(isNull.source(), new ExistsQuery(isNull.source(), handler.nameOf(isNull.field())));
+            } else {
+                query = new ScriptQuery(isNull.source(), isNull.asScript());
+            }
+
+            return handler.wrapFunctionQuery(isNull, isNull.field(), query);
+        }
+    }
+
     // assume the Optimizer properly orders the predicates to ease the translation
     public static class BinaryComparisons extends ExpressionTranslator<BinaryComparison> {
 
@@ -195,10 +257,10 @@ public final class ExpressionTranslators {
         protected Query asQuery(BinaryComparison bc, TranslatorHandler handler) {
             return doTranslate(bc, handler);
         }
-        
+
         public static void checkBinaryComparison(BinaryComparison bc) {
             Check.isTrue(bc.right().foldable(),
-                         "Line {}:{}: Comparisons against variables are not (currently) supported; offender [{}] in [{}]",
+                         "Line {}:{}: Comparisons against fields are not (currently) supported; offender [{}] in [{}]",
                          bc.right().sourceLocation().getLineNumber(), bc.right().sourceLocation().getColumnNumber(),
                          Expressions.name(bc.right()), bc.symbol());
         }
@@ -233,17 +295,21 @@ public final class ExpressionTranslators {
                 isDateLiteralComparison = true;
             }
 
+            ZoneId zoneId = null;
+            if (bc.left().dataType() == DATETIME) {
+                zoneId = bc.zoneId();
+            }
             if (bc instanceof GreaterThan) {
-                return new RangeQuery(source, name, value, false, null, false, format);
+                return new RangeQuery(source, name, value, false, null, false, format, zoneId);
             }
             if (bc instanceof GreaterThanOrEqual) {
-                return new RangeQuery(source, name, value, true, null, false, format);
+                return new RangeQuery(source, name, value, true, null, false, format, zoneId);
             }
             if (bc instanceof LessThan) {
-                return new RangeQuery(source, name, null, false, value, false, format);
+                return new RangeQuery(source, name, null, false, value, false, format, zoneId);
             }
             if (bc instanceof LessThanOrEqual) {
-                return new RangeQuery(source, name, null, false, value, true, format);
+                return new RangeQuery(source, name, null, false, value, true, format, zoneId);
             }
             if (bc instanceof Equals || bc instanceof NullEquals || bc instanceof NotEquals) {
                 if (bc.left() instanceof FieldAttribute) {
@@ -254,7 +320,7 @@ public final class ExpressionTranslators {
                 Query query;
                 if (isDateLiteralComparison) {
                     // dates equality uses a range query because it's the one that has a "format" parameter
-                    query = new RangeQuery(source, name, value, true, value, true, format);
+                    query = new RangeQuery(source, name, value, true, value, true, format, zoneId);
                 } else {
                     query = new TermQuery(source, name, value);
                 }
@@ -308,9 +374,53 @@ public final class ExpressionTranslators {
             }
 
             query = handler.wrapFunctionQuery(r, val, new RangeQuery(r.source(), handler.nameOf(val), lower.get(), r.includeLower(),
-                                                                     upper.get(), r.includeUpper(), format.get()));
+                                                                     upper.get(), r.includeUpper(), format.get(), r.zoneId()));
 
             return query;
+        }
+    }
+
+    public static class InComparisons extends ExpressionTranslator<In> {
+
+        protected Query asQuery(In in, TranslatorHandler handler) {
+            return doTranslate(in, handler);
+        }
+
+        public static Query doTranslate(In in, TranslatorHandler handler) {
+            Query q;
+            if (in.value() instanceof FieldAttribute) {
+                // equality should always be against an exact match (which is important for strings)
+                FieldAttribute fa = (FieldAttribute) in.value();
+                DataType dt = fa.dataType();
+
+                List<Expression> list = in.list();
+                Set<Object> set = new LinkedHashSet<>(CollectionUtils.mapSize(list.size()));
+                list.forEach(e -> {
+                    // TODO: this needs to be handled inside the optimizer
+                    if (DataTypes.isNull(e.dataType()) == false) {
+                        set.add(handler.convert(valueOf(e), dt));
+                    }
+                });
+
+                if (dt == DATETIME) {
+                    DateFormatter formatter = DateFormatter.forPattern(DATE_FORMAT);
+
+                    q = null;
+                    for (Object o : set) {
+                        assert o instanceof ZonedDateTime : "expected a ZonedDateTime, but got: " + o.getClass().getName();
+                        // see comment in Ranges#doTranslate() as to why formatting as String is required
+                        String zdt = formatter.format((ZonedDateTime) o);
+                        RangeQuery right = new RangeQuery(in.source(), fa.exactAttribute().name(),
+                                zdt, true, zdt, true, formatter.pattern(), in.zoneId());
+                        q = q == null ? right : new BoolQuery(in.source(), false, q, right);
+                    }
+                } else {
+                    q = new TermsQuery(in.source(), fa.exactAttribute().name(), set);
+                }
+            } else {
+                q = new ScriptQuery(in.source(), in.asScript());
+            }
+            return handler.wrapFunctionQuery(in, in.value(), q);
         }
     }
 
@@ -322,15 +432,25 @@ public final class ExpressionTranslators {
         }
 
         public static Query doTranslate(ScalarFunction f, TranslatorHandler handler) {
+            Query q = doKnownTranslate(f, handler);
+            if (q != null) {
+                return q;
+            }
             return handler.wrapFunctionQuery(f, f, new ScriptQuery(f.source(), f.asScript()));
         }
-    }
 
-    public static Object valueOf(Expression e) {
-        if (e.foldable()) {
-            return e.fold();
+        public static Query doKnownTranslate(ScalarFunction f, TranslatorHandler handler) {
+            if (f instanceof StartsWith) {
+                StartsWith sw = (StartsWith) f;
+                if (sw.isCaseSensitive() && sw.input() instanceof FieldAttribute && sw.pattern().foldable()) {
+                    String targetFieldName = handler.nameOf(((FieldAttribute) sw.input()).exactAttribute());
+                    String pattern = (String) sw.pattern().fold();
+
+                    return new PrefixQuery(f.source(), targetFieldName, pattern);
+                }
+            }
+            return null;
         }
-        throw new QlIllegalArgumentException("Cannot determine value for {}", e);
     }
 
     public static Query or(Source source, Query left, Query right) {

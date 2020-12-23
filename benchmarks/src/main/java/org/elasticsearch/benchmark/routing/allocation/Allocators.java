@@ -35,6 +35,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.gateway.GatewayAllocator;
+import org.elasticsearch.snapshots.EmptySnapshotsInfoService;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -47,17 +48,21 @@ public final class Allocators {
         public static final NoopGatewayAllocator INSTANCE = new NoopGatewayAllocator();
 
         @Override
-        public void applyStartedShards(RoutingAllocation allocation, List<ShardRouting> startedShards) {
+        public void applyStartedShards(List<ShardRouting> startedShards, RoutingAllocation allocation) {
             // noop
         }
 
         @Override
-        public void applyFailedShards(RoutingAllocation allocation, List<FailedShard> failedShards) {
+        public void applyFailedShards(List<FailedShard> failedShards, RoutingAllocation allocation) {
             // noop
         }
 
         @Override
-        public void allocateUnassigned(RoutingAllocation allocation) {
+        public void allocateUnassigned(
+            ShardRouting shardRouting,
+            RoutingAllocation allocation,
+            UnassignedAllocationHandler unassignedAllocationHandler
+        ) {
             // noop
         }
     }
@@ -75,7 +80,8 @@ public final class Allocators {
             defaultAllocationDeciders(settings, clusterSettings),
             NoopGatewayAllocator.INSTANCE,
             new BalancedShardsAllocator(settings),
-            EmptyClusterInfoService.INSTANCE
+            EmptyClusterInfoService.INSTANCE,
+            EmptySnapshotsInfoService.INSTANCE
         );
     }
 

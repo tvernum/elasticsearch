@@ -20,107 +20,48 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.MapInitializationNode;
-import org.elasticsearch.painless.lookup.PainlessConstructor;
-import org.elasticsearch.painless.lookup.PainlessMethod;
-import org.elasticsearch.painless.lookup.def;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-
-import static org.elasticsearch.painless.lookup.PainlessLookupUtility.typeToCanonicalTypeName;
+import java.util.Objects;
 
 /**
  * Represents a map initialization shortcut.
  */
-public final class EMapInit extends AExpression {
-    private final List<AExpression> keys;
-    private final List<AExpression> values;
+public class EMapInit extends AExpression {
 
-    private PainlessConstructor constructor = null;
-    private PainlessMethod method = null;
+    private final List<AExpression> keyNodes;
+    private final List<AExpression> valueNodes;
 
-    public EMapInit(Location location, List<AExpression> keys, List<AExpression> values) {
-        super(location);
+    public EMapInit(int identifier, Location location, List<AExpression> keyNodes, List<AExpression> valueNodes) {
+        super(identifier, location);
 
-        this.keys = keys;
-        this.values = values;
+        this.keyNodes = Collections.unmodifiableList(Objects.requireNonNull(keyNodes));
+        this.valueNodes = Collections.unmodifiableList(Objects.requireNonNull(valueNodes));
+    }
+
+    public List<AExpression> getKeyNodes() {
+        return keyNodes;
+    }
+
+    public List<AExpression> getValueNodes() {
+        return valueNodes;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        if (input.read == false) {
-            throw createError(new IllegalArgumentException("Must read from map initializer."));
-        }
-
-        output.actual = HashMap.class;
-
-        constructor = scriptRoot.getPainlessLookup().lookupPainlessConstructor(output.actual, 0);
-
-        if (constructor == null) {
-            throw createError(new IllegalArgumentException(
-                    "constructor [" + typeToCanonicalTypeName(output.actual) + ", <init>/0] not found"));
-        }
-
-        method = scriptRoot.getPainlessLookup().lookupPainlessMethod(output.actual, false, "put", 2);
-
-        if (method == null) {
-            throw createError(new IllegalArgumentException("method [" + typeToCanonicalTypeName(output.actual) + ", put/2] not found"));
-        }
-
-        if (keys.size() != values.size()) {
-            throw createError(new IllegalStateException("Illegal tree structure."));
-        }
-
-        for (int index = 0; index < keys.size(); ++index) {
-            AExpression expression = keys.get(index);
-
-            Input expressionInput = new Input();
-            expressionInput.expected = def.class;
-            expressionInput.internal = true;
-            expression.analyze(scriptRoot, scope, expressionInput);
-            expression.cast();
-        }
-
-        for (int index = 0; index < values.size(); ++index) {
-            AExpression expression = values.get(index);
-
-            Input expressionInput = new Input();
-            expressionInput.expected = def.class;
-            expressionInput.internal = true;
-            expression.analyze(scriptRoot, scope, expressionInput);
-            expression.cast();
-        }
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitMapInit(this, scope);
     }
 
     @Override
-    MapInitializationNode write(ClassNode classNode) {
-        MapInitializationNode mapInitializationNode = new MapInitializationNode();
-
-        for (int index = 0; index < keys.size(); ++index) {
-            mapInitializationNode.addArgumentNode(
-                    keys.get(index).cast(keys.get(index).write(classNode)),
-                    values.get(index).cast(values.get(index).write(classNode)));
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        for (AExpression keyNode : keyNodes) {
+            keyNode.visit(userTreeVisitor, scope);
         }
 
-        mapInitializationNode.setLocation(location);
-        mapInitializationNode.setExpressionType(output.actual);
-        mapInitializationNode.setConstructor(constructor);
-        mapInitializationNode.setMethod(method);
-
-        return mapInitializationNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(pairwiseToString(keys, values));
+        for (AExpression valueNode : valueNodes) {
+            valueNode.visit(userTreeVisitor, scope);
+        }
     }
 }

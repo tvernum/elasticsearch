@@ -21,8 +21,9 @@ package org.elasticsearch.search.aggregations.bucket.geogrid;
 
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
-import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.ValuesSource;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -34,23 +35,21 @@ import java.util.Map;
  */
 public class GeoTileGridAggregator extends GeoGridAggregator<InternalGeoTileGrid> {
 
-    GeoTileGridAggregator(String name, AggregatorFactories factories, CellIdSource valuesSource,
-                          int requiredSize, int shardSize, SearchContext aggregationContext,
-                          Aggregator parent, List<PipelineAggregator> pipelineAggregators,
-                          Map<String, Object> metaData) throws IOException {
-        super(name, factories, valuesSource, requiredSize, shardSize, aggregationContext, parent,
-            pipelineAggregators, metaData);
+    public GeoTileGridAggregator(String name, AggregatorFactories factories, ValuesSource.Numeric valuesSource,
+                                 int requiredSize, int shardSize, AggregationContext context,
+                                 Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata) throws IOException {
+        super(name, factories, valuesSource, requiredSize, shardSize, context, parent, cardinality, metadata);
     }
 
     @Override
     InternalGeoTileGrid buildAggregation(String name, int requiredSize, List<InternalGeoGridBucket> buckets,
-                                         List<PipelineAggregator> pipelineAggregators, Map<String, Object> metaData) {
-        return new InternalGeoTileGrid(name, requiredSize, buckets, pipelineAggregators, metaData);
+                                         Map<String, Object> metadata) {
+        return new InternalGeoTileGrid(name, requiredSize, buckets, metadata);
     }
 
     @Override
     public InternalGeoTileGrid buildEmptyAggregation() {
-        return new InternalGeoTileGrid(name, requiredSize, Collections.emptyList(), pipelineAggregators(), metaData());
+        return new InternalGeoTileGrid(name, requiredSize, Collections.emptyList(), metadata());
     }
 
     InternalGeoGridBucket newEmptyBucket() {

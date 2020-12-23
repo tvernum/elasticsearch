@@ -21,7 +21,7 @@ package org.elasticsearch.common.settings;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.Version;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.routing.allocation.decider.FilterAllocationDecider;
 import org.elasticsearch.cluster.routing.allocation.decider.ShardsLimitAllocationDecider;
 import org.elasticsearch.common.collect.Tuple;
@@ -116,8 +116,8 @@ public class ScopedSettingsTests extends ESTestCase {
         Setting<Integer> dynamicSetting = Setting.intSetting("index.some.dyn.setting", 1, Property.Dynamic, Property.IndexScope);
 
         IndexScopedSettings settings = new IndexScopedSettings(currentSettings,
-            new HashSet<>(Arrays.asList(dynamicSetting, IndexMetaData.INDEX_ROUTING_REQUIRE_GROUP_SETTING)));
-        Map<String, String> s = IndexMetaData.INDEX_ROUTING_REQUIRE_GROUP_SETTING.getAsMap(currentSettings);
+            new HashSet<>(Arrays.asList(dynamicSetting, IndexMetadata.INDEX_ROUTING_REQUIRE_GROUP_SETTING)));
+        Map<String, String> s = IndexMetadata.INDEX_ROUTING_REQUIRE_GROUP_SETTING.getAsMap(currentSettings);
         assertEquals(1, s.size());
         assertEquals("192.168.0.1,127.0.0.1", s.get("_ip"));
         Settings.Builder builder = Settings.builder();
@@ -127,7 +127,7 @@ public class ScopedSettingsTests extends ESTestCase {
         settings.updateDynamicSettings(updates,
             Settings.builder().put(currentSettings), builder, "node");
         currentSettings = builder.build();
-        s = IndexMetaData.INDEX_ROUTING_REQUIRE_GROUP_SETTING.getAsMap(currentSettings);
+        s = IndexMetadata.INDEX_ROUTING_REQUIRE_GROUP_SETTING.getAsMap(currentSettings);
         assertEquals(0, s.size());
         assertEquals(1, dynamicSetting.get(currentSettings).intValue());
         assertEquals(1, currentSettings.size());
@@ -140,7 +140,7 @@ public class ScopedSettingsTests extends ESTestCase {
             .build();
         Settings updates = Settings.builder().put(setting, value).build();
         IndexScopedSettings settings = new IndexScopedSettings(currentSettings,
-            new HashSet<>(Collections.singletonList(IndexMetaData.INDEX_ROUTING_REQUIRE_GROUP_SETTING)));
+            new HashSet<>(Collections.singletonList(IndexMetadata.INDEX_ROUTING_REQUIRE_GROUP_SETTING)));
         assertFalse(settings.updateSettings(updates, Settings.builder().put(currentSettings), Settings.builder(), ""));
     }
 
@@ -737,6 +737,28 @@ public class ScopedSettingsTests extends ESTestCase {
         assertThat(diff.getAsInt("foo.bar", null), equalTo(1));
     }
 
+    public void testDiffWithDependentSettings() {
+        final String dependedSettingName = "this.setting.is.depended.on";
+        Setting<Integer> dependedSetting = Setting.intSetting(dependedSettingName, 1, Property.Dynamic, Property.NodeScope);
+
+        final String dependentSettingName = "this.setting.depends.on.another";
+        Setting<Integer> dependentSetting = new Setting<>(dependentSettingName,
+            (s) -> Integer.toString(dependedSetting.get(s) + 10),
+            (s) -> Setting.parseInt(s, 1, dependentSettingName),
+            Property.Dynamic, Property.NodeScope);
+
+        ClusterSettings settings = new ClusterSettings(Settings.EMPTY, new HashSet<>(Arrays.asList(dependedSetting, dependentSetting)));
+
+        // Ensure that the value of the dependent setting is correctly calculated based on the "source" settings
+        Settings diff = settings.diff(Settings.builder().put(dependedSettingName, 2).build(), Settings.EMPTY);
+        assertThat(diff.getAsInt(dependentSettingName, null), equalTo(12));
+
+        // Ensure that the value is correctly calculated if neither is set
+        diff = settings.diff(Settings.EMPTY, Settings.EMPTY);
+        assertThat(diff.getAsInt(dependedSettingName, null), equalTo(1));
+        assertThat(diff.getAsInt(dependentSettingName, null), equalTo(11));
+    }
+
     public void testDiffWithAffixAndComplexMatcher() {
         Setting<Integer> fooBarBaz = Setting.intSetting("foo.bar.baz", 1, Property.NodeScope);
         Setting<Integer> fooBar = Setting.intSetting("foo.bar", 1, Property.Dynamic, Property.NodeScope);
@@ -811,9 +833,9 @@ public class ScopedSettingsTests extends ESTestCase {
            Settings.EMPTY,
             IndexScopedSettings.BUILT_IN_INDEX_SETTINGS);
         IndexScopedSettings copy = settings.copy(Settings.builder().put("index.store.type", "boom").build(),
-                newIndexMeta("foo", Settings.builder().put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 3).build()));
-        assertEquals(3, copy.get(IndexMetaData.INDEX_NUMBER_OF_REPLICAS_SETTING).intValue());
-        assertEquals(1, copy.get(IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING).intValue());
+                newIndexMeta("foo", Settings.builder().put(IndexMetadata.SETTING_NUMBER_OF_REPLICAS, 3).build()));
+        assertEquals(3, copy.get(IndexMetadata.INDEX_NUMBER_OF_REPLICAS_SETTING).intValue());
+        assertEquals(1, copy.get(IndexMetadata.INDEX_NUMBER_OF_SHARDS_SETTING).intValue());
         assertEquals("boom", copy.get(IndexModule.INDEX_STORE_TYPE_SETTING)); // test fallback to node settings
     }
 
@@ -877,14 +899,14 @@ public class ScopedSettingsTests extends ESTestCase {
         assertTrue(diffed.isEmpty());
     }
 
-    public static IndexMetaData newIndexMeta(String name, Settings indexSettings) {
-        Settings build = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-            .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 1)
-            .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
+    public static IndexMetadata newIndexMeta(String name, Settings indexSettings) {
+        Settings build = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT)
+            .put(IndexMetadata.SETTING_NUMBER_OF_REPLICAS, 1)
+            .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
             .put(indexSettings)
             .build();
-        IndexMetaData metaData = IndexMetaData.builder(name).settings(build).build();
-        return metaData;
+        IndexMetadata metadata = IndexMetadata.builder(name).settings(build).build();
+        return metadata;
     }
 
     public void testKeyPattern() {

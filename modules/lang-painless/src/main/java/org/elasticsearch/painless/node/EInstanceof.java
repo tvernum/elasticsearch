@@ -20,11 +20,7 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.InstanceofNode;
-import org.elasticsearch.painless.lookup.PainlessLookupUtility;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
@@ -33,69 +29,33 @@ import java.util.Objects;
  * <p>
  * Unlike java's, this works for primitive types too.
  */
-public final class EInstanceof extends AExpression {
-    private AExpression expression;
-    private final String type;
+public class EInstanceof extends AExpression {
 
-    private Class<?> resolvedType;
-    private Class<?> expressionType;
-    private boolean primitiveExpression;
+    private final AExpression expressionNode;
+    private final String canonicalTypeName;
 
-    public EInstanceof(Location location, AExpression expression, String type) {
-        super(location);
-        this.expression = Objects.requireNonNull(expression);
-        this.type = Objects.requireNonNull(type);
+    public EInstanceof(int identifier, Location location, AExpression expression, String canonicalTypeName) {
+        super(identifier, location);
+
+        this.expressionNode = Objects.requireNonNull(expression);
+        this.canonicalTypeName = Objects.requireNonNull(canonicalTypeName);
+    }
+
+    public AExpression getExpressionNode() {
+        return expressionNode;
+    }
+
+    public String getCanonicalTypeName() {
+        return canonicalTypeName;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        // ensure the specified type is part of the definition
-        Class<?> clazz = scriptRoot.getPainlessLookup().canonicalTypeNameToType(this.type);
-
-        if (clazz == null) {
-            throw createError(new IllegalArgumentException("Not a type [" + this.type + "]."));
-        }
-
-        // map to wrapped type for primitive types
-        resolvedType = clazz.isPrimitive() ? PainlessLookupUtility.typeToBoxedType(clazz) :
-                PainlessLookupUtility.typeToJavaType(clazz);
-
-        // analyze and cast the expression
-        Output expressionOutput = expression.analyze(scriptRoot, scope, new Input());
-        expression.input.expected = expressionOutput.actual;
-        expression.cast();
-
-        // record if the expression returns a primitive
-        primitiveExpression = expressionOutput.actual.isPrimitive();
-        // map to wrapped type for primitive types
-        expressionType = expressionOutput.actual.isPrimitive() ?
-            PainlessLookupUtility.typeToBoxedType(expressionOutput.actual) : PainlessLookupUtility.typeToJavaType(clazz);
-
-        output.actual = boolean.class;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitInstanceof(this, scope);
     }
 
     @Override
-    InstanceofNode write(ClassNode classNode) {
-        InstanceofNode instanceofNode = new InstanceofNode();
-
-        instanceofNode.setChildNode(expression.cast(expression.write(classNode)));
-
-        instanceofNode.setLocation(location);
-        instanceofNode.setExpressionType(output.actual);
-        instanceofNode.setInstanceType(expressionType);
-        instanceofNode.setResolvedType(resolvedType);
-        instanceofNode.setPrimitiveResult(primitiveExpression);
-
-        return instanceofNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(expression, type);
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        expressionNode.visit(userTreeVisitor, scope);
     }
 }

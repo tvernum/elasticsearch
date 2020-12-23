@@ -22,13 +22,15 @@ package org.elasticsearch.search.aggregations.metrics;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
+import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -36,6 +38,8 @@ import java.util.Map;
 
 public class PercentilesAggregationBuilder extends AbstractPercentilesAggregationBuilder<PercentilesAggregationBuilder> {
     public static final String NAME = Percentiles.TYPE_NAME;
+    public static final ValuesSourceRegistry.RegistryKey<PercentilesAggregatorSupplier> REGISTRY_KEY =
+        new ValuesSourceRegistry.RegistryKey<>(NAME, PercentilesAggregatorSupplier.class);
 
     private static final double[] DEFAULT_PERCENTS = new double[] { 1, 5, 25, 50, 75, 95, 99 };
     private static final ParseField PERCENTS_FIELD = new ParseField("percents");
@@ -54,6 +58,10 @@ public class PercentilesAggregationBuilder extends AbstractPercentilesAggregatio
                 PercentilesConfig.TDigest::new,
                 PERCENTS_FIELD);
 
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        PercentilesAggregatorFactory.registerAggregators(builder);
+    }
+
     public PercentilesAggregationBuilder(StreamInput in) throws IOException {
         super(in);
     }
@@ -67,13 +75,18 @@ public class PercentilesAggregationBuilder extends AbstractPercentilesAggregatio
     }
 
     protected PercentilesAggregationBuilder(PercentilesAggregationBuilder clone,
-                                            Builder factoriesBuilder, Map<String, Object> metaData) {
-        super(clone, factoriesBuilder, metaData);
+                                            AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metadata) {
+        super(clone, factoriesBuilder, metadata);
     }
 
     @Override
-    protected AggregationBuilder shallowCopy(Builder factoriesBuilder, Map<String, Object> metaData) {
-        return new PercentilesAggregationBuilder(this, factoriesBuilder, metaData);
+    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metadata) {
+        return new PercentilesAggregationBuilder(this, factoriesBuilder, metadata);
+    }
+
+    @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.NUMERIC;
     }
 
     /**
@@ -115,16 +128,26 @@ public class PercentilesAggregationBuilder extends AbstractPercentilesAggregatio
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource> innerBuild(QueryShardContext queryShardContext,
-                                                                    ValuesSourceConfig<ValuesSource> config,
-                                                                    AggregatorFactory parent,
-                                                                    Builder subFactoriesBuilder) throws IOException {
+    protected ValuesSourceAggregatorFactory innerBuild(
+            AggregationContext context,
+            ValuesSourceConfig config,
+            AggregatorFactory parent,
+            AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
+
+        PercentilesAggregatorSupplier aggregatorSupplier =
+            context.getValuesSourceRegistry().getAggregator(REGISTRY_KEY, config);
+
         return new PercentilesAggregatorFactory(name, config, values, configOrDefault(), keyed,
-            queryShardContext, parent, subFactoriesBuilder, metaData);
+            context, parent, subFactoriesBuilder, metadata, aggregatorSupplier);
     }
 
     @Override
     public String getType() {
         return NAME;
+    }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() {
+        return REGISTRY_KEY;
     }
 }

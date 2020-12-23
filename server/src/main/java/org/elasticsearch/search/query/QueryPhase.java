@@ -22,7 +22,6 @@ package org.elasticsearch.search.query;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.PointValues;
@@ -56,8 +55,9 @@ import org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor;
 import org.elasticsearch.index.IndexSortConfig;
 import org.elasticsearch.index.mapper.DateFieldMapper.DateFieldType;
 import org.elasticsearch.index.mapper.MappedFieldType;
+import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.DocValueFormat;
-import org.elasticsearch.search.SearchPhase;
+import org.elasticsearch.search.SearchContextSourcePrinter;
 import org.elasticsearch.search.SearchService;
 import org.elasticsearch.search.aggregations.AggregationPhase;
 import org.elasticsearch.search.internal.ContextIndexSearcher;
@@ -93,7 +93,7 @@ import static org.elasticsearch.search.query.TopDocsCollectorContext.shortcutTot
  * Query phase of a search request, used to run the query and get back from each shard information about the matching documents
  * (document ids and score or sort criteria) so that matches can be reduced on the coordinating node
  */
-public class QueryPhase implements SearchPhase {
+public class QueryPhase {
     private static final Logger LOGGER = LogManager.getLogger(QueryPhase.class);
     // TODO: remove this property in 8.0
     public static final boolean SYS_PROP_REWRITE_SORT = Booleans.parseBoolean(System.getProperty("es.search.rewrite_sort", "true"));
@@ -108,13 +108,12 @@ public class QueryPhase implements SearchPhase {
         this.rescorePhase = new RescorePhase();
     }
 
-    @Override
     public void preProcess(SearchContext context) {
         final Runnable cancellation;
         if (context.lowLevelCancellation()) {
-            SearchShardTask task = context.getTask();
             cancellation = context.searcher().addQueryCancellation(() -> {
-                if (task.isCancelled()) {
+                SearchShardTask task = context.getTask();
+                if (task != null && task.isCancelled()) {
                     throw new TaskCancelledException("cancelled");
                 }
             });
@@ -130,7 +129,6 @@ public class QueryPhase implements SearchPhase {
         }
     }
 
-    @Override
     public void execute(SearchContext searchContext) throws QueryPhaseExecutionException {
         if (searchContext.hasOnlySuggest()) {
             suggestPhase.execute(searchContext);
@@ -282,9 +280,9 @@ public class QueryPhase implements SearchPhase {
             }
 
             if (searchContext.lowLevelCancellation()) {
-                SearchShardTask task = searchContext.getTask();
                 searcher.addQueryCancellation(() -> {
-                    if (task.isCancelled()) {
+                    SearchShardTask task = searchContext.getTask();
+                    if (task != null && task.isCancelled()) {
                         throw new TaskCancelledException("cancelled");
                     }
                 });
@@ -355,8 +353,6 @@ public class QueryPhase implements SearchPhase {
                 throw new QueryPhaseExecutionException(searchContext.shardTarget(), "Time exceeded");
             }
             queryResult.searchTimedOut(true);
-        } finally {
-            searchContext.clearReleasables(SearchContext.Lifetime.COLLECTION);
         }
         if (searchContext.terminateAfter() != SearchContext.DEFAULT_TERMINATE_AFTER && queryResult.terminatedEarly() == null) {
             queryResult.terminatedEarly(false);
@@ -411,14 +407,13 @@ public class QueryPhase implements SearchPhase {
                 throw new QueryPhaseExecutionException(searchContext.shardTarget(), "Time exceeded");
             }
             searchContext.queryResult().searchTimedOut(true);
-        } finally {
-            searchContext.clearReleasables(SearchContext.Lifetime.COLLECTION);
         }
         return false; // no rescoring when sorting by field
     }
 
     private static Query tryRewriteLongSort(SearchContext searchContext, IndexReader reader,
                                             Query query, boolean hasFilterCollector) throws IOException {
+        if ((searchContext.from() + searchContext.size()) <= 0) return null;
         if (searchContext.searchAfter() != null) return null; //TODO: handle sort optimization with search after
         if (searchContext.scrollContext() != null) return null;
         if (searchContext.collapse() != null) return null;
@@ -434,12 +429,12 @@ public class QueryPhase implements SearchPhase {
 
         // check if this is a field of type Long or Date, that is indexed and has doc values
         String fieldName = sortField.getField();
+        QueryShardContext queryShardContext = searchContext.getQueryShardContext();
         if (fieldName == null) return null; // happens when _score or _doc is the 1st sort field
-        if (searchContext.mapperService() == null) return null; // mapperService can be null in tests
-        final MappedFieldType fieldType = searchContext.mapperService().fieldType(fieldName);
+        final MappedFieldType fieldType = queryShardContext.getFieldType(fieldName);
         if (fieldType == null) return null; // for unmapped fields, default behaviour depending on "unmapped_type" flag
         if ((fieldType.typeName().equals("long") == false) && (fieldType instanceof DateFieldType == false)) return null;
-        if (fieldType.indexOptions() == IndexOptions.NONE) return null; //TODO: change to pointDataDimensionCount() when implemented
+        if (fieldType.isSearchable() == false) return null;
         if (fieldType.hasDocValues() == false) return null;
 
 
@@ -451,7 +446,7 @@ public class QueryPhase implements SearchPhase {
                 if (SortField.FIELD_DOC.equals(sField) == false) return null;
             } else {
                 //TODO: find out how to cover _script sort that don't use _score
-                if (searchContext.mapperService().fieldType(sFieldName) == null) return null; // could be _script sort that uses _score
+                if (queryShardContext.getFieldType(sFieldName) == null) return null; // could be _script sort that uses _score
             }
         }
 
@@ -579,7 +574,7 @@ public class QueryPhase implements SearchPhase {
      * Returns true if more than 50% of data in the index have the same value
      * The evaluation is approximation based on finding the median value and estimating its count
      */
-    static boolean indexFieldHasDuplicateData(IndexReader reader, String field) throws IOException {
+    private static boolean indexFieldHasDuplicateData(IndexReader reader, String field) throws IOException {
         long docsNoDupl = 0; // number of docs in segments with NO duplicate data that would benefit optimization
         long docsDupl = 0; // number of docs in segments with duplicate data that would NOT benefit optimization
         for (LeafReaderContext lrc : reader.leaves()) {
@@ -590,30 +585,33 @@ public class QueryPhase implements SearchPhase {
                 continue;
             }
             assert(pointValues.size() == docCount); // TODO: modify the code to handle multiple values
-
             int duplDocCount = docCount/2; // expected doc count of duplicate data
-            long minValue = LongPoint.decodeDimension(pointValues.getMinPackedValue(), 0);
-            long maxValue = LongPoint.decodeDimension(pointValues.getMaxPackedValue(), 0);
-            boolean hasDuplicateData = true;
-            while ((minValue < maxValue) && hasDuplicateData) {
-                long midValue = Math.floorDiv(minValue, 2) + Math.floorDiv(maxValue, 2); // to avoid overflow first divide each value by 2
-                long countLeft = estimatePointCount(pointValues, minValue, midValue);
-                long countRight = estimatePointCount(pointValues, midValue + 1, maxValue);
-                if ((countLeft >= countRight) && (countLeft > duplDocCount) ) {
-                    maxValue = midValue;
-                } else if ((countRight > countLeft) && (countRight > duplDocCount)) {
-                    minValue = midValue + 1;
-                } else {
-                    hasDuplicateData = false;
-                }
-            }
-            if (hasDuplicateData) {
+            if (pointsHaveDuplicateData(pointValues, duplDocCount)) {
                 docsDupl += docCount;
             } else {
                 docsNoDupl += docCount;
             }
         }
         return (docsDupl > docsNoDupl);
+    }
+
+    static boolean pointsHaveDuplicateData(PointValues pointValues, int duplDocCount) throws IOException {
+        long minValue = LongPoint.decodeDimension(pointValues.getMinPackedValue(), 0);
+        long maxValue = LongPoint.decodeDimension(pointValues.getMaxPackedValue(), 0);
+        boolean hasDuplicateData = true;
+        while ((minValue < maxValue) && hasDuplicateData) {
+            long midValue = Math.floorDiv(minValue, 2) + Math.floorDiv(maxValue, 2); // to avoid overflow first divide each value by 2
+            long countLeft = estimatePointCount(pointValues, minValue, midValue);
+            long countRight = estimatePointCount(pointValues, midValue + 1, maxValue);
+            if ((countLeft >= countRight) && (countLeft > duplDocCount) ) {
+                maxValue = midValue;
+            } else if ((countRight > countLeft) && (countRight > duplDocCount)) {
+                minValue = midValue + 1;
+            } else {
+                hasDuplicateData = false;
+            }
+        }
+        return hasDuplicateData;
     }
 
 

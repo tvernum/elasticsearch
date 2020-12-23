@@ -10,7 +10,6 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.test.AbstractSerializingTestCase;
-import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats.CategorizationStatus;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats.MemoryStatus;
 
 import java.io.IOException;
@@ -23,6 +22,7 @@ public class ModelSizeStatsTests extends AbstractSerializingTestCase<ModelSizeSt
     public void testDefaultConstructor() {
         ModelSizeStats stats = new ModelSizeStats.Builder("foo").build();
         assertEquals(0, stats.getModelBytes());
+        assertNull(stats.getPeakModelBytes());
         assertNull(stats.getModelBytesExceeded());
         assertNull(stats.getModelBytesMemoryLimit());
         assertEquals(0, stats.getTotalByFieldCount());
@@ -30,11 +30,13 @@ public class ModelSizeStatsTests extends AbstractSerializingTestCase<ModelSizeSt
         assertEquals(0, stats.getTotalPartitionFieldCount());
         assertEquals(0, stats.getBucketAllocationFailuresCount());
         assertEquals(MemoryStatus.OK, stats.getMemoryStatus());
+        assertNull(stats.getAssignmentMemoryBasis());
         assertEquals(0, stats.getCategorizedDocCount());
         assertEquals(0, stats.getTotalCategoryCount());
         assertEquals(0, stats.getFrequentCategoryCount());
         assertEquals(0, stats.getRareCategoryCount());
         assertEquals(0, stats.getDeadCategoryCount());
+        assertEquals(0, stats.getFailedCategoryCount());
         assertEquals(CategorizationStatus.OK, stats.getCategorizationStatus());
     }
 
@@ -68,6 +70,9 @@ public class ModelSizeStatsTests extends AbstractSerializingTestCase<ModelSizeSt
             stats.setModelBytes(randomNonNegativeLong());
         }
         if (randomBoolean()) {
+            stats.setPeakModelBytes(randomNonNegativeLong());
+        }
+        if (randomBoolean()) {
             stats.setModelBytesExceeded(randomNonNegativeLong());
         }
         if (randomBoolean()) {
@@ -92,6 +97,9 @@ public class ModelSizeStatsTests extends AbstractSerializingTestCase<ModelSizeSt
             stats.setMemoryStatus(randomFrom(MemoryStatus.values()));
         }
         if (randomBoolean()) {
+            stats.setAssignmentMemoryBasis(randomFrom(ModelSizeStats.AssignmentMemoryBasis.values()));
+        }
+        if (randomBoolean()) {
             stats.setCategorizedDocCount(randomNonNegativeLong());
         }
         if (randomBoolean()) {
@@ -105,6 +113,9 @@ public class ModelSizeStatsTests extends AbstractSerializingTestCase<ModelSizeSt
         }
         if (randomBoolean()) {
             stats.setDeadCategoryCount(randomNonNegativeLong());
+        }
+        if (randomBoolean()) {
+            stats.setFailedCategoryCount(randomNonNegativeLong());
         }
         if (randomBoolean()) {
             stats.setCategorizationStatus(randomFrom(CategorizationStatus.values()));

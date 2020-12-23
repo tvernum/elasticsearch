@@ -4,8 +4,8 @@
 <titleabbrev>cat fielddata</titleabbrev>
 ++++
 
-Returns the amount of heap memory currently used by fielddata on every data node
-in the cluster.
+Returns the amount of heap memory currently used by the
+<<modules-fielddata, field data cache>> on every data node in the cluster.
 
 
 [[cat-fielddata-api-request]]
@@ -27,17 +27,17 @@ information.
 [[cat-fielddata-api-query-params]]
 ==== {api-query-parms-title}
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=bytes]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=bytes]
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=http-format]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=http-format]
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=cat-h]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=cat-h]
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=help]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=help]
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=cat-s]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=cat-s]
 
-include::{docdir}/rest-api/common-parms.asciidoc[tag=cat-v]
+include::{es-repo-dir}/rest-api/common-parms.asciidoc[tag=cat-v]
 
 
 [[cat-fielddata-api-example]]

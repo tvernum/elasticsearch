@@ -16,22 +16,23 @@ import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
-import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.rest.action.RestBuilderListener;
 import org.elasticsearch.xpack.core.security.action.token.InvalidateTokenAction;
 import org.elasticsearch.xpack.core.security.action.token.InvalidateTokenRequest;
 import org.elasticsearch.xpack.core.security.action.token.InvalidateTokenResponse;
+import org.elasticsearch.rest.RestRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 
 /**
  * Rest handler for handling access token invalidation requests
  */
-public final class RestInvalidateTokenAction extends TokenBaseRestHandler {
+public final class RestInvalidateTokenAction extends TokenBaseRestHandler implements RestRequestFilter {
 
     static final ConstructingObjectParser<InvalidateTokenRequest, Void> PARSER =
         new ConstructingObjectParser<>("invalidate_token", a -> {
@@ -93,9 +94,16 @@ public final class RestInvalidateTokenAction extends TokenBaseRestHandler {
                     public RestResponse buildResponse(InvalidateTokenResponse invalidateResp,
                                                       XContentBuilder builder) throws Exception {
                         invalidateResp.toXContent(builder, channel.request());
-                        return new BytesRestResponse(RestStatus.OK, builder);
+                        return new BytesRestResponse(invalidateResp.getResult().getRestStatus(), builder);
                     }
                 });
         }
+    }
+
+    private static final Set<String> FILTERED_FIELDS = Set.of("token", "refresh_token");
+
+    @Override
+    public Set<String> getFilteredFields() {
+        return FILTERED_FIELDS;
     }
 }

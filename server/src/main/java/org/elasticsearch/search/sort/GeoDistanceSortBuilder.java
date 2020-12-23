@@ -24,7 +24,9 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.FieldComparator;
+import org.apache.lucene.search.LeafFieldComparator;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.comparators.DoubleComparator;
 import org.apache.lucene.util.BitSet;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.Version;
@@ -47,7 +49,7 @@ import org.elasticsearch.index.fielddata.IndexGeoPointFieldData;
 import org.elasticsearch.index.fielddata.MultiGeoPointValues;
 import org.elasticsearch.index.fielddata.NumericDoubleValues;
 import org.elasticsearch.index.fielddata.SortedNumericDoubleValues;
-import org.elasticsearch.index.fielddata.plain.AbstractLatLonPointDVIndexFieldData.LatLonPointDVIndexFieldData;
+import org.elasticsearch.index.fielddata.plain.AbstractLatLonPointIndexFieldData.LatLonPointIndexFieldData;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.query.GeoValidationMethod;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -55,6 +57,7 @@ import org.elasticsearch.index.query.QueryRewriteContext;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.MultiValueMode;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -496,7 +499,7 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         IndexGeoPointFieldData geoIndexFieldData = fieldData(context);
         Nested nested = nested(context);
 
-        if (geoIndexFieldData.getClass() == LatLonPointDVIndexFieldData.class // only works with 5.x geo_point
+        if (geoIndexFieldData.getClass() == LatLonPointIndexFieldData.class // only works with 5.x geo_point
                 && nested == null
                 && localSortMode == MultiValueMode.MIN // LatLonDocValuesField internally picks the closest point
                 && unit == DistanceUnit.METERS
@@ -519,7 +522,7 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         IndexGeoPointFieldData geoIndexFieldData = fieldData(context);
         Nested nested = nested(context);
 
-        // TODO implement the single point optimization above 
+        // TODO implement the single point optimization above
 
         return comparatorSource(localPoints, localSortMode, geoIndexFieldData, nested)
                 .newBucketedSort(context.bigArrays(), order, DocValueFormat.RAW, bucketSize, extra);
@@ -564,10 +567,10 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
     }
 
     private IndexGeoPointFieldData fieldData(QueryShardContext context) {
-        MappedFieldType fieldType = context.fieldMapper(fieldName);
+        MappedFieldType fieldType = context.getFieldType(fieldName);
         if (fieldType == null) {
             if (ignoreUnmapped) {
-                fieldType = context.getMapperService().unmappedFieldType("geo_point");
+                return new LatLonPointIndexFieldData(fieldName, CoreValuesSourceType.GEOPOINT);
             } else {
                 throw new IllegalArgumentException("failed to find mapper for [" + fieldName + "] for geo distance based sort");
             }
@@ -584,7 +587,7 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         validateMaxChildrenExistOnlyInTopLevelNestedSort(context, nestedSort);
         return resolveNested(context, nestedSort);
     }
-    
+
     private IndexFieldData.XFieldComparatorSource comparatorSource(GeoPoint[] localPoints, MultiValueMode localSortMode,
             IndexGeoPointFieldData geoIndexFieldData, Nested nested) {
         return new IndexFieldData.XFieldComparatorSource(null, localSortMode, nested) {
@@ -609,10 +612,15 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
 
             @Override
             public FieldComparator<?> newComparator(String fieldname, int numHits, int sortPos, boolean reversed) {
-                return new FieldComparator.DoubleComparator(numHits, null, null) {
+                return new DoubleComparator(numHits, null, null, reversed, sortPos) {
                     @Override
-                    protected NumericDocValues getNumericDocValues(LeafReaderContext context, String field) throws IOException {
-                        return getNumericDoubleValues(context).getRawDoubleValues();
+                    public LeafFieldComparator getLeafComparator(LeafReaderContext context) throws IOException {
+                        return new DoubleLeafComparator(context) {
+                            @Override
+                            protected NumericDocValues getNumericDocValues(LeafReaderContext context, String field) throws IOException {
+                                return getNumericDoubleValues(context).getRawDoubleValues();
+                            }
+                        };
                     }
                 };
             }

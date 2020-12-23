@@ -20,56 +20,24 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.NullNode;
-import org.elasticsearch.painless.lookup.PainlessLookupUtility;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 /**
  * Represents a null constant.
  */
-public final class ENull extends AExpression {
+public class ENull extends AExpression {
 
-    public ENull(Location location) {
-        super(location);
+    public ENull(int identifier, Location location) {
+        super(identifier, location);
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        if (input.read == false) {
-            throw createError(new IllegalArgumentException("Must read from null constant."));
-        }
-
-        if (input.expected != null) {
-            if (input.expected.isPrimitive()) {
-                throw createError(new IllegalArgumentException(
-                    "Cannot cast null to a primitive type [" + PainlessLookupUtility.typeToCanonicalTypeName(input.expected) + "]."));
-            }
-
-            output.actual = input.expected;
-        } else {
-            output.actual = Object.class;
-        }
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitNull(this, scope);
     }
 
     @Override
-    NullNode write(ClassNode classNode) {
-        NullNode nullNode = new NullNode();
-
-        nullNode.setLocation(location);
-        nullNode.setExpressionType(output.actual);
-
-        return nullNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString();
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        // terminal node; no children
     }
 }

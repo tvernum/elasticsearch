@@ -26,7 +26,6 @@ import org.elasticsearch.search.aggregations.BucketCollector;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.support.AggregationPath.PathElement;
-import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.sort.SortOrder;
 
 import java.io.IOException;
@@ -44,10 +43,9 @@ public abstract class DeferringBucketCollector extends BucketCollector {
     /** Set the deferred collectors. */
     public abstract void setDeferredCollector(Iterable<BucketCollector> deferredCollectors);
 
-    public final void replay(long... selectedBuckets) throws IOException {
-        prepareSelectedBuckets(selectedBuckets);
-    }
-
+    /**
+     * Replay the deferred hits on the selected buckets.
+     */
     public abstract void prepareSelectedBuckets(long... selectedBuckets) throws IOException;
 
     /**
@@ -86,18 +84,13 @@ public abstract class DeferringBucketCollector extends BucketCollector {
         }
 
         @Override
-        public SearchContext context() {
-            return in.context();
-        }
-
-        @Override
         public Aggregator subAggregator(String name) {
             return in.subAggregator(name);
         }
 
         @Override
-        public InternalAggregation buildAggregation(long bucket) throws IOException {
-            return in.buildAggregation(bucket);
+        public InternalAggregation[] buildAggregations(long[] owningBucketOrds) throws IOException {
+            return in.buildAggregations(owningBucketOrds);
         }
 
         @Override
@@ -118,12 +111,6 @@ public abstract class DeferringBucketCollector extends BucketCollector {
         }
 
         @Override
-        public void postCollection() throws IOException {
-            throw new IllegalStateException(
-                    "Deferred collectors cannot be collected directly. They must be collected through the recording wrapper.");
-        }
-
-        @Override
         public Aggregator resolveSortPath(PathElement next, Iterator<PathElement> path) {
             return in.resolveSortPath(next, path);
         }
@@ -131,6 +118,11 @@ public abstract class DeferringBucketCollector extends BucketCollector {
         @Override
         public BucketComparator bucketComparator(String key, SortOrder order) {
             throw new UnsupportedOperationException("Can't sort on deferred aggregations");
+        }
+
+        @Override
+        public Aggregator[] subAggregators() {
+            return in.subAggregators();
         }
     }
 

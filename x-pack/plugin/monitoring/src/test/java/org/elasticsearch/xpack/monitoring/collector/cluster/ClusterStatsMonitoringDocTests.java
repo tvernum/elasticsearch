@@ -10,15 +10,17 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
 import org.elasticsearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
+import org.elasticsearch.action.admin.cluster.stats.AnalysisStats;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsNodeResponse;
 import org.elasticsearch.action.admin.cluster.stats.ClusterStatsResponse;
+import org.elasticsearch.action.admin.cluster.stats.MappingStats;
 import org.elasticsearch.action.admin.indices.stats.CommonStats;
 import org.elasticsearch.action.admin.indices.stats.CommonStatsFlags;
 import org.elasticsearch.action.admin.indices.stats.ShardStats;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
-import org.elasticsearch.cluster.metadata.MetaData;
+import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodeRole;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
@@ -45,6 +47,7 @@ import org.elasticsearch.monitor.os.OsInfo;
 import org.elasticsearch.monitor.os.OsStats;
 import org.elasticsearch.monitor.process.ProcessStats;
 import org.elasticsearch.plugins.PluginInfo;
+import org.elasticsearch.plugins.PluginType;
 import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.transport.TransportInfo;
 import org.elasticsearch.xpack.core.XPackFeatureSet;
@@ -210,7 +213,7 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                                                                 Version.CURRENT);
 
         final ClusterState clusterState = ClusterState.builder(clusterName)
-                                                        .metaData(MetaData.builder()
+                                                        .metadata(Metadata.builder()
                                                             .clusterUUID(clusterUuid)
                                                             .transientSettings(Settings.builder()
                                                                 .put("cluster.metadata.display_name", "my_prod_cluster")
@@ -235,7 +238,7 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                                         .maxNodes(2)
                                         .build();
 
-        final List<XPackFeatureSet.Usage> usages = singletonList(new MonitoringFeatureSetUsage(false, true, false, null));
+        final List<XPackFeatureSet.Usage> usages = singletonList(new MonitoringFeatureSetUsage(false, null));
 
         final NodeInfo mockNodeInfo = mock(NodeInfo.class);
         Version mockNodeVersion = Version.CURRENT.minimumIndexCompatibilityVersion();
@@ -243,7 +246,7 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
         when(mockNodeInfo.getNode()).thenReturn(discoveryNode);
 
         final TransportInfo mockTransportInfo = mock(TransportInfo.class);
-        when(mockNodeInfo.getTransport()).thenReturn(mockTransportInfo);
+        when(mockNodeInfo.getInfo(TransportInfo.class)).thenReturn(mockTransportInfo);
 
         final BoundTransportAddress bound = new BoundTransportAddress(new TransportAddress[]{transportAddress}, transportAddress);
         when(mockTransportInfo.address()).thenReturn(bound);
@@ -254,20 +257,20 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                                                             .build());
 
         final PluginsAndModules mockPluginsAndModules = mock(PluginsAndModules.class);
-        when(mockNodeInfo.getPlugins()).thenReturn(mockPluginsAndModules);
+        when(mockNodeInfo.getInfo(PluginsAndModules.class)).thenReturn(mockPluginsAndModules);
         final PluginInfo pluginInfo = new PluginInfo("_plugin", "_plugin_desc", "_plugin_version", Version.CURRENT,
-            "1.8", "_plugin_class", Collections.emptyList(), false);
+            "1.8", "_plugin_class", Collections.emptyList(), false, PluginType.ISOLATED, "", false);
         when(mockPluginsAndModules.getPluginInfos()).thenReturn(singletonList(pluginInfo));
 
         final OsInfo mockOsInfo = mock(OsInfo.class);
-        when(mockNodeInfo.getOs()).thenReturn(mockOsInfo);
+        when(mockNodeInfo.getInfo(OsInfo.class)).thenReturn(mockOsInfo);
         when(mockOsInfo.getAvailableProcessors()).thenReturn(32);
         when(mockOsInfo.getAllocatedProcessors()).thenReturn(16);
         when(mockOsInfo.getName()).thenReturn("_os_name");
         when(mockOsInfo.getPrettyName()).thenReturn("_pretty_os_name");
 
         final JvmInfo mockJvmInfo = mock(JvmInfo.class);
-        when(mockNodeInfo.getJvm()).thenReturn(mockJvmInfo);
+        when(mockNodeInfo.getInfo(JvmInfo.class)).thenReturn(mockJvmInfo);
         when(mockJvmInfo.version()).thenReturn("_jvm_version");
         when(mockJvmInfo.getVmName()).thenReturn("_jvm_vm_name");
         when(mockJvmInfo.getVmVersion()).thenReturn("_jvm_vm_version");
@@ -324,12 +327,14 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
         when(mockNodeResponse.nodeStats()).thenReturn(mockNodeStats);
         when(mockNodeResponse.shardsStats()).thenReturn(new ShardStats[]{mockShardStats});
 
+        final Metadata metadata = clusterState.metadata();
         final ClusterStatsResponse clusterStats = new ClusterStatsResponse(1451606400000L,
                                                                             "_cluster",
                                                                             clusterName,
                                                                             singletonList(mockNodeResponse),
                                                                             emptyList(),
-                                                                            clusterState);
+                                                                            MappingStats.of(metadata),
+                                                                            AnalysisStats.of(metadata));
 
         final MonitoringDoc.Node node = new MonitoringDoc.Node("_uuid", "_host", "_addr", "_ip", "_name", 1504169190855L);
 
@@ -412,7 +417,8 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                 + "        \"deleted\": 0"
                 + "      },"
                 + "      \"store\": {"
-                + "        \"size_in_bytes\": 0"
+                + "        \"size_in_bytes\": 0,"
+                + "        \"reserved_in_bytes\": 0"
                 + "      },"
                 + "      \"fielddata\": {"
                 + "        \"memory_size_in_bytes\": 0,"
@@ -465,7 +471,8 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                 + "        \"coordinating_only\": 0,"
                 + "        \"data\": 0,"
                 + "        \"ingest\": 0,"
-                + "        \"master\": 1"
+                + "        \"master\": 1,"
+                + "        \"remote_cluster_client\": 0"
                 + "      },"
                 + "      \"versions\": ["
                 + "        \"%s\""
@@ -536,7 +543,9 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                 + "          \"description\": \"_plugin_desc\","
                 + "          \"classname\": \"_plugin_class\","
                 + "          \"extended_plugins\": [],"
-                + "          \"has_native_controller\": false"
+                + "          \"has_native_controller\": false,"
+                + "          \"licensed\": false,"
+                + "          \"type\": \"isolated\""
                 + "        }"
                 + "      ],"
                 + "      \"network_types\": {"
@@ -594,7 +603,7 @@ public class ClusterStatsMonitoringDocTests extends BaseMonitoringDocTestCase<Cl
                 + "    },"
                 + "    \"xpack\": {"
                 + "      \"monitoring\": {"
-                + "        \"available\": false,"
+                + "        \"available\": true,"
                 + "        \"enabled\": true,"
                 + "        \"collection_enabled\": false"
                 + "      }"

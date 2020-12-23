@@ -19,87 +19,35 @@
 
 package org.elasticsearch.painless.node;
 
-import org.elasticsearch.painless.FunctionRef;
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.NewArrayFuncRefNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 /**
  * Represents a function reference.
  */
-public final class ENewArrayFunctionRef extends AExpression implements ILambda {
-    private final String type;
+public class ENewArrayFunctionRef extends AExpression {
 
-    private SFunction function;
-    private FunctionRef ref;
-    private String defPointer;
+    private final String canonicalTypeName;
 
-    public ENewArrayFunctionRef(Location location, String type) {
-        super(location);
+    public ENewArrayFunctionRef(int identifier, Location location, String canonicalTypeName) {
+        super(identifier, location);
 
-        this.type = Objects.requireNonNull(type);
+        this.canonicalTypeName = Objects.requireNonNull(canonicalTypeName);
+    }
+
+    public String getCanonicalTypeName() {
+        return canonicalTypeName;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        SReturn code = new SReturn(location, new ENewArray(location, type, Arrays.asList(new EVariable(location, "size")), false));
-        function = new SFunction(
-                location, type, scriptRoot.getNextSyntheticName("newarray"),
-                Collections.singletonList("int"), Collections.singletonList("size"),
-                new SBlock(location, Collections.singletonList(code)), true, true, true, false);
-        function.generateSignature(scriptRoot.getPainlessLookup());
-        function.analyze(scriptRoot);
-        scriptRoot.getFunctionTable().addFunction(function.name, function.returnType, function.typeParameters, true, true);
-
-        if (input.expected == null) {
-            ref = null;
-            output.actual = String.class;
-            defPointer = "Sthis." + function.name + ",0";
-        } else {
-            defPointer = null;
-            ref = FunctionRef.create(scriptRoot.getPainlessLookup(), scriptRoot.getFunctionTable(),
-                    location, input.expected, "this", function.name, 0);
-            output.actual = input.expected;
-        }
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitNewArrayFunctionRef(this, scope);
     }
 
     @Override
-    NewArrayFuncRefNode write(ClassNode classNode) {
-        classNode.addFunctionNode(function.write(classNode));
-
-        NewArrayFuncRefNode newArrayFuncRefNode = new NewArrayFuncRefNode();
-
-        newArrayFuncRefNode.setLocation(location);
-        newArrayFuncRefNode.setExpressionType(output.actual);
-        newArrayFuncRefNode.setFuncRef(ref);
-
-        return newArrayFuncRefNode;
-    }
-
-    @Override
-    public String getPointer() {
-        return defPointer;
-    }
-
-    @Override
-    public List<Class<?>> getCaptures() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(type + "[]", "new");
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        // terminal node; no children
     }
 }

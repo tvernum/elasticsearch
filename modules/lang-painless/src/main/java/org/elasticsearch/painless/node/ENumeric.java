@@ -20,118 +20,40 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.ConstantNode;
-import org.elasticsearch.painless.ir.ExpressionNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
 /**
  * Represents a non-decimal numeric constant.
  */
-public final class ENumeric extends AExpression {
+public class ENumeric extends AExpression {
 
-    private final String value;
-    private int radix;
+    private final String numeric;
+    private final int radix;
 
-    protected Object constant;
+    public ENumeric(int identifier, Location location, String numeric, int radix) {
+        super(identifier, location);
 
-    public ENumeric(Location location, String value, int radix) {
-        super(location);
-
-        this.value = Objects.requireNonNull(value);
+        this.numeric = Objects.requireNonNull(numeric);
         this.radix = radix;
     }
 
-    @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
+    public String getNumeric() {
+        return numeric;
+    }
 
-        if (input.read == false) {
-            throw createError(new IllegalArgumentException("Must read from constant [" + value + "]."));
-        }
-
-        if (value.endsWith("d") || value.endsWith("D")) {
-            if (radix != 10) {
-                throw createError(new IllegalStateException("Illegal tree structure."));
-            }
-
-            try {
-                constant = Double.parseDouble(value.substring(0, value.length() - 1));
-                output.actual = double.class;
-            } catch (NumberFormatException exception) {
-                throw createError(new IllegalArgumentException("Invalid double constant [" + value + "]."));
-            }
-        } else if (value.endsWith("f") || value.endsWith("F")) {
-            if (radix != 10) {
-                throw createError(new IllegalStateException("Illegal tree structure."));
-            }
-
-            try {
-                constant = Float.parseFloat(value.substring(0, value.length() - 1));
-                output.actual = float.class;
-            } catch (NumberFormatException exception) {
-                throw createError(new IllegalArgumentException("Invalid float constant [" + value + "]."));
-            }
-        } else if (value.endsWith("l") || value.endsWith("L")) {
-            try {
-                constant = Long.parseLong(value.substring(0, value.length() - 1), radix);
-                output.actual = long.class;
-            } catch (NumberFormatException exception) {
-                throw createError(new IllegalArgumentException("Invalid long constant [" + value + "]."));
-            }
-        } else {
-            try {
-                Class<?> sort = input.expected == null ? int.class : input.expected;
-                int integer = Integer.parseInt(value, radix);
-
-                if (sort == byte.class && integer >= Byte.MIN_VALUE && integer <= Byte.MAX_VALUE) {
-                    constant = (byte)integer;
-                    output.actual = byte.class;
-                } else if (sort == char.class && integer >= Character.MIN_VALUE && integer <= Character.MAX_VALUE) {
-                    constant = (char)integer;
-                    output.actual = char.class;
-                } else if (sort == short.class && integer >= Short.MIN_VALUE && integer <= Short.MAX_VALUE) {
-                    constant = (short)integer;
-                    output.actual = short.class;
-                } else {
-                    constant = integer;
-                    output.actual = int.class;
-                }
-            } catch (NumberFormatException exception) {
-                try {
-                    // Check if we can parse as a long. If so then hint that the user might prefer that.
-                    Long.parseLong(value, radix);
-                    throw createError(new IllegalArgumentException("Invalid int constant [" + value + "]. If you want a long constant "
-                            + "then change it to [" + value + "L]."));
-                } catch (NumberFormatException longNoGood) {
-                    // Ignored
-                }
-                throw createError(new IllegalArgumentException("Invalid int constant [" + value + "]."));
-            }
-        }
-
-        return output;
+    public int getRadix() {
+        return radix;
     }
 
     @Override
-    ExpressionNode write(ClassNode classNode) {
-        ConstantNode constantNode = new ConstantNode();
-        constantNode.setLocation(location);
-        constantNode.setExpressionType(output.actual);
-        constantNode.setConstant(constant);
-
-        return constantNode;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitNumeric(this, scope);
     }
 
     @Override
-    public String toString() {
-        if (radix != 10) {
-            return singleLineToString(value, radix);
-        }
-        return singleLineToString(value);
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        // terminal node; no children
     }
 }

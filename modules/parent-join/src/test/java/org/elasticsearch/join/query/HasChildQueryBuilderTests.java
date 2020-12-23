@@ -33,7 +33,6 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper;
 import org.apache.lucene.search.similarities.Similarity;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.settings.Settings;
@@ -56,15 +55,18 @@ import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.test.AbstractQueryTestCase;
+import org.elasticsearch.test.TestGeoShapeFieldMapperPlugin;
 import org.elasticsearch.test.VersionUtils;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.join.query.HasChildQueryBuilder.LateParsingQuery;
 import static org.elasticsearch.join.query.JoinQueryBuilders.hasChildQuery;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -85,15 +87,7 @@ public class HasChildQueryBuilderTests extends AbstractQueryTestCase<HasChildQue
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singletonList(ParentJoinPlugin.class);
-    }
-
-    @Override
-    protected Settings createTestIndexSettings() {
-        return Settings.builder()
-            .put(super.createTestIndexSettings())
-            .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-            .build();
+        return Arrays.asList(ParentJoinPlugin.class, TestGeoShapeFieldMapperPlugin.class);
     }
 
     @Override
@@ -106,10 +100,10 @@ public class HasChildQueryBuilderTests extends AbstractQueryTestCase<HasChildQue
                     .field(PARENT_DOC, CHILD_DOC)
                 .endObject()
             .endObject()
-            .startObject(STRING_FIELD_NAME)
+            .startObject(TEXT_FIELD_NAME)
                 .field("type", "text")
             .endObject()
-            .startObject(STRING_FIELD_NAME_2)
+            .startObject(KEYWORD_FIELD_NAME)
                 .field("type", "keyword")
             .endObject()
             .startObject(INT_FIELD_NAME)
@@ -159,15 +153,15 @@ public class HasChildQueryBuilderTests extends AbstractQueryTestCase<HasChildQue
             hqb.innerHit(new InnerHitBuilder()
                     .setName(randomAlphaOfLengthBetween(1, 10))
                     .setSize(randomIntBetween(0, 100))
-                    .addSort(new FieldSortBuilder(STRING_FIELD_NAME_2).order(SortOrder.ASC)));
+                    .addSort(new FieldSortBuilder(KEYWORD_FIELD_NAME).order(SortOrder.ASC)));
         }
         return hqb;
     }
 
     @Override
     protected void doAssertLuceneQuery(HasChildQueryBuilder queryBuilder, Query query, QueryShardContext context) throws IOException {
-        assertThat(query, instanceOf(HasChildQueryBuilder.LateParsingQuery.class));
-        HasChildQueryBuilder.LateParsingQuery lpq = (HasChildQueryBuilder.LateParsingQuery) query;
+        assertThat(query, instanceOf(LateParsingQuery.class));
+        LateParsingQuery lpq = (LateParsingQuery) query;
         assertEquals(queryBuilder.minChildren(), lpq.getMinChildren());
         assertEquals(queryBuilder.maxChildren(), lpq.getMaxChildren());
         assertEquals(queryBuilder.scoreMode(), lpq.getScoreMode()); // WTF is this why do we have two?
@@ -280,8 +274,8 @@ public class HasChildQueryBuilderTests extends AbstractQueryTestCase<HasChildQue
     }
 
     static void assertLateParsingQuery(Query query, String type, String id) throws IOException {
-        assertThat(query, instanceOf(HasChildQueryBuilder.LateParsingQuery.class));
-        HasChildQueryBuilder.LateParsingQuery lateParsingQuery = (HasChildQueryBuilder.LateParsingQuery) query;
+        assertThat(query, instanceOf(LateParsingQuery.class));
+        LateParsingQuery lateParsingQuery = (LateParsingQuery) query;
         assertThat(lateParsingQuery.getInnerQuery(), instanceOf(BooleanQuery.class));
         BooleanQuery booleanQuery = (BooleanQuery) lateParsingQuery.getInnerQuery();
         assertThat(booleanQuery.clauses().size(), equalTo(2));
@@ -320,7 +314,7 @@ public class HasChildQueryBuilderTests extends AbstractQueryTestCase<HasChildQue
         QueryShardContext shardContext = createShardContext();
         HasChildQueryBuilder hasChildQueryBuilder =
             hasChildQuery(CHILD_DOC, new TermQueryBuilder("custom_string", "value"), ScoreMode.None);
-        HasChildQueryBuilder.LateParsingQuery query = (HasChildQueryBuilder.LateParsingQuery) hasChildQueryBuilder.toQuery(shardContext);
+        LateParsingQuery query = (LateParsingQuery) hasChildQueryBuilder.toQuery(shardContext);
         Similarity expected = SimilarityService.BUILT_IN.get(similarity)
             .apply(Settings.EMPTY, Version.CURRENT, null);
         assertThat(((PerFieldSimilarityWrapper) query.getSimilarity()).get("custom_string"), instanceOf(expected.getClass()));

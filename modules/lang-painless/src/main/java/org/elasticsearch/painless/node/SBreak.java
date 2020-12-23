@@ -20,48 +20,24 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.BreakNode;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 /**
  * Represents a break statement.
  */
-public final class SBreak extends AStatement {
+public class SBreak extends AStatement {
 
-    public SBreak(Location location) {
-        super(location);
+    public SBreak(int identifier, Location location) {
+        super(identifier, location);
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        if (input.inLoop == false) {
-            throw createError(new IllegalArgumentException("Break statement outside of a loop."));
-        }
-
-        output.loopEscape = true;
-        output.allEscape = true;
-        output.anyBreak = true;
-        output.statementCount = 1;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitBreak(this, scope);
     }
 
     @Override
-    BreakNode write(ClassNode classNode) {
-        BreakNode breakNode = new BreakNode();
-
-        breakNode.setLocation(location);
-
-        return breakNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString();
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        // terminal node; no children
     }
 }

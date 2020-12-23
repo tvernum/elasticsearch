@@ -63,6 +63,7 @@ import org.elasticsearch.common.SuppressForbidden;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
@@ -403,20 +404,24 @@ final class RequestConverters {
         return request;
     }
 
-    private static void addSearchRequestParams(Params params, SearchRequest searchRequest) {
+    static void addSearchRequestParams(Params params, SearchRequest searchRequest) {
         params.putParam(RestSearchAction.TYPED_KEYS_PARAM, "true");
         params.withRouting(searchRequest.routing());
         params.withPreference(searchRequest.preference());
         params.withIndicesOptions(searchRequest.indicesOptions());
-        params.putParam("search_type", searchRequest.searchType().name().toLowerCase(Locale.ROOT));
+        params.withSearchType(searchRequest.searchType().name().toLowerCase(Locale.ROOT));
         params.putParam("ccs_minimize_roundtrips", Boolean.toString(searchRequest.isCcsMinimizeRoundtrips()));
+        if (searchRequest.getPreFilterShardSize() != null) {
+            params.putParam("pre_filter_shard_size", Integer.toString(searchRequest.getPreFilterShardSize()));
+        }
+        params.withMaxConcurrentShardRequests(searchRequest.getMaxConcurrentShardRequests());
         if (searchRequest.requestCache() != null) {
-            params.putParam("request_cache", Boolean.toString(searchRequest.requestCache()));
+            params.withRequestCache(searchRequest.requestCache());
         }
         if (searchRequest.allowPartialSearchResults() != null) {
-            params.putParam("allow_partial_search_results", Boolean.toString(searchRequest.allowPartialSearchResults()));
+            params.withAllowPartialResults(searchRequest.allowPartialSearchResults());
         }
-        params.putParam("batched_reduce_size", Integer.toString(searchRequest.getBatchedReduceSize()));
+        params.withBatchedReduceSize(searchRequest.getBatchedReduceSize());
         if (searchRequest.scroll() != null) {
             params.putParam("scroll", searchRequest.scroll().keepAlive());
         }
@@ -516,13 +521,17 @@ final class RequestConverters {
         return request;
     }
 
-    static Request fieldCaps(FieldCapabilitiesRequest fieldCapabilitiesRequest) {
-        Request request = new Request(HttpGet.METHOD_NAME, endpoint(fieldCapabilitiesRequest.indices(), "_field_caps"));
+    static Request fieldCaps(FieldCapabilitiesRequest fieldCapabilitiesRequest) throws IOException {
+        String methodName = fieldCapabilitiesRequest.indexFilter() != null ? HttpPost.METHOD_NAME  : HttpGet.METHOD_NAME;
+        Request request = new Request(methodName, endpoint(fieldCapabilitiesRequest.indices(), "_field_caps"));
 
         Params params = new Params();
         params.withFields(fieldCapabilitiesRequest.fields());
         params.withIndicesOptions(fieldCapabilitiesRequest.indicesOptions());
         request.addParameters(params.asMap());
+        if (fieldCapabilitiesRequest.indexFilter() != null) {
+            request.setEntity(createEntity(fieldCapabilitiesRequest, REQUEST_BODY_CONTENT_TYPE));
+        }
         return request;
     }
 
@@ -545,8 +554,20 @@ final class RequestConverters {
         return prepareReindexRequest(reindexRequest, false);
     }
 
+    static Request deleteByQuery(DeleteByQueryRequest deleteByQueryRequest) throws IOException {
+        return prepareDeleteByQueryRequest(deleteByQueryRequest, true);
+    }
+
     static Request submitDeleteByQuery(DeleteByQueryRequest deleteByQueryRequest) throws IOException {
         return prepareDeleteByQueryRequest(deleteByQueryRequest, false);
+    }
+
+    static Request updateByQuery(UpdateByQueryRequest updateByQueryRequest) throws IOException {
+        return prepareUpdateByQueryRequest(updateByQueryRequest, true);
+    }
+
+    static Request submitUpdateByQuery(UpdateByQueryRequest updateByQueryRequest) throws IOException {
+        return prepareUpdateByQueryRequest(updateByQueryRequest, false);
     }
 
     private static Request prepareReindexRequest(ReindexRequest reindexRequest, boolean waitForCompletion) throws IOException {
@@ -563,6 +584,7 @@ final class RequestConverters {
         if (reindexRequest.getScrollTime() != null) {
             params.putParam("scroll", reindexRequest.getScrollTime());
         }
+
         request.addParameters(params.asMap());
         request.setEntity(createEntity(reindexRequest, REQUEST_BODY_CONTENT_TYPE));
         return request;
@@ -598,7 +620,8 @@ final class RequestConverters {
         return request;
     }
 
-    static Request updateByQuery(UpdateByQueryRequest updateByQueryRequest) throws IOException {
+    static Request prepareUpdateByQueryRequest(UpdateByQueryRequest updateByQueryRequest,
+                                               boolean waitForCompletion) throws IOException {
         String endpoint = endpoint(updateByQueryRequest.indices(), "_update_by_query");
         Request request = new Request(HttpPost.METHOD_NAME, endpoint);
         Params params = new Params()
@@ -609,6 +632,7 @@ final class RequestConverters {
             .withWaitForActiveShards(updateByQueryRequest.getWaitForActiveShards())
             .withRequestsPerSecond(updateByQueryRequest.getRequestsPerSecond())
             .withIndicesOptions(updateByQueryRequest.indicesOptions())
+            .withWaitForCompletion(waitForCompletion)
             .withSlices(updateByQueryRequest.getSlices());
         if (updateByQueryRequest.isAbortOnVersionConflict() == false) {
             params.putParam("conflicts", "proceed");
@@ -625,10 +649,6 @@ final class RequestConverters {
         request.addParameters(params.asMap());
         request.setEntity(createEntity(updateByQueryRequest, REQUEST_BODY_CONTENT_TYPE));
         return request;
-    }
-
-    static Request deleteByQuery(DeleteByQueryRequest deleteByQueryRequest) throws IOException {
-        return prepareDeleteByQueryRequest(deleteByQueryRequest, true);
     }
 
     static Request rethrottleReindex(RethrottleRequest rethrottleRequest) {
@@ -829,10 +849,10 @@ final class RequestConverters {
                 if (fetchSourceContext.fetchSource() == false) {
                     putParam("_source", Boolean.FALSE.toString());
                 }
-                if (fetchSourceContext.includes() != null && fetchSourceContext.includes().length > 0) {
+                if (CollectionUtils.isEmpty(fetchSourceContext.includes()) == false) {
                     putParam("_source_includes", String.join(",", fetchSourceContext.includes()));
                 }
-                if (fetchSourceContext.excludes() != null && fetchSourceContext.excludes().length > 0) {
+                if (CollectionUtils.isEmpty(fetchSourceContext.excludes()) == false) {
                     putParam("_source_excludes", String.join(",", fetchSourceContext.excludes()));
                 }
             }
@@ -840,7 +860,7 @@ final class RequestConverters {
         }
 
         Params withFields(String[] fields) {
-            if (fields != null && fields.length > 0) {
+            if (CollectionUtils.isEmpty(fields) == false) {
                 return putParam("fields", String.join(",", fields));
             }
             return this;
@@ -856,6 +876,26 @@ final class RequestConverters {
 
         Params withPreference(String preference) {
             return putParam("preference", preference);
+        }
+
+        Params withSearchType(String searchType) {
+            return putParam("search_type", searchType);
+        }
+
+        Params withMaxConcurrentShardRequests(int maxConcurrentShardRequests) {
+            return putParam("max_concurrent_shard_requests", Integer.toString(maxConcurrentShardRequests));
+        }
+
+        Params withBatchedReduceSize(int batchedReduceSize) {
+            return putParam("batched_reduce_size", Integer.toString(batchedReduceSize));
+        }
+
+        Params withRequestCache(boolean requestCache) {
+            return putParam("request_cache", Boolean.toString(requestCache));
+        }
+
+        Params withAllowPartialResults(boolean allowPartialSearchResults) {
+            return putParam("allow_partial_search_results", Boolean.toString(allowPartialSearchResults));
         }
 
         Params withRealtime(boolean realtime) {
@@ -921,7 +961,7 @@ final class RequestConverters {
         }
 
         Params withStoredFields(String[] storedFields) {
-            if (storedFields != null && storedFields.length > 0) {
+            if (CollectionUtils.isEmpty(storedFields) == false) {
                 return putParam("stored_fields", String.join(",", storedFields));
             }
             return this;

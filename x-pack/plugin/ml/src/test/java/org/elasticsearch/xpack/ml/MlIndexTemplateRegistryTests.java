@@ -21,12 +21,12 @@ import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.ilm.LifecycleAction;
 import org.elasticsearch.xpack.core.ilm.RolloverAction;
 import org.elasticsearch.xpack.core.ml.MlStatsIndex;
@@ -35,14 +35,9 @@ import org.junit.Before;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.elasticsearch.mock.orig.Mockito.verify;
 import static org.elasticsearch.mock.orig.Mockito.when;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doAnswer;
@@ -72,24 +67,19 @@ public class MlIndexTemplateRegistryTests extends ESTestCase {
         IndicesAdminClient indicesAdminClient = mock(IndicesAdminClient.class);
         when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(client.admin()).thenReturn(adminClient);
-        doAnswer(withResponse(new AcknowledgedResponse(true))).when(indicesAdminClient).putTemplate(any(), any());
+        doAnswer(withResponse(AcknowledgedResponse.TRUE)).when(indicesAdminClient).putTemplate(any(), any());
 
         clusterService = mock(ClusterService.class);
 
-        List<NamedXContentRegistry.Entry> entries = new ArrayList<>(ClusterModule.getNamedXWriteables());
-        entries.add(new NamedXContentRegistry.Entry(LifecycleAction.class, new ParseField(RolloverAction.NAME), RolloverAction::parse));
-        xContentRegistry = new NamedXContentRegistry(entries);
+        xContentRegistry = new NamedXContentRegistry(CollectionUtils.appendToCopy(ClusterModule.getNamedXWriteables(),
+                new NamedXContentRegistry.Entry(LifecycleAction.class, new ParseField(RolloverAction.NAME), RolloverAction::parse)));
 
         putIndexTemplateRequestCaptor = ArgumentCaptor.forClass(PutIndexTemplateRequest.class);
     }
 
-    public void testStateTemplateWithIlm() {
+    public void testStateTemplate() {
         MlIndexTemplateRegistry registry =
-            new MlIndexTemplateRegistry(
-                Settings.builder()
-                    .put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), true)
-                    .build(),
-                clusterService, threadPool, client, xContentRegistry);
+            new MlIndexTemplateRegistry(Settings.EMPTY, clusterService, threadPool, client, xContentRegistry);
 
         registry.clusterChanged(createClusterChangedEvent(nodes));
 
@@ -103,33 +93,9 @@ public class MlIndexTemplateRegistryTests extends ESTestCase {
         assertThat(req.settings().get("index.lifecycle.rollover_alias"), equalTo(".ml-state-write"));
     }
 
-    public void testStateTemplateWithNoIlm() {
+    public void testStatsTemplate() {
         MlIndexTemplateRegistry registry =
-            new MlIndexTemplateRegistry(
-                Settings.builder()
-                    .put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), false)
-                    .build(),
-                clusterService, threadPool, client, xContentRegistry);
-
-        registry.clusterChanged(createClusterChangedEvent(nodes));
-
-        verify(client.admin().indices(), times(7)).putTemplate(putIndexTemplateRequestCaptor.capture(), anyObject());
-
-        PutIndexTemplateRequest req = putIndexTemplateRequestCaptor.getAllValues().stream()
-            .filter(r -> r.name().equals(AnomalyDetectorsIndexFields.STATE_INDEX_PREFIX))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("expected the ml state index template to be put"));
-        assertThat(req.settings().get("index.lifecycle.name"), is(nullValue()));
-        assertThat(req.settings().get("index.lifecycle.rollover_alias"), is(nullValue()));
-    }
-
-    public void testStatsTemplateWithIlm() {
-        MlIndexTemplateRegistry registry =
-            new MlIndexTemplateRegistry(
-                Settings.builder()
-                    .put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), true)
-                    .build(),
-                clusterService, threadPool, client, xContentRegistry);
+            new MlIndexTemplateRegistry(Settings.EMPTY, clusterService, threadPool, client, xContentRegistry);
 
         registry.clusterChanged(createClusterChangedEvent(nodes));
 
@@ -141,26 +107,6 @@ public class MlIndexTemplateRegistryTests extends ESTestCase {
             .orElseThrow(() -> new AssertionError("expected the ml stats index template to be put"));
         assertThat(req.settings().get("index.lifecycle.name"), equalTo("ml-size-based-ilm-policy"));
         assertThat(req.settings().get("index.lifecycle.rollover_alias"), equalTo(".ml-stats-write"));
-    }
-
-    public void testStatsTemplateWithNoIlm() {
-        MlIndexTemplateRegistry registry =
-            new MlIndexTemplateRegistry(
-                Settings.builder()
-                    .put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), false)
-                    .build(),
-                clusterService, threadPool, client, xContentRegistry);
-
-        registry.clusterChanged(createClusterChangedEvent(nodes));
-
-        verify(client.admin().indices(), times(7)).putTemplate(putIndexTemplateRequestCaptor.capture(), anyObject());
-
-        PutIndexTemplateRequest req = putIndexTemplateRequestCaptor.getAllValues().stream()
-            .filter(r -> r.name().equals(MlStatsIndex.TEMPLATE_NAME))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("expected the ml stats index template to be put"));
-        assertThat(req.settings().get("index.lifecycle.name"), is(nullValue()));
-        assertThat(req.settings().get("index.lifecycle.rollover_alias"), is(nullValue()));
     }
 
     @SuppressWarnings("unchecked")

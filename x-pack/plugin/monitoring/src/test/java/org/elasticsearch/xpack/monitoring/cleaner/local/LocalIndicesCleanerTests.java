@@ -7,8 +7,9 @@ package org.elasticsearch.xpack.monitoring.cleaner.local;
 
 import org.elasticsearch.action.admin.indices.settings.get.GetSettingsResponse;
 import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.InternalSettingsPlugin;
 import org.elasticsearch.xpack.monitoring.cleaner.AbstractIndicesCleanerTestCase;
@@ -16,7 +17,6 @@ import org.elasticsearch.xpack.monitoring.cleaner.CleanerService;
 import org.elasticsearch.xpack.monitoring.exporter.local.LocalExporter;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
@@ -28,9 +28,7 @@ public class LocalIndicesCleanerTests extends AbstractIndicesCleanerTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        ArrayList<Class<? extends Plugin>> plugins = new ArrayList<>(super.nodePlugins());
-        plugins.add(InternalSettingsPlugin.class);
-        return plugins;
+        return CollectionUtils.appendToCopy(super.nodePlugins(), InternalSettingsPlugin.class);
     }
 
     @Override
@@ -46,7 +44,7 @@ public class LocalIndicesCleanerTests extends AbstractIndicesCleanerTestCase {
     protected void createIndex(String name, ZonedDateTime creationDate) {
         long creationMillis = creationDate.toInstant().toEpochMilli();
         assertAcked(prepareCreate(name)
-                .setSettings(Settings.builder().put(IndexMetaData.SETTING_CREATION_DATE, creationMillis).build()));
+                .setSettings(Settings.builder().put(IndexMetadata.SETTING_CREATION_DATE, creationMillis).build()));
     }
 
     @Override

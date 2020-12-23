@@ -19,6 +19,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -62,8 +63,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.elasticsearch.xpack.core.ml.utils.QueryProviderTests.createRandomValidQueryProvider;
 import static org.elasticsearch.xpack.core.ml.job.messages.Messages.DATAFEED_AGGREGATIONS_INTERVAL_MUST_BE_GREATER_THAN_ZERO;
+import static org.elasticsearch.xpack.core.ml.utils.QueryProviderTests.createRandomValidQueryProvider;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -151,6 +152,14 @@ public class DatafeedConfigTests extends AbstractSerializingTestCase<DatafeedCon
             Boolean.toString(randomBoolean()),
             Boolean.toString(randomBoolean()),
             SearchRequest.DEFAULT_INDICES_OPTIONS));
+        if (randomBoolean()) {
+            Map<String, Object> settings = new HashMap<>();
+            settings.put("type", "keyword");
+            settings.put("script", "");
+            Map<String, Object> field = new HashMap<>();
+            field.put("runtime_field_foo", settings);
+            builder.setRuntimeMappings(field);
+        }
         return builder;
     }
 
@@ -492,8 +501,8 @@ public class DatafeedConfigTests extends AbstractSerializingTestCase<DatafeedCon
     public void testCheckValid_GivenNegativeQueryDelay() {
         DatafeedConfig.Builder conf = new DatafeedConfig.Builder("datafeed1", "job1");
         IllegalArgumentException e = ESTestCase.expectThrows(IllegalArgumentException.class,
-                () -> conf.setQueryDelay(TimeValue.timeValueMillis(-10)));
-        assertEquals("query_delay cannot be less than 0. Value = -10", e.getMessage());
+                () -> conf.setQueryDelay(TimeValue.timeValueMillis(-1)));
+        assertEquals("query_delay cannot be less than 0. Value = -1", e.getMessage());
     }
 
     public void testCheckValid_GivenZeroFrequency() {
@@ -525,6 +534,29 @@ public class DatafeedConfigTests extends AbstractSerializingTestCase<DatafeedCon
         ElasticsearchException e = expectThrows(ElasticsearchException.class, datafeed::build);
 
         assertThat(e.getMessage(), equalTo("script_fields cannot be used in combination with aggregations"));
+    }
+
+    public void testBuild_GivenRuntimeMappingMissingType() {
+        DatafeedConfig.Builder builder = new DatafeedConfig.Builder("datafeed1", "job1");
+        builder.setIndices(Collections.singletonList("my_index"));
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("type_field_is_missing", "");
+        Map<String, Object> fields = new HashMap<>();
+        fields.put("runtime_field_foo", properties);
+        builder.setRuntimeMappings(fields);
+
+        ElasticsearchException e = expectThrows(ElasticsearchException.class, builder::build);
+        assertThat(e.getMessage(), equalTo("No type specified for runtime field [runtime_field_foo]"));
+    }
+
+    public void testBuild_GivenInvalidRuntimeMapping() {
+        DatafeedConfig.Builder builder = new DatafeedConfig.Builder("datafeed1", "job1");
+        builder.setIndices(Collections.singletonList("my_index"));
+        Map<String, Object> fields = new HashMap<>();
+        fields.put("field_is_not_an_object", "");
+        builder.setRuntimeMappings(fields);
+        ElasticsearchException e = expectThrows(ElasticsearchException.class, builder::build);
+        assertThat(e.getMessage(), equalTo("Expected map for runtime field [field_is_not_an_object] definition but got a String"));
     }
 
     public void testHasAggregations_GivenNull() {
@@ -927,9 +959,8 @@ public class DatafeedConfigTests extends AbstractSerializingTestCase<DatafeedCon
             }
             break;
         case 7:
-            ArrayList<ScriptField> scriptFields = new ArrayList<>(instance.getScriptFields());
-            scriptFields.add(new ScriptField(randomAlphaOfLengthBetween(1, 10), new Script("foo"), true));
-            builder.setScriptFields(scriptFields);
+            builder.setScriptFields(CollectionUtils.appendToCopy(
+                    instance.getScriptFields(), new ScriptField(randomAlphaOfLengthBetween(1, 10), new Script("foo"), true)));
             builder.setAggProvider(null);
             break;
         case 8:

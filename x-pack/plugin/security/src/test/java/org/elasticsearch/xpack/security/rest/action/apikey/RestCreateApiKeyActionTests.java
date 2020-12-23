@@ -53,8 +53,7 @@ public class RestCreateApiKeyActionTests extends ESTestCase {
                 .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
                 .build();
         threadPool = new ThreadPool(settings);
-        when(mockLicenseState.isSecurityAvailable()).thenReturn(true);
-        when(mockLicenseState.isApiKeyServiceAllowed()).thenReturn(true);
+        when(mockLicenseState.isSecurityEnabled()).thenReturn(true);
     }
 
     @Override

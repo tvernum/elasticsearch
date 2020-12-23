@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.internal;
 
+import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FilterDirectoryReader;
 import org.apache.lucene.index.FilterLeafReader;
@@ -30,6 +31,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.suggest.document.CompletionTerms;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.automaton.CompiledAutomaton;
+import org.elasticsearch.common.lucene.index.SequentialStoredFieldsLeafReader;
 
 import java.io.IOException;
 
@@ -79,7 +81,7 @@ class ExitableDirectoryReader extends FilterDirectoryReader {
     /**
      * Wraps a {@link FilterLeafReader} with a {@link QueryCancellation}.
      */
-    static class ExitableLeafReader extends FilterLeafReader {
+    static class ExitableLeafReader extends SequentialStoredFieldsLeafReader {
 
         private final QueryCancellation queryCancellation;
 
@@ -118,6 +120,11 @@ class ExitableDirectoryReader extends FilterDirectoryReader {
         @Override
         public CacheHelper getReaderCacheHelper() {
             return in.getReaderCacheHelper();
+        }
+
+        @Override
+        protected StoredFieldsReader doGetSequentialStoredFieldsReader(StoredFieldsReader reader) {
+            return reader;
         }
     }
 
@@ -245,7 +252,7 @@ class ExitableDirectoryReader extends FilterDirectoryReader {
 
     private static class ExitableIntersectVisitor implements PointValues.IntersectVisitor {
 
-        private static final int MAX_CALLS_BEFORE_QUERY_TIMEOUT_CHECK = (1 << 4) - 1; // 15
+        private static final int MAX_CALLS_BEFORE_QUERY_TIMEOUT_CHECK = (1 << 13) - 1; // 8191
 
         private final PointValues.IntersectVisitor in;
         private final QueryCancellation queryCancellation;

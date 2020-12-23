@@ -20,88 +20,44 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.ir.DoWhileLoopNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Objects;
 
 /**
  * Represents a do-while loop.
  */
-public final class SDo extends AStatement {
+public class SDo extends AStatement {
 
-    private final SBlock block;
-    private AExpression condition;
+    private final AExpression conditionNode;
+    private final SBlock blockNode;
 
-    private boolean continuous = false;
+    public SDo(int identifier, Location location, AExpression conditionNode, SBlock blockNode) {
+        super(identifier, location);
 
-    public SDo(Location location, SBlock block, AExpression condition) {
-        super(location);
+        this.conditionNode = Objects.requireNonNull(conditionNode);
+        this.blockNode = blockNode;
+    }
 
-        this.condition = Objects.requireNonNull(condition);
-        this.block = block;
+    public AExpression getConditionNode() {
+        return conditionNode;
+    }
+
+    public SBlock getBlockNode() {
+        return blockNode;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        scope = scope.newLocalScope();
-
-        if (block == null) {
-            throw createError(new IllegalArgumentException("Extraneous do while loop."));
-        }
-
-        Input blockInput = new Input();
-        blockInput.beginLoop = true;
-        blockInput.inLoop = true;
-        Output blockOutput = block.analyze(scriptRoot, scope, blockInput);
-
-        if (blockOutput.loopEscape && blockOutput.anyContinue == false) {
-            throw createError(new IllegalArgumentException("Extraneous do while loop."));
-        }
-
-        AExpression.Input conditionInput = new AExpression.Input();
-        conditionInput.expected = boolean.class;
-        condition.analyze(scriptRoot, scope, conditionInput);
-        condition.cast();
-
-        if (condition instanceof EBoolean) {
-            continuous = ((EBoolean)condition).constant;
-
-            if (!continuous) {
-                throw createError(new IllegalArgumentException("Extraneous do while loop."));
-            }
-
-            if (blockOutput.anyBreak == false) {
-                output.methodEscape = true;
-                output.allEscape = true;
-            }
-        }
-
-        output.statementCount = 1;
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitDo(this, scope);
     }
 
     @Override
-    DoWhileLoopNode write(ClassNode classNode) {
-        DoWhileLoopNode doWhileLoopNode = new DoWhileLoopNode();
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        if (blockNode != null) {
+            blockNode.visit(userTreeVisitor, scope);
+        }
 
-        doWhileLoopNode.setConditionNode(condition.cast(condition.write(classNode)));
-        doWhileLoopNode.setBlockNode(block.write(classNode));
-
-        doWhileLoopNode.setLocation(location);
-        doWhileLoopNode.setContinuous(continuous);
-
-        return doWhileLoopNode;
-    }
-
-    @Override
-    public String toString() {
-        return singleLineToString(condition, block);
+        conditionNode.visit(userTreeVisitor, scope);
     }
 }

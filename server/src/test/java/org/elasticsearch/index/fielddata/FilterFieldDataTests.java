@@ -25,7 +25,6 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.Mapper.BuilderContext;
 import org.elasticsearch.index.mapper.TextFieldMapper;
 
 import java.util.List;
@@ -60,17 +59,17 @@ public class FilterFieldDataTests extends AbstractFieldDataTestCase {
         }
         writer.forceMerge(1, true);
         List<LeafReaderContext> contexts = refreshReader();
-        final BuilderContext builderCtx = new BuilderContext(indexService.getIndexSettings().getSettings(), new ContentPath(1));
+        final ContentPath contentPath = new ContentPath(1);
 
         {
             indexService.clearCaches(false, true);
-            MappedFieldType ft = new TextFieldMapper.Builder("high_freq")
+            MappedFieldType ft = new TextFieldMapper.Builder("high_freq", createDefaultIndexAnalyzers())
                     .fielddata(true)
                     .fielddataFrequencyFilter(0, random.nextBoolean() ? 100 : 0.5d, 0)
-                    .build(builderCtx).fieldType();
+                    .build(contentPath).fieldType();
             IndexOrdinalsFieldData fieldData = shardContext.getForField(ft);
             for (LeafReaderContext context : contexts) {
-                AtomicOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
+                LeafOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
                 SortedSetDocValues bytesValues = loadDirect.getOrdinalsValues();
                 assertThat(2L, equalTo(bytesValues.getValueCount()));
                 assertThat(bytesValues.lookupOrd(0).utf8ToString(), equalTo("10"));
@@ -79,13 +78,13 @@ public class FilterFieldDataTests extends AbstractFieldDataTestCase {
         }
         {
             indexService.clearCaches(false, true);
-            MappedFieldType ft = new TextFieldMapper.Builder("high_freq")
+            MappedFieldType ft = new TextFieldMapper.Builder("high_freq", createDefaultIndexAnalyzers())
                     .fielddata(true)
                     .fielddataFrequencyFilter(random.nextBoolean() ? 101 : 101d/200.0d, 201, 100)
-                    .build(builderCtx).fieldType();
+                    .build(contentPath).fieldType();
             IndexOrdinalsFieldData fieldData = shardContext.getForField(ft);
             for (LeafReaderContext context : contexts) {
-                AtomicOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
+                LeafOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
                 SortedSetDocValues bytesValues = loadDirect.getOrdinalsValues();
                 assertThat(1L, equalTo(bytesValues.getValueCount()));
                 assertThat(bytesValues.lookupOrd(0).utf8ToString(), equalTo("5"));
@@ -94,13 +93,13 @@ public class FilterFieldDataTests extends AbstractFieldDataTestCase {
 
         {
             indexService.clearCaches(false, true);// test # docs with value
-            MappedFieldType ft = new TextFieldMapper.Builder("med_freq")
+            MappedFieldType ft = new TextFieldMapper.Builder("med_freq", createDefaultIndexAnalyzers())
                     .fielddata(true)
                     .fielddataFrequencyFilter(random.nextBoolean() ? 101 : 101d/200.0d, Integer.MAX_VALUE, 101)
-                    .build(builderCtx).fieldType();
+                    .build(contentPath).fieldType();
             IndexOrdinalsFieldData fieldData = shardContext.getForField(ft);
             for (LeafReaderContext context : contexts) {
-                AtomicOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
+                LeafOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
                 SortedSetDocValues bytesValues = loadDirect.getOrdinalsValues();
                 assertThat(2L, equalTo(bytesValues.getValueCount()));
                 assertThat(bytesValues.lookupOrd(0).utf8ToString(), equalTo("10"));
@@ -110,13 +109,13 @@ public class FilterFieldDataTests extends AbstractFieldDataTestCase {
 
         {
             indexService.clearCaches(false, true);
-            MappedFieldType ft = new TextFieldMapper.Builder("med_freq")
+            MappedFieldType ft = new TextFieldMapper.Builder("med_freq", createDefaultIndexAnalyzers())
                     .fielddata(true)
                     .fielddataFrequencyFilter(random.nextBoolean() ? 101 : 101d/200.0d, Integer.MAX_VALUE, 101)
-                    .build(builderCtx).fieldType();
+                    .build(contentPath).fieldType();
             IndexOrdinalsFieldData fieldData = shardContext.getForField(ft);
             for (LeafReaderContext context : contexts) {
-                AtomicOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
+                LeafOrdinalsFieldData loadDirect = fieldData.loadDirect(context);
                 SortedSetDocValues bytesValues = loadDirect.getOrdinalsValues();
                 assertThat(2L, equalTo(bytesValues.getValueCount()));
                 assertThat(bytesValues.lookupOrd(0).utf8ToString(), equalTo("10"));
@@ -127,7 +126,7 @@ public class FilterFieldDataTests extends AbstractFieldDataTestCase {
     }
 
     @Override
-    public void testEmpty() throws Exception {
+    public void testEmpty() {
         assumeTrue("No need to test empty usage here", false);
     }
 }

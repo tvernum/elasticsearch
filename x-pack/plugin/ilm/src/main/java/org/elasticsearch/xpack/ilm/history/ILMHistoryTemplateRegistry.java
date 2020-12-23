@@ -28,12 +28,20 @@ public class ILMHistoryTemplateRegistry extends IndexTemplateRegistry {
     // history (please add a comment why you increased the version here)
     // version 1: initial
     // version 2: convert to hidden index
-    public static final int INDEX_TEMPLATE_VERSION = 2;
+    // version 3: templates moved to composable templates
+    // version 4: add `allow_auto_create` setting
+    // version 5: convert to data stream
+    public static final int INDEX_TEMPLATE_VERSION = 5;
 
     public static final String ILM_TEMPLATE_VERSION_VARIABLE = "xpack.ilm_history.template.version";
     public static final String ILM_TEMPLATE_NAME = "ilm-history";
 
     public static final String ILM_POLICY_NAME = "ilm-history-ilm-policy";
+
+    @Override
+    protected boolean requiresMasterNode() {
+        return true;
+    }
 
     public static final IndexTemplateConfig TEMPLATE_ILM_HISTORY = new IndexTemplateConfig(
         ILM_TEMPLATE_NAME,
@@ -57,7 +65,7 @@ public class ILMHistoryTemplateRegistry extends IndexTemplateRegistry {
     }
 
     @Override
-    protected List<IndexTemplateConfig> getTemplateConfigs() {
+    protected List<IndexTemplateConfig> getComposableTemplateConfigs() {
         if (this.ilmHistoryEnabled) {
             return Collections.singletonList(TEMPLATE_ILM_HISTORY);
         } else {

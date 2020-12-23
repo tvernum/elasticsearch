@@ -15,12 +15,16 @@ import org.elasticsearch.action.admin.cluster.snapshots.create.CreateSnapshotAct
 import org.elasticsearch.action.admin.cluster.snapshots.get.GetSnapshotsAction;
 import org.elasticsearch.action.admin.cluster.snapshots.status.SnapshotsStatusAction;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateAction;
+import org.elasticsearch.action.ingest.GetPipelineAction;
+import org.elasticsearch.action.ingest.SimulatePipelineAction;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.xpack.core.ilm.action.GetLifecycleAction;
 import org.elasticsearch.xpack.core.ilm.action.GetStatusAction;
 import org.elasticsearch.xpack.core.ilm.action.StartILMAction;
 import org.elasticsearch.xpack.core.ilm.action.StopILMAction;
 import org.elasticsearch.xpack.core.security.action.DelegatePkiAuthenticationAction;
+import org.elasticsearch.xpack.core.security.action.GrantApiKeyAction;
+import org.elasticsearch.xpack.core.security.action.saml.SamlSpMetadataAction;
 import org.elasticsearch.xpack.core.security.action.token.InvalidateTokenAction;
 import org.elasticsearch.xpack.core.security.action.token.RefreshTokenAction;
 import org.elasticsearch.xpack.core.security.action.user.HasPrivilegesAction;
@@ -44,23 +48,27 @@ public class ClusterPrivilegeResolver {
     // shared automatons
     private static final Set<String> ALL_SECURITY_PATTERN = Set.of("cluster:admin/xpack/security/*");
     private static final Set<String> MANAGE_SAML_PATTERN = Set.of("cluster:admin/xpack/security/saml/*",
-        InvalidateTokenAction.NAME, RefreshTokenAction.NAME);
+        InvalidateTokenAction.NAME, RefreshTokenAction.NAME, SamlSpMetadataAction.NAME);
     private static final Set<String> MANAGE_OIDC_PATTERN = Set.of("cluster:admin/xpack/security/oidc/*");
     private static final Set<String> MANAGE_TOKEN_PATTERN = Set.of("cluster:admin/xpack/security/token/*");
     private static final Set<String> MANAGE_API_KEY_PATTERN = Set.of("cluster:admin/xpack/security/api_key/*");
+    private static final Set<String> GRANT_API_KEY_PATTERN = Set.of(GrantApiKeyAction.NAME + "*");
     private static final Set<String> MONITOR_PATTERN = Set.of("cluster:monitor/*");
     private static final Set<String> MONITOR_ML_PATTERN = Set.of("cluster:monitor/xpack/ml/*");
     private static final Set<String> MONITOR_TRANSFORM_PATTERN = Set.of("cluster:monitor/data_frame/*", "cluster:monitor/transform/*");
     private static final Set<String> MONITOR_WATCHER_PATTERN = Set.of("cluster:monitor/xpack/watcher/*");
     private static final Set<String> MONITOR_ROLLUP_PATTERN = Set.of("cluster:monitor/xpack/rollup/*");
-    private static final Set<String> ALL_CLUSTER_PATTERN = Set.of("cluster:*", "indices:admin/template/*");
+    private static final Set<String> ALL_CLUSTER_PATTERN = Set.of("cluster:*", "indices:admin/template/*", "indices:admin/index_template/*",
+        "indices:admin/data_stream/*");
     private static final Set<String> MANAGE_ML_PATTERN = Set.of("cluster:admin/xpack/ml/*", "cluster:monitor/xpack/ml/*");
     private static final Set<String> MANAGE_TRANSFORM_PATTERN = Set.of("cluster:admin/data_frame/*", "cluster:monitor/data_frame/*",
             "cluster:monitor/transform/*", "cluster:admin/transform/*");
     private static final Set<String> MANAGE_WATCHER_PATTERN = Set.of("cluster:admin/xpack/watcher/*", "cluster:monitor/xpack/watcher/*");
     private static final Set<String> TRANSPORT_CLIENT_PATTERN = Set.of("cluster:monitor/nodes/liveness", "cluster:monitor/state");
-    private static final Set<String> MANAGE_IDX_TEMPLATE_PATTERN = Set.of("indices:admin/template/*");
+    private static final Set<String> MANAGE_IDX_TEMPLATE_PATTERN = Set.of("indices:admin/template/*", "indices:admin/index_template/*",
+        "cluster:admin/component_template/*");
     private static final Set<String> MANAGE_INGEST_PIPELINE_PATTERN = Set.of("cluster:admin/ingest/pipeline/*");
+    private static final Set<String> READ_PIPELINE_PATTERN = Set.of(GetPipelineAction.NAME, SimulatePipelineAction.NAME);
     private static final Set<String> MANAGE_ROLLUP_PATTERN = Set.of("cluster:admin/xpack/rollup/*", "cluster:monitor/xpack/rollup/*");
     private static final Set<String> MANAGE_CCR_PATTERN =
         Set.of("cluster:admin/xpack/ccr/*", ClusterStateAction.NAME, HasPrivilegesAction.NAME);
@@ -99,6 +107,8 @@ public class ClusterPrivilegeResolver {
         new ActionClusterPrivilege("manage_index_templates", MANAGE_IDX_TEMPLATE_PATTERN);
     public static final NamedClusterPrivilege MANAGE_INGEST_PIPELINES =
         new ActionClusterPrivilege("manage_ingest_pipelines", MANAGE_INGEST_PIPELINE_PATTERN);
+    public static final NamedClusterPrivilege READ_PIPELINE =
+        new ActionClusterPrivilege("read_pipeline", READ_PIPELINE_PATTERN);
     public static final NamedClusterPrivilege TRANSPORT_CLIENT = new ActionClusterPrivilege("transport_client",
         TRANSPORT_CLIENT_PATTERN);
     public static final NamedClusterPrivilege MANAGE_SECURITY = new ActionClusterPrivilege("manage_security", ALL_SECURITY_PATTERN,
@@ -106,6 +116,7 @@ public class ClusterPrivilegeResolver {
     public static final NamedClusterPrivilege MANAGE_SAML = new ActionClusterPrivilege("manage_saml", MANAGE_SAML_PATTERN);
     public static final NamedClusterPrivilege MANAGE_OIDC = new ActionClusterPrivilege("manage_oidc", MANAGE_OIDC_PATTERN);
     public static final NamedClusterPrivilege MANAGE_API_KEY = new ActionClusterPrivilege("manage_api_key", MANAGE_API_KEY_PATTERN);
+    public static final NamedClusterPrivilege GRANT_API_KEY = new ActionClusterPrivilege("grant_api_key", GRANT_API_KEY_PATTERN);
     public static final NamedClusterPrivilege MANAGE_PIPELINE = new ActionClusterPrivilege("manage_pipeline", Set.of("cluster:admin" +
         "/ingest/pipeline/*"));
     public static final NamedClusterPrivilege MANAGE_AUTOSCALING = new ActionClusterPrivilege(
@@ -126,6 +137,9 @@ public class ClusterPrivilegeResolver {
     public static final NamedClusterPrivilege MANAGE_OWN_API_KEY = ManageOwnApiKeyClusterPrivilege.INSTANCE;
     public static final NamedClusterPrivilege MANAGE_ENRICH = new ActionClusterPrivilege("manage_enrich", MANAGE_ENRICH_AUTOMATON);
 
+    public static final NamedClusterPrivilege MANAGE_LOGSTASH_PIPELINES = new ActionClusterPrivilege("manage_logstash_pipelines",
+        Set.of("cluster:admin/logstash/pipeline/*"));
+
     private static final Map<String, NamedClusterPrivilege> VALUES = Stream.of(
         NONE,
         ALL,
@@ -143,11 +157,13 @@ public class ClusterPrivilegeResolver {
         MANAGE_WATCHER,
         MANAGE_IDX_TEMPLATES,
         MANAGE_INGEST_PIPELINES,
+        READ_PIPELINE,
         TRANSPORT_CLIENT,
         MANAGE_SECURITY,
         MANAGE_SAML,
         MANAGE_OIDC,
         MANAGE_API_KEY,
+        GRANT_API_KEY,
         MANAGE_PIPELINE,
         MANAGE_ROLLUP,
         MANAGE_AUTOSCALING,
@@ -161,7 +177,8 @@ public class ClusterPrivilegeResolver {
         READ_SLM,
         DELEGATE_PKI,
         MANAGE_OWN_API_KEY,
-        MANAGE_ENRICH).collect(Collectors.toUnmodifiableMap(NamedClusterPrivilege::name, Function.identity()));
+        MANAGE_ENRICH,
+        MANAGE_LOGSTASH_PIPELINES).collect(Collectors.toUnmodifiableMap(NamedClusterPrivilege::name, Function.identity()));
 
     /**
      * Resolves a {@link NamedClusterPrivilege} from a given name if it exists.
@@ -193,7 +210,9 @@ public class ClusterPrivilegeResolver {
     }
 
     public static boolean isClusterAction(String actionName) {
-        return actionName.startsWith("cluster:") || actionName.startsWith("indices:admin/template/");
+        return actionName.startsWith("cluster:") ||
+            actionName.startsWith("indices:admin/template/") ||
+            actionName.startsWith("indices:admin/index_template/");
     }
 
     private static String actionToPattern(String text) {

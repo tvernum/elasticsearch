@@ -36,7 +36,7 @@ import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.cluster.health.ClusterIndexHealth;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.Table;
 import org.elasticsearch.common.settings.Settings;
@@ -82,6 +82,11 @@ public class RestIndicesAction extends AbstractCatAction {
     }
 
     @Override
+    public boolean allowSystemIndexAccessByDefault() {
+        return true;
+    }
+
+    @Override
     protected void documentation(StringBuilder sb) {
         sb.append("/_cat/indices\n");
         sb.append("/_cat/indices/{index}\n");
@@ -91,7 +96,6 @@ public class RestIndicesAction extends AbstractCatAction {
     public RestChannelConsumer doCatRequest(final RestRequest request, final NodeClient client) {
         final String[] indices = Strings.splitStringByCommaToArray(request.param("index"));
         final IndicesOptions indicesOptions = IndicesOptions.fromRequest(request, IndicesOptions.strictExpand());
-        final boolean local = request.paramAsBoolean("local", false);
         final TimeValue masterNodeTimeout = request.paramAsTime("master_timeout", DEFAULT_MASTER_NODE_TIMEOUT);
         final boolean includeUnloadedSegments = request.paramAsBoolean("include_unloaded_segments", false);
 
@@ -103,7 +107,7 @@ public class RestIndicesAction extends AbstractCatAction {
                 }
             });
 
-            sendGetSettingsRequest(indices, indicesOptions, local, masterNodeTimeout, client, new ActionListener<>() {
+            sendGetSettingsRequest(indices, indicesOptions, masterNodeTimeout, client, new ActionListener<>() {
                 @Override
                 public void onResponse(final GetSettingsResponse getSettingsResponse) {
                     final GroupedActionListener<ActionResponse> groupedListener = createGroupedListener(request, 4, listener);
@@ -125,9 +129,9 @@ public class RestIndicesAction extends AbstractCatAction {
                     // index names with the same indices options that we used for the initial cluster state request (strictExpand).
                     sendIndicesStatsRequest(indices, subRequestIndicesOptions, includeUnloadedSegments, client,
                         ActionListener.wrap(groupedListener::onResponse, groupedListener::onFailure));
-                    sendClusterStateRequest(indices, subRequestIndicesOptions, local, masterNodeTimeout, client,
+                    sendClusterStateRequest(indices, subRequestIndicesOptions, masterNodeTimeout, client,
                         ActionListener.wrap(groupedListener::onResponse, groupedListener::onFailure));
-                    sendClusterHealthRequest(indices, subRequestIndicesOptions, local, masterNodeTimeout, client,
+                    sendClusterHealthRequest(indices, subRequestIndicesOptions, masterNodeTimeout, client,
                         ActionListener.wrap(groupedListener::onResponse, groupedListener::onFailure));
                 }
 
@@ -149,14 +153,12 @@ public class RestIndicesAction extends AbstractCatAction {
      */
     private void sendGetSettingsRequest(final String[] indices,
                                         final IndicesOptions indicesOptions,
-                                        final boolean local,
                                         final TimeValue masterNodeTimeout,
                                         final NodeClient client,
                                         final ActionListener<GetSettingsResponse> listener) {
         final GetSettingsRequest request = new GetSettingsRequest();
         request.indices(indices);
         request.indicesOptions(indicesOptions);
-        request.local(local);
         request.masterNodeTimeout(masterNodeTimeout);
         request.names(IndexSettings.INDEX_SEARCH_THROTTLED.getKey());
 
@@ -165,7 +167,6 @@ public class RestIndicesAction extends AbstractCatAction {
 
     private void sendClusterStateRequest(final String[] indices,
                                          final IndicesOptions indicesOptions,
-                                         final boolean local,
                                          final TimeValue masterNodeTimeout,
                                          final NodeClient client,
                                          final ActionListener<ClusterStateResponse> listener) {
@@ -173,7 +174,6 @@ public class RestIndicesAction extends AbstractCatAction {
         final ClusterStateRequest request = new ClusterStateRequest();
         request.indices(indices);
         request.indicesOptions(indicesOptions);
-        request.local(local);
         request.masterNodeTimeout(masterNodeTimeout);
 
         client.admin().cluster().state(request, listener);
@@ -181,7 +181,6 @@ public class RestIndicesAction extends AbstractCatAction {
 
     private void sendClusterHealthRequest(final String[] indices,
                                           final IndicesOptions indicesOptions,
-                                          final boolean local,
                                           final TimeValue masterNodeTimeout,
                                           final NodeClient client,
                                           final ActionListener<ClusterHealthResponse> listener) {
@@ -189,7 +188,6 @@ public class RestIndicesAction extends AbstractCatAction {
         final ClusterHealthRequest request = new ClusterHealthRequest();
         request.indices(indices);
         request.indicesOptions(indicesOptions);
-        request.local(local);
         request.masterNodeTimeout(masterNodeTimeout);
 
         client.admin().cluster().health(request, listener);
@@ -215,21 +213,27 @@ public class RestIndicesAction extends AbstractCatAction {
         return new GroupedActionListener<>(new ActionListener<>() {
             @Override
             public void onResponse(final Collection<ActionResponse> responses) {
-                GetSettingsResponse settingsResponse = extractResponse(responses, GetSettingsResponse.class);
-                Map<String, Settings> indicesSettings = StreamSupport.stream(settingsResponse.getIndexToSettings().spliterator(), false)
-                    .collect(Collectors.toMap(cursor -> cursor.key, cursor -> cursor.value));
+                try {
+                    GetSettingsResponse settingsResponse = extractResponse(responses, GetSettingsResponse.class);
+                    Map<String, Settings> indicesSettings = StreamSupport.stream(settingsResponse.getIndexToSettings().spliterator(), false)
+                        .collect(Collectors.toMap(cursor -> cursor.key, cursor -> cursor.value));
 
-                ClusterStateResponse stateResponse = extractResponse(responses, ClusterStateResponse.class);
-                Map<String, IndexMetaData> indicesStates = StreamSupport.stream(stateResponse.getState().getMetaData().spliterator(), false)
-                    .collect(Collectors.toMap(indexMetaData -> indexMetaData.getIndex().getName(), Function.identity()));
+                    ClusterStateResponse stateResponse = extractResponse(responses, ClusterStateResponse.class);
+                    Map<String, IndexMetadata> indicesStates =
+                        StreamSupport.stream(stateResponse.getState().getMetadata().spliterator(), false)
+                            .collect(Collectors.toMap(indexMetadata -> indexMetadata.getIndex().getName(), Function.identity()));
 
-                ClusterHealthResponse healthResponse = extractResponse(responses, ClusterHealthResponse.class);
-                Map<String, ClusterIndexHealth> indicesHealths = healthResponse.getIndices();
+                    ClusterHealthResponse healthResponse = extractResponse(responses, ClusterHealthResponse.class);
+                    Map<String, ClusterIndexHealth> indicesHealths = healthResponse.getIndices();
 
-                IndicesStatsResponse statsResponse = extractResponse(responses, IndicesStatsResponse.class);
-                Map<String, IndexStats> indicesStats = statsResponse.getIndices();
+                    IndicesStatsResponse statsResponse = extractResponse(responses, IndicesStatsResponse.class);
+                    Map<String, IndexStats> indicesStats = statsResponse.getIndices();
 
-                listener.onResponse(buildTable(request, indicesSettings, indicesHealths, indicesStats, indicesStates));
+                    Table responseTable = buildTable(request, indicesSettings, indicesHealths, indicesStats, indicesStates);
+                    listener.onResponse(responseTable);
+                } catch (Exception e) {
+                    onFailure(e);
+                }
             }
 
             @Override
@@ -495,6 +499,26 @@ public class RestIndicesAction extends AbstractCatAction {
 
         table.addCell("search.throttled", "alias:sth;default:false;desc:indicates if the index is search throttled");
 
+        table.addCell("bulk.total_operations",
+            "sibling:pri;alias:bto,bulkTotalOperation;default:false;text-align:right;desc:number of bulk shard ops");
+        table.addCell("pri.bulk.total_operations", "default:false;text-align:right;desc:number of bulk shard ops");
+
+        table.addCell("bulk.total_time",
+            "sibling:pri;alias:btti,bulkTotalTime;default:false;text-align:right;desc:time spend in shard bulk");
+        table.addCell("pri.bulk.total_time", "default:false;text-align:right;desc:time spend in shard bulk");
+
+        table.addCell("bulk.total_size_in_bytes",
+            "sibling:pri;alias:btsi,bulkTotalSizeInBytes;default:false;text-align:right;desc:total size in bytes of shard bulk");
+        table.addCell("pri.bulk.total_size_in_bytes", "default:false;text-align:right;desc:total size in bytes of shard bulk");
+
+        table.addCell("bulk.avg_time",
+            "sibling:pri;alias:bati,bulkAvgTime;default:false;text-align:right;desc:average time spend in shard bulk");
+        table.addCell("pri.bulk.avg_time", "default:false;text-align:right;desc:average time spend in shard bulk");
+
+        table.addCell("bulk.avg_size_in_bytes",
+            "sibling:pri;alias:basi,bulkAvgSizeInBytes;default:false;text-align:right;desc:average size in bytes of shard bulk");
+        table.addCell("pri.bulk.avg_size_in_bytes", "default:false;text-align:right;desc:average size in bytes of shard bulk");
+
         table.endHeaders();
         return table;
     }
@@ -504,20 +528,20 @@ public class RestIndicesAction extends AbstractCatAction {
                      final Map<String, Settings> indicesSettings,
                      final Map<String, ClusterIndexHealth> indicesHealths,
                      final Map<String, IndexStats> indicesStats,
-                     final Map<String, IndexMetaData> indicesMetaDatas) {
+                     final Map<String, IndexMetadata> indicesMetadatas) {
 
         final String healthParam = request.param("health");
         final Table table = getTableWithHeader(request);
 
         indicesSettings.forEach((indexName, settings) -> {
-            if (indicesMetaDatas.containsKey(indexName) == false) {
+            if (indicesMetadatas.containsKey(indexName) == false) {
                 // the index exists in the Get Indices response but is not present in the cluster state:
                 // it is likely that the index was deleted in the meanwhile, so we ignore it.
                 return;
             }
 
-            final IndexMetaData indexMetaData = indicesMetaDatas.get(indexName);
-            final IndexMetaData.State indexState = indexMetaData.getState();
+            final IndexMetadata indexMetadata = indicesMetadatas.get(indexName);
+            final IndexMetadata.State indexState = indexMetadata.getState();
             final IndexStats indexStats = indicesStats.get(indexName);
             final boolean searchThrottled = IndexSettings.INDEX_SEARCH_THROTTLED.get(settings);
 
@@ -549,7 +573,7 @@ public class RestIndicesAction extends AbstractCatAction {
             final CommonStats primaryStats;
             final CommonStats totalStats;
 
-            if (indexStats == null || indexState == IndexMetaData.State.CLOSE) {
+            if (indexStats == null || indexState == IndexMetadata.State.CLOSE) {
                 // TODO: expose docs stats for replicated closed indices
                 primaryStats = new CommonStats();
                 totalStats = new CommonStats();
@@ -561,15 +585,15 @@ public class RestIndicesAction extends AbstractCatAction {
             table.addCell(health);
             table.addCell(indexState.toString().toLowerCase(Locale.ROOT));
             table.addCell(indexName);
-            table.addCell(indexMetaData.getIndexUUID());
+            table.addCell(indexMetadata.getIndexUUID());
             table.addCell(indexHealth == null ? null : indexHealth.getNumberOfShards());
             table.addCell(indexHealth == null ? null : indexHealth.getNumberOfReplicas());
 
             table.addCell(primaryStats.getDocs() == null ? null : primaryStats.getDocs().getCount());
             table.addCell(primaryStats.getDocs() == null ? null : primaryStats.getDocs().getDeleted());
 
-            table.addCell(indexMetaData.getCreationDate());
-            ZonedDateTime creationTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(indexMetaData.getCreationDate()), ZoneOffset.UTC);
+            table.addCell(indexMetadata.getCreationDate());
+            ZonedDateTime creationTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(indexMetadata.getCreationDate()), ZoneOffset.UTC);
             table.addCell(STRICT_DATE_TIME_FORMATTER.format(creationTime));
 
             table.addCell(totalStats.getStore() == null ? null : totalStats.getStore().size());
@@ -753,6 +777,21 @@ public class RestIndicesAction extends AbstractCatAction {
             table.addCell(primaryStats.getTotalMemory());
 
             table.addCell(searchThrottled);
+
+            table.addCell(totalStats.getBulk() == null ? null : totalStats.getBulk().getTotalOperations());
+            table.addCell(primaryStats.getBulk() == null ? null : primaryStats.getBulk().getTotalOperations());
+
+            table.addCell(totalStats.getBulk() == null ? null : totalStats.getBulk().getTotalTime());
+            table.addCell(primaryStats.getBulk() == null ? null : primaryStats.getBulk().getTotalTime());
+
+            table.addCell(totalStats.getBulk() == null ? null : totalStats.getBulk().getTotalSizeInBytes());
+            table.addCell(primaryStats.getBulk() == null ? null : primaryStats.getBulk().getTotalSizeInBytes());
+
+            table.addCell(totalStats.getBulk() == null ? null : totalStats.getBulk().getAvgTime());
+            table.addCell(primaryStats.getBulk() == null ? null : primaryStats.getBulk().getAvgTime());
+
+            table.addCell(totalStats.getBulk() == null ? null : totalStats.getBulk().getAvgSizeInBytes());
+            table.addCell(primaryStats.getBulk() == null ? null : primaryStats.getBulk().getAvgSizeInBytes());
 
             table.endRow();
         });

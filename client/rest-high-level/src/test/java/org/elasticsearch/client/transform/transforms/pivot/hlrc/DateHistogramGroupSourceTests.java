@@ -74,19 +74,20 @@ public class DateHistogramGroupSourceTests extends AbstractResponseTestCase<
             dateHistogramGroupSource = new DateHistogramGroupSource(
                 field,
                 scriptConfig,
-                new DateHistogramGroupSource.FixedInterval(new DateHistogramInterval(randomPositiveTimeValue()))
+                randomBoolean(),
+                new DateHistogramGroupSource.FixedInterval(new DateHistogramInterval(randomTimeValue(1, 100, "d", "h", "ms", "s", "m"))),
+                randomBoolean() ? randomZone() : null
             );
         } else {
             dateHistogramGroupSource = new DateHistogramGroupSource(
                 field,
                 scriptConfig,
-                new DateHistogramGroupSource.CalendarInterval(new DateHistogramInterval(randomTimeValue(1, 1, "m", "h", "d", "w")))
+                randomBoolean(),
+                new DateHistogramGroupSource.CalendarInterval(new DateHistogramInterval(randomTimeValue(1, 1, "m", "h", "d", "w"))),
+                randomBoolean() ? randomZone() : null
             );
         }
 
-        if (randomBoolean()) {
-            dateHistogramGroupSource.setTimeZone(randomZone());
-        }
         return dateHistogramGroupSource;
     }
 

@@ -19,8 +19,6 @@
 
 package org.elasticsearch.transport;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
@@ -83,7 +81,6 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
     static final int CHANNELS_PER_CONNECTION = 1;
 
     private static final int MAX_CONNECT_ATTEMPTS_PER_RUN = 3;
-    private static final Logger logger = LogManager.getLogger(ProxyConnectionStrategy.class);
 
     private final int maxNumConnections;
     private final String configuredAddress;
@@ -98,46 +95,46 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
             clusterAlias,
             transportService,
             connectionManager,
+            settings,
             REMOTE_SOCKET_CONNECTIONS.getConcreteSettingForNamespace(clusterAlias).get(settings),
             PROXY_ADDRESS.getConcreteSettingForNamespace(clusterAlias).get(settings),
             SERVER_NAME.getConcreteSettingForNamespace(clusterAlias).get(settings));
     }
 
     ProxyConnectionStrategy(String clusterAlias, TransportService transportService, RemoteConnectionManager connectionManager,
-                            int maxNumConnections, String configuredAddress) {
-        this(clusterAlias, transportService, connectionManager, maxNumConnections, configuredAddress,
+                            Settings settings, int maxNumConnections, String configuredAddress) {
+        this(clusterAlias, transportService, connectionManager, settings, maxNumConnections, configuredAddress,
             () -> resolveAddress(configuredAddress), null);
     }
 
     ProxyConnectionStrategy(String clusterAlias, TransportService transportService, RemoteConnectionManager connectionManager,
-                            int maxNumConnections, String configuredAddress, String configuredServerName) {
-        this(clusterAlias, transportService, connectionManager, maxNumConnections, configuredAddress,
+                            Settings settings, int maxNumConnections, String configuredAddress, String configuredServerName) {
+        this(clusterAlias, transportService, connectionManager, settings, maxNumConnections, configuredAddress,
             () -> resolveAddress(configuredAddress), configuredServerName);
     }
 
     ProxyConnectionStrategy(String clusterAlias, TransportService transportService, RemoteConnectionManager connectionManager,
-                            int maxNumConnections, String configuredAddress, Supplier<TransportAddress> address,
+                            Settings settings, int maxNumConnections, String configuredAddress, Supplier<TransportAddress> address,
                             String configuredServerName) {
-        super(clusterAlias, transportService, connectionManager);
+        super(clusterAlias, transportService, connectionManager, settings);
         this.maxNumConnections = maxNumConnections;
         this.configuredAddress = configuredAddress;
         this.configuredServerName = configuredServerName;
         assert Strings.isEmpty(configuredAddress) == false : "Cannot use proxy connection strategy with no configured addresses";
         this.address = address;
         this.clusterNameValidator = (newConnection, actualProfile, listener) ->
-            transportService.handshake(newConnection, actualProfile.getHandshakeTimeout().millis(), cn -> true,
-                ActionListener.map(listener, resp -> {
-                    ClusterName remote = resp.getClusterName();
-                    if (remoteClusterName.compareAndSet(null, remote)) {
-                        return null;
-                    } else {
-                        if (remoteClusterName.get().equals(remote) == false) {
-                            DiscoveryNode node = newConnection.getNode();
-                            throw new ConnectTransportException(node, "handshake failed. unexpected remote cluster name " + remote);
-                        }
-                        return null;
+            transportService.handshake(newConnection, actualProfile.getHandshakeTimeout(), cn -> true, listener.map(resp -> {
+                ClusterName remote = resp.getClusterName();
+                if (remoteClusterName.compareAndSet(null, remote)) {
+                    return null;
+                } else {
+                    if (remoteClusterName.get().equals(remote) == false) {
+                        DiscoveryNode node = newConnection.getNode();
+                        throw new ConnectTransportException(node, "handshake failed. unexpected remote cluster name " + remote);
                     }
-                }));
+                    return null;
+                }
+            }));
     }
 
     static Stream<Setting.AffixSetting<?>> enablementSettings() {
@@ -157,7 +154,9 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
     protected boolean strategyMustBeRebuilt(Settings newSettings) {
         String address = PROXY_ADDRESS.getConcreteSettingForNamespace(clusterAlias).get(newSettings);
         int numOfSockets = REMOTE_SOCKET_CONNECTIONS.getConcreteSettingForNamespace(clusterAlias).get(newSettings);
-        return numOfSockets != maxNumConnections || configuredAddress.equals(address) == false;
+        String serverName = SERVER_NAME.getConcreteSettingForNamespace(clusterAlias).get(newSettings);
+        return numOfSockets != maxNumConnections || configuredAddress.equals(address) == false ||
+            Objects.equals(serverName, configuredServerName) == false;
     }
 
     @Override
@@ -172,7 +171,7 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
 
     @Override
     public RemoteConnectionInfo.ModeInfo getModeInfo() {
-        return new ProxyModeInfo(configuredAddress, maxNumConnections, connectionManager.size());
+        return new ProxyModeInfo(configuredAddress, configuredServerName, maxNumConnections, connectionManager.size());
     }
 
     private void performProxyConnectionProcess(ActionListener<Void> listener) {
@@ -255,17 +254,24 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
     public static class ProxyModeInfo implements RemoteConnectionInfo.ModeInfo {
 
         private final String address;
+        private final String serverName;
         private final int maxSocketConnections;
         private final int numSocketsConnected;
 
-        public ProxyModeInfo(String address, int maxSocketConnections, int numSocketsConnected) {
+        public ProxyModeInfo(String address, String serverName, int maxSocketConnections, int numSocketsConnected) {
             this.address = address;
+            this.serverName = serverName;
             this.maxSocketConnections = maxSocketConnections;
             this.numSocketsConnected = numSocketsConnected;
         }
 
         private ProxyModeInfo(StreamInput input) throws IOException {
             address = input.readString();
+            if (input.getVersion().onOrAfter(Version.V_7_7_0)) {
+                serverName = input.readString();
+            } else {
+                serverName = null;
+            }
             maxSocketConnections = input.readVInt();
             numSocketsConnected = input.readVInt();
         }
@@ -273,6 +279,7 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             builder.field("proxy_address", address);
+            builder.field("server_name", serverName);
             builder.field("num_proxy_sockets_connected", numSocketsConnected);
             builder.field("max_proxy_socket_connections", maxSocketConnections);
             return builder;
@@ -281,6 +288,9 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeString(address);
+            if (out.getVersion().onOrAfter(Version.V_7_7_0)) {
+                out.writeString(serverName);
+            }
             out.writeVInt(maxSocketConnections);
             out.writeVInt(numSocketsConnected);
         }
@@ -297,6 +307,10 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
 
         public String getAddress() {
             return address;
+        }
+
+        public String getServerName() {
+            return serverName;
         }
 
         public int getMaxSocketConnections() {
@@ -319,12 +333,13 @@ public class ProxyConnectionStrategy extends RemoteConnectionStrategy {
             ProxyModeInfo otherProxy = (ProxyModeInfo) o;
             return maxSocketConnections == otherProxy.maxSocketConnections &&
                 numSocketsConnected == otherProxy.numSocketsConnected &&
-                Objects.equals(address, otherProxy.address);
+                Objects.equals(address, otherProxy.address) &&
+                Objects.equals(serverName, otherProxy.serverName);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(address, maxSocketConnections, numSocketsConnected);
+            return Objects.hash(address, serverName, maxSocketConnections, numSocketsConnected);
         }
     }
 }

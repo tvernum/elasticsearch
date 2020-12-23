@@ -59,8 +59,11 @@ public final class DataTypeConverter {
             return left;
         }
         if (isString(left) && isString(right)) {
-            if (left == TEXT) {
+            if (left == TEXT || right == TEXT) {
                 return TEXT;
+            }
+            if (left == KEYWORD) {
+                return KEYWORD;
             }
             return right;
         }

@@ -6,7 +6,7 @@
 package org.elasticsearch.xpack.monitoring.test;
 
 import org.elasticsearch.analysis.common.CommonAnalysisPlugin;
-import org.elasticsearch.cluster.metadata.IndexTemplateMetaData;
+import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Tuple;
@@ -20,7 +20,6 @@ import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.store.MockFSIndexStore;
 import org.elasticsearch.test.transport.MockTransportService;
 import org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplateUtils;
-import org.elasticsearch.xpack.core.monitoring.test.MockPainlessScriptEngine;
 import org.elasticsearch.xpack.monitoring.LocalStateMonitoring;
 import org.elasticsearch.xpack.monitoring.MonitoringService;
 import org.elasticsearch.xpack.monitoring.exporter.ClusterAlertsUtil;
@@ -70,7 +69,7 @@ public abstract class MonitoringIntegTestCase extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(LocalStateMonitoring.class, MockPainlessScriptEngine.TestPlugin.class,
+        return Arrays.asList(LocalStateMonitoring.class, MockClusterAlertScriptEngine.TestPlugin.class,
                 MockIngestPlugin.class, CommonAnalysisPlugin.class);
     }
 
@@ -164,7 +163,7 @@ public abstract class MonitoringIntegTestCase extends ESIntegTestCase {
 
     protected void assertTemplateInstalled(String name) {
         boolean found = false;
-        for (IndexTemplateMetaData template : client().admin().indices().prepareGetTemplates().get().getIndexTemplates()) {
+        for (IndexTemplateMetadata template : client().admin().indices().prepareGetTemplates().get().getIndexTemplates()) {
             if (Regex.simpleMatch(name, template.getName())) {
                 found =  true;
             }
@@ -177,10 +176,8 @@ public abstract class MonitoringIntegTestCase extends ESIntegTestCase {
         assertBusy(this::ensureMonitoringIndicesYellow);
     }
 
-    private void awaitIndexExists(final String index) throws Exception {
-        assertBusy(() -> {
-            assertIndicesExists(index);
-        }, 30, TimeUnit.SECONDS);
+    protected void awaitIndexExists(final String index) throws Exception {
+        assertBusy(() -> assertIndicesExists(index), 30, TimeUnit.SECONDS);
     }
 
     private void assertIndicesExists(String... indices) {

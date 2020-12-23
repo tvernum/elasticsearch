@@ -20,6 +20,7 @@
 package org.elasticsearch.index.query;
 
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.AutomatonQuery;
 import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.search.PrefixQuery;
@@ -61,8 +62,8 @@ public class PrefixQueryBuilderTests extends AbstractQueryTestCase<PrefixQueryBu
     }
 
     private static PrefixQueryBuilder randomPrefixQuery() {
-        String fieldName = randomFrom(STRING_FIELD_NAME,
-            STRING_ALIAS_FIELD_NAME,
+        String fieldName = randomFrom(TEXT_FIELD_NAME,
+            TEXT_ALIAS_FIELD_NAME,
             randomAlphaOfLengthBetween(1, 10));
         String value = randomAlphaOfLengthBetween(1, 10);
         return new PrefixQueryBuilder(fieldName, value);
@@ -70,8 +71,10 @@ public class PrefixQueryBuilderTests extends AbstractQueryTestCase<PrefixQueryBu
 
     @Override
     protected void doAssertLuceneQuery(PrefixQueryBuilder queryBuilder, Query query, QueryShardContext context) throws IOException {
-        assertThat(query, Matchers.anyOf(instanceOf(PrefixQuery.class), instanceOf(MatchNoDocsQuery.class)));
-        if (context.fieldMapper(queryBuilder.fieldName()) != null) { // The field is mapped
+        assertThat(query, Matchers.anyOf(instanceOf(PrefixQuery.class), instanceOf(MatchNoDocsQuery.class),
+            instanceOf(AutomatonQuery.class)));
+        if (context.getFieldType(queryBuilder.fieldName()) != null
+            && queryBuilder.caseInsensitive() == false) { // The field is mapped and case sensitive
             PrefixQuery prefixQuery = (PrefixQuery) query;
 
             String expectedFieldName = expectedFieldName(queryBuilder.fieldName());
@@ -92,16 +95,19 @@ public class PrefixQueryBuilderTests extends AbstractQueryTestCase<PrefixQueryBu
 
     public void testBlendedRewriteMethod() throws IOException {
         String rewrite = "top_terms_blended_freqs_10";
-        Query parsedQuery = parseQuery(prefixQuery(STRING_FIELD_NAME, "val").rewrite(rewrite)).toQuery(createShardContext());
+        Query parsedQuery = parseQuery(prefixQuery(TEXT_FIELD_NAME, "val").rewrite(rewrite)).toQuery(createShardContext());
         assertThat(parsedQuery, instanceOf(PrefixQuery.class));
         PrefixQuery prefixQuery = (PrefixQuery) parsedQuery;
-        assertThat(prefixQuery.getPrefix(), equalTo(new Term(STRING_FIELD_NAME, "val")));
+        assertThat(prefixQuery.getPrefix(), equalTo(new Term(TEXT_FIELD_NAME, "val")));
         assertThat(prefixQuery.getRewriteMethod(), instanceOf(MultiTermQuery.TopTermsBlendedFreqScoringRewrite.class));
     }
 
     public void testFromJson() throws IOException {
         String json =
-                "{    \"prefix\" : { \"user\" :  { \"value\" : \"ki\", \"boost\" : 2.0 } }}";
+                "{    \"prefix\" : { \"user\" :  { \"value\" : \"ki\",\n"
+                + "     \"case_insensitive\" : true,\n"
+                + " \"boost\" : 2.0"
+                + "} }}";
 
         PrefixQueryBuilder parsed = (PrefixQueryBuilder) parseQuery(json);
         checkGeneratedJson(json, parsed);
@@ -116,7 +122,7 @@ public class PrefixQueryBuilderTests extends AbstractQueryTestCase<PrefixQueryBu
         QueryShardContext context = createShardContext();
         QueryShardException e = expectThrows(QueryShardException.class,
                 () -> query.toQuery(context));
-        assertEquals("Can only use prefix queries on keyword and text fields - not on [mapped_int] which is of type [integer]",
+        assertEquals("Can only use prefix queries on keyword, text and wildcard fields - not on [mapped_int] which is of type [integer]",
                 e.getMessage());
     }
 
@@ -145,7 +151,7 @@ public class PrefixQueryBuilderTests extends AbstractQueryTestCase<PrefixQueryBu
         e = expectThrows(ParsingException.class, () -> parseQuery(shortJson));
         assertEquals("[prefix] query doesn't support multiple fields, found [user1] and [user2]", e.getMessage());
     }
-    
+
     public void testRewriteIndexQueryToMatchNone() throws Exception {
         PrefixQueryBuilder query = prefixQuery("_index", "does_not_exist");
         QueryShardContext queryShardContext = createShardContext();

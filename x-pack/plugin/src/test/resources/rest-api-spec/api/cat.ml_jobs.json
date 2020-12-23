@@ -1,9 +1,14 @@
 {
   "cat.ml_jobs":{
     "documentation":{
-      "url":"http://www.elastic.co/guide/en/elasticsearch/reference/current/cat-anomaly-detectors.html"
+      "url":"http://www.elastic.co/guide/en/elasticsearch/reference/current/cat-anomaly-detectors.html",
+      "description": "Gets configuration and usage information about anomaly detection jobs."
     },
     "stability":"stable",
+    "visibility":"public",
+    "headers":{
+      "accept": [ "text/plain", "application/json"]
+    },
     "url":{
       "paths":[
         {
@@ -27,10 +32,16 @@
       ]
     },
     "params":{
-      "allow_no_jobs":{
+      "allow_no_match":{
         "type":"boolean",
         "required":false,
         "description":"Whether to ignore if a wildcard expression matches no jobs. (This includes `_all` string or when no jobs have been specified)"
+      },
+      "allow_no_jobs":{
+        "type":"boolean",
+        "required":false,
+        "description":"Whether to ignore if a wildcard expression matches no jobs. (This includes `_all` string or when no jobs have been specified)",
+        "deprecated":true
       },
       "bytes":{
         "type":"enum",
@@ -70,13 +81,13 @@
         "type":"enum",
         "description":"The unit in which to display time values",
         "options":[
-          "d (Days)",
-          "h (Hours)",
-          "m (Minutes)",
-          "s (Seconds)",
-          "ms (Milliseconds)",
-          "micros (Microseconds)",
-          "nanos (Nanoseconds)"
+          "d",
+          "h",
+          "m",
+          "s",
+          "ms",
+          "micros",
+          "nanos"
         ]
       },
       "v":{

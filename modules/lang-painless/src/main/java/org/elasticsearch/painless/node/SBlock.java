@@ -20,81 +20,38 @@
 package org.elasticsearch.painless.node;
 
 import org.elasticsearch.painless.Location;
-import org.elasticsearch.painless.Scope;
-import org.elasticsearch.painless.ir.BlockNode;
-import org.elasticsearch.painless.ir.ClassNode;
-import org.elasticsearch.painless.symbol.ScriptRoot;
+import org.elasticsearch.painless.phase.UserTreeVisitor;
 
 import java.util.Collections;
 import java.util.List;
-
-import static java.util.Collections.emptyList;
+import java.util.Objects;
 
 /**
  * Represents a set of statements as a branch of control-flow.
  */
-public final class SBlock extends AStatement {
+public class SBlock extends AStatement {
 
-    final List<AStatement> statements;
+    private final List<AStatement> statementNodes;
 
-    public SBlock(Location location, List<AStatement> statements) {
-        super(location);
+    public SBlock(int identifier, Location location, List<AStatement> statementNodes) {
+        super(identifier, location);
 
-        this.statements = Collections.unmodifiableList(statements);
+        this.statementNodes = Collections.unmodifiableList(Objects.requireNonNull(statementNodes));
+    }
+
+    public List<AStatement> getStatementNodes() {
+        return statementNodes;
     }
 
     @Override
-    Output analyze(ScriptRoot scriptRoot, Scope scope, Input input) {
-        this.input = input;
-        output = new Output();
-
-        if (statements == null || statements.isEmpty()) {
-            throw createError(new IllegalArgumentException("A block must contain at least one statement."));
-        }
-
-        AStatement last = statements.get(statements.size() - 1);
-
-        for (AStatement statement : statements) {
-            // Note that we do not need to check after the last statement because
-            // there is no statement that can be unreachable after the last.
-            if (output.allEscape) {
-                throw createError(new IllegalArgumentException("Unreachable statement."));
-            }
-
-            Input statementInput = new Input();
-            statementInput.inLoop = input.inLoop;
-            statementInput.lastSource = input.lastSource && statement == last;
-            statementInput.lastLoop = (input.beginLoop || input.lastLoop) && statement == last;
-            Output statementOutput = statement.analyze(scriptRoot, scope, statementInput);
-
-            output.methodEscape = statementOutput.methodEscape;
-            output.loopEscape = statementOutput.loopEscape;
-            output.allEscape = statementOutput.allEscape;
-            output.anyContinue |= statementOutput.anyContinue;
-            output.anyBreak |= statementOutput.anyBreak;
-            output.statementCount += statementOutput.statementCount;
-        }
-
-        return output;
+    public <Scope> void visit(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        userTreeVisitor.visitBlock(this, scope);
     }
 
     @Override
-    BlockNode write(ClassNode classNode) {
-        BlockNode blockNode = new BlockNode();
-
-        for (AStatement statement : statements) {
-            blockNode.addStatementNode(statement.write(classNode));
+    public <Scope> void visitChildren(UserTreeVisitor<Scope> userTreeVisitor, Scope scope) {
+        for (AStatement statementNode: statementNodes) {
+            statementNode.visit(userTreeVisitor, scope);
         }
-
-        blockNode.setLocation(location);
-        blockNode.setAllEscape(output.allEscape);
-        blockNode.setStatementCount(output.statementCount);
-
-        return blockNode;
-    }
-
-    @Override
-    public String toString() {
-        return multilineToString(emptyList(), statements);
     }
 }

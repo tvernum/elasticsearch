@@ -5,8 +5,6 @@
  */
 package org.elasticsearch.xpack.core.ilm;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.AbstractDiffable;
 import org.elasticsearch.cluster.Diffable;
@@ -41,7 +39,6 @@ import java.util.stream.Collectors;
  */
 public class LifecyclePolicy extends AbstractDiffable<LifecyclePolicy>
         implements ToXContentObject, Diffable<LifecyclePolicy> {
-    private static final Logger logger = LogManager.getLogger(LifecyclePolicy.class);
     private static final int MAX_INDEX_NAME_BYTES = 255;
 
     public static final ParseField PHASES_FIELD = new ParseField("phases");
@@ -242,7 +239,7 @@ public class LifecyclePolicy extends AbstractDiffable<LifecyclePolicy>
 
     /**
      * Validate the name for an policy against some static rules. Intended to match
-     * {@link org.elasticsearch.cluster.metadata.MetaDataCreateIndexService#validateIndexOrAliasName(String, BiFunction)}
+     * {@link org.elasticsearch.cluster.metadata.MetadataCreateIndexService#validateIndexOrAliasName(String, BiFunction)}
      * @param policy the policy name to validate
      * @throws IllegalArgumentException if the name is invalid
      */

@@ -22,7 +22,6 @@ package org.elasticsearch.smoketest;
 import com.carrotsearch.randomizedtesting.annotations.Name;
 import com.carrotsearch.randomizedtesting.annotations.ParametersFactory;
 import com.carrotsearch.randomizedtesting.annotations.TimeoutSuite;
-
 import org.apache.http.HttpHost;
 import org.apache.http.util.EntityUtils;
 import org.apache.lucene.util.BytesRef;
@@ -31,6 +30,7 @@ import org.elasticsearch.Version;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.common.ParseField;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentLocation;
@@ -46,6 +46,7 @@ import org.elasticsearch.test.rest.yaml.ESClientYamlSuiteTestCase;
 import org.elasticsearch.test.rest.yaml.restspec.ClientYamlSuiteRestSpec;
 import org.elasticsearch.test.rest.yaml.section.ExecutableSection;
 import org.junit.After;
+import org.junit.Before;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,8 +60,8 @@ import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static org.elasticsearch.common.xcontent.ConstructingObjectParser.constructorArg;
 
-//The default 20 minutes timeout isn't always enough, please do not increase further than 30 before analyzing what makes this suite so slow
-@TimeoutSuite(millis = 30 * TimeUnits.MINUTE)
+//The default 20 minutes timeout isn't always enough, but Darwin CI hosts are incredibly slow...
+@TimeoutSuite(millis = 40 * TimeUnits.MINUTE)
 public class DocsClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     public DocsClientYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
@@ -69,11 +70,9 @@ public class DocsClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     @ParametersFactory
     public static Iterable<Object[]> parameters() throws Exception {
-        List<NamedXContentRegistry.Entry> entries = new ArrayList<>(ExecutableSection.DEFAULT_EXECUTABLE_CONTEXTS.size() + 1);
-        entries.addAll(ExecutableSection.DEFAULT_EXECUTABLE_CONTEXTS);
-        entries.add(new NamedXContentRegistry.Entry(ExecutableSection.class,
-                new ParseField("compare_analyzers"), CompareAnalyzers::parse));
-        NamedXContentRegistry executableSectionRegistry = new NamedXContentRegistry(entries);
+        NamedXContentRegistry executableSectionRegistry = new NamedXContentRegistry(CollectionUtils.appendToCopy(
+                ExecutableSection.DEFAULT_EXECUTABLE_CONTEXTS, new NamedXContentRegistry.Entry(ExecutableSection.class,
+                        new ParseField("compare_analyzers"), CompareAnalyzers::parse)));
         return ESClientYamlSuiteTestCase.createParameters(executableSectionRegistry);
     }
 
@@ -100,6 +99,13 @@ public class DocsClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
             final Version esVersion,
             final Version masterVersion) {
         return new ClientYamlDocsTestClient(restSpec, restClient, hosts, esVersion, masterVersion, this::getClientBuilderWithSniffedHosts);
+    }
+
+    @Before
+    public void waitForRequirements() throws Exception {
+        if (isCcrTest() || isGetLicenseTest() || isXpackInfoTest()) {
+            ESRestTestCase.waitForActiveLicense(adminClient());
+        }
     }
 
     @After
@@ -161,6 +167,21 @@ public class DocsClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
     protected boolean isTransformTest() {
         String testName = getTestName();
         return testName != null && (testName.contains("/transform/") || testName.contains("\\transform\\"));
+    }
+
+    protected boolean isCcrTest() {
+        String testName = getTestName();
+        return testName != null && testName.contains("/ccr/");
+    }
+
+    protected boolean isGetLicenseTest() {
+        String testName = getTestName();
+        return testName != null && (testName.contains("/get-license/") || testName.contains("\\get-license\\"));
+    }
+
+    protected boolean isXpackInfoTest() {
+        String testName = getTestName();
+        return testName != null && (testName.contains("/info/") || testName.contains("\\info\\"));
     }
 
     /**

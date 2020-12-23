@@ -20,7 +20,7 @@
 package org.elasticsearch.cluster.routing;
 
 import org.elasticsearch.Version;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -63,7 +63,7 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
         Type type = Type.values()[in.readByte()];
         switch (type) {
             case EMPTY_STORE: return EmptyStoreRecoverySource.INSTANCE;
-            case EXISTING_STORE: return new ExistingStoreRecoverySource(in);
+            case EXISTING_STORE: return ExistingStoreRecoverySource.read(in);
             case PEER: return PeerRecoverySource.INSTANCE;
             case SNAPSHOT: return new SnapshotRecoverySource(in);
             case LOCAL_SHARDS: return LocalShardsRecoverySource.INSTANCE;
@@ -152,8 +152,8 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
             this.bootstrapNewHistoryUUID = bootstrapNewHistoryUUID;
         }
 
-        private ExistingStoreRecoverySource(StreamInput in) throws IOException {
-            bootstrapNewHistoryUUID = in.readBoolean();
+        private static ExistingStoreRecoverySource read(StreamInput in) throws IOException {
+            return in.readBoolean() ? FORCE_STALE_PRIMARY_INSTANCE : INSTANCE;
         }
 
         @Override
@@ -213,6 +213,9 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
      * recovery from a snapshot
      */
     public static class SnapshotRecoverySource extends RecoverySource {
+
+        public static final String NO_API_RESTORE_UUID = "_no_api_";
+
         private final String restoreUUID;
         private final Snapshot snapshot;
         private final IndexId index;
@@ -229,11 +232,7 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
             restoreUUID = in.readString();
             snapshot = new Snapshot(in);
             version = Version.readVersion(in);
-            if (in.getVersion().onOrAfter(Version.V_7_7_0)) {
-                index = new IndexId(in);
-            } else {
-                index = new IndexId(in.readString(), IndexMetaData.INDEX_UUID_NA_VALUE);
-            }
+            index = new IndexId(in);
         }
 
         public String restoreUUID() {
@@ -245,7 +244,7 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
         }
 
         /**
-         * Gets the {@link IndexId} of the recovery source. May contain {@link IndexMetaData#INDEX_UUID_NA_VALUE} as the index uuid if it
+         * Gets the {@link IndexId} of the recovery source. May contain {@link IndexMetadata#INDEX_UUID_NA_VALUE} as the index uuid if it
          * was created by an older version master in a mixed version cluster.
          *
          * @return IndexId
@@ -263,11 +262,7 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
             out.writeString(restoreUUID);
             snapshot.writeTo(out);
             Version.writeVersion(version, out);
-            if (out.getVersion().onOrAfter(Version.V_7_7_0)) {
-                index.writeTo(out);
-            } else {
-                out.writeString(index.getName());
-            }
+            index.writeTo(out);
         }
 
         @Override

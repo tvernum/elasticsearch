@@ -48,33 +48,16 @@ import static org.mockito.Mockito.when;
 
 public class IndexRecoveryCollectorTests extends BaseCollectorTestCase {
 
-    public void testShouldCollectReturnsFalseIfMonitoringNotAllowed() {
-        // this controls the blockage
-        when(licenseState.isMonitoringAllowed()).thenReturn(false);
-        final boolean isElectedMaster = randomBoolean();
-        whenLocalNodeElectedMaster(isElectedMaster);
-
-        final IndexRecoveryCollector collector = new IndexRecoveryCollector(clusterService, licenseState, client);
-
-        assertThat(collector.shouldCollect(isElectedMaster), is(false));
-        if (isElectedMaster) {
-            verify(licenseState).isMonitoringAllowed();
-        }
-    }
-
     public void testShouldCollectReturnsFalseIfNotMaster() {
-        when(licenseState.isMonitoringAllowed()).thenReturn(true);
         final IndexRecoveryCollector collector = new IndexRecoveryCollector(clusterService, licenseState, client);
 
         assertThat(collector.shouldCollect(false), is(false));
     }
 
     public void testShouldCollectReturnsTrue() {
-        when(licenseState.isMonitoringAllowed()).thenReturn(true);
         final IndexRecoveryCollector collector = new IndexRecoveryCollector(clusterService, licenseState, client);
 
         assertThat(collector.shouldCollect(true), is(true));
-        verify(licenseState).isMonitoringAllowed();
     }
 
     public void testDoCollect() throws Exception {
@@ -154,8 +137,8 @@ public class IndexRecoveryCollectorTests extends BaseCollectorTestCase {
         final Collection<MonitoringDoc> results = collector.doCollect(node, interval, clusterState);
         verify(indicesAdminClient).prepareRecoveries();
         if (recoveryStates.isEmpty() == false) {
-            verify(clusterState).metaData();
-            verify(metaData).clusterUUID();
+            verify(clusterState).metadata();
+            verify(metadata).clusterUUID();
         }
 
         if (nbRecoveries == 0) {

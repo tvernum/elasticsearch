@@ -14,6 +14,7 @@ import org.elasticsearch.common.settings.MockSecureSettings;
 import org.elasticsearch.common.settings.SecureSettings;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.ESIntegTestCase.Scope;
@@ -128,14 +129,15 @@ public class SecuritySettingsSource extends NodeConfigurationSource {
         writeFile(xpackConf, "roles.yml", configRoles());
         writeFile(xpackConf, "users", configUsers());
         writeFile(xpackConf, "users_roles", configUsersRoles());
+        writeFile(xpackConf, "operator_users.yml", configOperatorUsers());
 
         Settings.Builder builder = Settings.builder()
+                .put(Environment.PATH_HOME_SETTING.getKey(), home)
                 .put(XPackSettings.SECURITY_ENABLED.getKey(), true)
                 .put(NetworkModule.TRANSPORT_TYPE_KEY, randomBoolean() ? SecurityField.NAME4 : SecurityField.NIO)
                 .put(NetworkModule.HTTP_TYPE_KEY, randomBoolean() ? SecurityField.NAME4 : SecurityField.NIO)
-                //TODO: for now isolate security tests from watcher & monitoring (randomize this later)
+                //TODO: for now isolate security tests from watcher (randomize this later)
                 .put(XPackSettings.WATCHER_ENABLED.getKey(), false)
-                .put(XPackSettings.MONITORING_ENABLED.getKey(), false)
                 .put(XPackSettings.AUDIT_ENABLED.getKey(), randomBoolean())
                 .put(LoggingAuditTrail.EMIT_HOST_ADDRESS_SETTING.getKey(), randomBoolean())
                 .put(LoggingAuditTrail.EMIT_HOST_NAME_SETTING.getKey(), randomBoolean())
@@ -176,6 +178,11 @@ public class SecuritySettingsSource extends NodeConfigurationSource {
 
     protected String configRoles() {
         return CONFIG_ROLE_ALLOW_ALL;
+    }
+
+    protected String configOperatorUsers() {
+        // By default, no operator user is configured
+        return "";
     }
 
     protected String nodeClientUsername() {

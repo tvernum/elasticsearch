@@ -212,6 +212,16 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
         return result;
     }
 
+
+    public boolean isEmpty() {
+        return clusterPrivileges.length == 0
+            && configurableClusterPrivileges.length == 0
+            && indicesPrivileges.length == 0
+            && applicationPrivileges.length == 0
+            && runAs.length == 0
+            && metadata.size() == 0;
+    }
+
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return toXContent(builder, params, false);
@@ -663,11 +673,11 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
             return allowRestrictedIndices;
         }
 
-        private boolean hasDeniedFields() {
+        public boolean hasDeniedFields() {
             return deniedFields != null && deniedFields.length > 0;
         }
 
-        private boolean hasGrantedFields() {
+        public boolean hasGrantedFields() {
             if (grantedFields != null && grantedFields.length >= 0) {
                 // we treat just '*' as no FLS since that's what the UI defaults to
                 if (grantedFields.length == 1 && "*".equals(grantedFields[0])) {
