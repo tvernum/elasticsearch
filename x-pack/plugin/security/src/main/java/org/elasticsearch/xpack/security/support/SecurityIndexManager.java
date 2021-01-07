@@ -80,8 +80,12 @@ public class SecurityIndexManager implements ClusterStateListener {
 
     public static final int INTERNAL_MAIN_INDEX_FORMAT = 6;
     public static final int INTERNAL_TOKENS_INDEX_FORMAT = 7;
+    public static final int INTERNAL_SECRETS_INDEX_FORMAT = 7;
+
     public static final String SECURITY_MAIN_TEMPLATE_7 = "security-index-template-7";
     public static final String SECURITY_TOKENS_TEMPLATE_7 = "security-tokens-index-template-7";
+    public static final String SECURITY_SECRETS_TEMPLATE_7 = "security-secrets-index-template-7";
+
     public static final String SECURITY_VERSION_STRING = "security-version";
     public static final String TEMPLATE_VERSION_VARIABLE = "security.template.version";
 
@@ -107,6 +111,12 @@ public class SecurityIndexManager implements ClusterStateListener {
         return new SecurityIndexManager(client, clusterService, RestrictedIndicesNames.SECURITY_TOKENS_ALIAS,
                 RestrictedIndicesNames.INTERNAL_SECURITY_TOKENS_INDEX_7, INTERNAL_TOKENS_INDEX_FORMAT,
                 () -> SecurityIndexManager.readTemplateAsBytes(SECURITY_TOKENS_TEMPLATE_7));
+    }
+
+    public static SecurityIndexManager buildSecuritySecretsIndexManager(Client client, ClusterService clusterService) {
+        return new SecurityIndexManager(client, clusterService, RestrictedIndicesNames.SECURITY_SECRETS_ALIAS,
+                RestrictedIndicesNames.INTERNAL_SECURITY_SECRETS_INDEX_7, INTERNAL_SECRETS_INDEX_FORMAT,
+                () -> SecurityIndexManager.readTemplateAsBytes(SECURITY_SECRETS_TEMPLATE_7));
     }
 
     private SecurityIndexManager(Client client, ClusterService clusterService, String aliasName, String internalIndexName,
