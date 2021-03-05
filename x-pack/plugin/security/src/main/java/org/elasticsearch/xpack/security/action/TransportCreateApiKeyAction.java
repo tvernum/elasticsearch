@@ -46,7 +46,7 @@ public final class TransportCreateApiKeyAction extends HandledTransportAction<Cr
         if (authentication == null) {
             listener.onFailure(new IllegalStateException("authentication is required"));
         } else {
-            if (Authentication.AuthenticationType.API_KEY == authentication.getAuthenticationType() && grantsAnyPrivileges(request)) {
+            if (ApiKeyService.isApiKeyAuthentication(authentication) && grantsAnyPrivileges(request)) {
                 listener.onFailure(new IllegalArgumentException(
                     "creating derived api keys requires an explicit role descriptor that is empty (has no privileges)"));
                 return;

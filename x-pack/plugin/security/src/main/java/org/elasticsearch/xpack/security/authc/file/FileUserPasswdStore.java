@@ -16,7 +16,6 @@ import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.Maps;
 import org.elasticsearch.env.Environment;
-import org.elasticsearch.watcher.FileChangesListener;
 import org.elasticsearch.watcher.FileWatcher;
 import org.elasticsearch.watcher.ResourceWatcherService;
 import org.elasticsearch.xpack.core.XPackPlugin;
@@ -28,15 +27,15 @@ import org.elasticsearch.xpack.core.security.support.NoOpLogger;
 import org.elasticsearch.xpack.core.security.support.Validation;
 import org.elasticsearch.xpack.core.security.support.Validation.Users;
 import org.elasticsearch.xpack.core.security.user.User;
+import org.elasticsearch.xpack.security.support.FileLineParser;
+import org.elasticsearch.xpack.security.support.FileReloadListener;
 import org.elasticsearch.xpack.security.support.SecurityFiles;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -62,7 +61,7 @@ public class FileUserPasswdStore {
         users = parseFileLenient(file, logger, settings);
         listeners = new CopyOnWriteArrayList<>(Collections.singletonList(listener));
         FileWatcher watcher = new FileWatcher(file.getParent());
-        watcher.addListener(new FileListener());
+        watcher.addListener(new FileReloadListener(file, this::tryReload));
         try {
             watcherService.add(watcher, ResourceWatcherService.Frequency.HIGH);
         } catch (IOException e) {
@@ -118,50 +117,39 @@ public class FileUserPasswdStore {
      *
      * Returns {@code null}, if the {@code users} file does not exist.
      */
-    public static Map<String, char[]> parseFile(Path path, @Nullable Logger logger, Settings settings) {
-        if (logger == null) {
-            logger = NoOpLogger.INSTANCE;
-        }
+    public static Map<String, char[]> parseFile(Path path, @Nullable Logger nullableLogger, Settings settings) {
+        final Logger logger = nullableLogger == null ? NoOpLogger.INSTANCE : nullableLogger;
         logger.trace("reading users file [{}]...", path.toAbsolutePath());
 
         if (Files.exists(path) == false) {
             return null;
         }
 
-        List<String> lines;
+        final Map<String, char[]> users = new HashMap<>();
+        final boolean allowReserved = XPackSettings.RESERVED_REALM_ENABLED_SETTING.get(settings) == false;
+
         try {
-            lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+            FileLineParser.parse(path, (line, lineNr) -> {
+                // only trim the line because we have a format, our tool generates the formatted text and we shouldn't be lenient
+                // and allow spaces in the format
+                line = line.trim();
+                int i = line.indexOf(':');
+                if (i <= 0 || i == line.length() - 1) {
+                    logger.error("invalid entry in users file [{}], line [{}]. skipping...", path.toAbsolutePath(), lineNr);
+                    return;
+                }
+                final String username = line.substring(0, i);
+                final Validation.Error validationError = Users.validateUsername(username, allowReserved, settings);
+                if (validationError != null) {
+                    logger.error("invalid username [{}] in users file [{}], skipping... ({})", username, path.toAbsolutePath(),
+                        validationError);
+                    return;
+                }
+                final String hash = line.substring(i + 1);
+                users.put(username, hash.toCharArray());
+            });
         } catch (IOException ioe) {
             throw new IllegalStateException("could not read users file [" + path.toAbsolutePath() + "]", ioe);
-        }
-
-        Map<String, char[]> users = new HashMap<>();
-
-        final boolean allowReserved = XPackSettings.RESERVED_REALM_ENABLED_SETTING.get(settings) == false;
-        int lineNr = 0;
-        for (String line : lines) {
-            lineNr++;
-            if (line.startsWith("#")) { // comment
-                continue;
-            }
-
-            // only trim the line because we have a format, our tool generates the formatted text and we shouldn't be lenient
-            // and allow spaces in the format
-            line = line.trim();
-            int i = line.indexOf(':');
-            if (i <= 0 || i == line.length() - 1) {
-                logger.error("invalid entry in users file [{}], line [{}]. skipping...", path.toAbsolutePath(), lineNr);
-                continue;
-            }
-            String username = line.substring(0, i);
-            Validation.Error validationError = Users.validateUsername(username, allowReserved, settings);
-            if (validationError != null) {
-                logger.error("invalid username [{}] in users file [{}], skipping... ({})", username, path.toAbsolutePath(),
-                        validationError);
-                continue;
-            }
-            String hash = line.substring(i + 1);
-            users.put(username, hash.toCharArray());
         }
 
         logger.debug("parsed [{}] users from file [{}]", users.size(), path.toAbsolutePath());
@@ -179,28 +167,14 @@ public class FileUserPasswdStore {
         listeners.forEach(Runnable::run);
     }
 
-    private class FileListener implements FileChangesListener {
-        @Override
-        public void onFileCreated(Path file) {
-            onFileChanged(file);
-        }
+    private void tryReload() {
+        final Map<String, char[]> previousUsers = users;
+        users = parseFileLenient(file, logger, settings);
 
-        @Override
-        public void onFileDeleted(Path file) {
-            onFileChanged(file);
-        }
-
-        @Override
-        public void onFileChanged(Path file) {
-            if (file.equals(FileUserPasswdStore.this.file)) {
-                final Map<String, char[]> previousUsers = users;
-                users = parseFileLenient(file, logger, settings);
-
-                if (Maps.deepEquals(previousUsers, users) == false) {
-                    logger.info("users file [{}] changed. updating users... )", file.toAbsolutePath());
-                    notifyRefresh();
-                }
-            }
+        if (Maps.deepEquals(previousUsers, users) == false) {
+            logger.info("users file [{}] changed. updating users... )", file.toAbsolutePath());
+            notifyRefresh();
         }
     }
+
 }

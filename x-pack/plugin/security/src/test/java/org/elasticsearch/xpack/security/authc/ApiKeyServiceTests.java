@@ -181,7 +181,7 @@ public class ApiKeyServiceTests extends ESTestCase {
             ApiKeyService.ApiKeyCredentials creds = ApiKeyService.getCredentialsFromHeader(threadContext);
             assertNotNull(creds);
             assertEquals(id, creds.getId());
-            assertEquals(key, creds.getKey().toString());
+            assertEquals(key, creds.getSecret().toString());
         }
 
         // missing space
@@ -1071,7 +1071,7 @@ public class ApiKeyServiceTests extends ESTestCase {
     }
 
     private void writeCredentialsToThreadContext(ApiKeyCredentials creds) {
-        final String credentialString = creds.getId() + ":" + creds.getKey();
+        final String credentialString = creds.getId() + ":" + creds.getSecret();
         this.threadPool.getThreadContext().putHeader("Authorization",
             "ApiKey " + Base64.getEncoder().encodeToString(credentialString.getBytes(StandardCharsets.US_ASCII)));
     }

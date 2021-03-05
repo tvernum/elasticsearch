@@ -46,6 +46,7 @@ import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.audit.AuditTrail;
 import org.elasticsearch.xpack.security.audit.AuditTrailService;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
+import org.elasticsearch.xpack.security.authc.service.ServiceAccountService;
 import org.elasticsearch.xpack.security.authc.support.RealmUserLookup;
 import org.elasticsearch.xpack.security.operator.OperatorPrivileges.OperatorPrivilegesService;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
@@ -88,6 +89,7 @@ public class AuthenticationService {
     private final Cache<String, Realm> lastSuccessfulAuthCache;
     private final AtomicLong numInvalidation = new AtomicLong();
     private final ApiKeyService apiKeyService;
+    private final ServiceAccountService serviceAccountService;
     private final OperatorPrivilegesService operatorPrivilegesService;
     private final boolean runAsEnabled;
     private final boolean isAnonymousUserEnabled;
@@ -96,7 +98,7 @@ public class AuthenticationService {
     public AuthenticationService(Settings settings, Realms realms, AuditTrailService auditTrailService,
                                  AuthenticationFailureHandler failureHandler, ThreadPool threadPool,
                                  AnonymousUser anonymousUser, TokenService tokenService, ApiKeyService apiKeyService,
-                                 OperatorPrivilegesService operatorPrivilegesService) {
+                                 ServiceAccountService serviceAccountService, OperatorPrivilegesService operatorPrivilegesService) {
         this.nodeName = Node.NODE_NAME_SETTING.get(settings);
         this.realms = realms;
         this.auditTrailService = auditTrailService;
@@ -115,6 +117,7 @@ public class AuthenticationService {
             this.lastSuccessfulAuthCache = null;
         }
         this.apiKeyService = apiKeyService;
+        this.serviceAccountService = serviceAccountService;
         this.operatorPrivilegesService = operatorPrivilegesService;
         this.authenticationSerializer = new AuthenticationContextSerializer();
     }
@@ -261,6 +264,14 @@ public class AuthenticationService {
         return true;
     }
 
+    private interface ApiKeyAuthenticator {
+        String type();
+
+        void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx, ActionListener<AuthenticationResult> listener);
+
+        Authentication buildAuthentication(AuthenticationResult result);
+    }
+
     /**
      * This class is responsible for taking a request and executing the authentication. The authentication is executed in an asynchronous
      * fashion in order to avoid blocking calls on a network thread. This class also performs the auditing necessary around authentication
@@ -351,30 +362,82 @@ public class AuthenticationService {
         }
 
         private void checkForApiKey() {
-            apiKeyService.authenticateWithApiKeyIfPresent(threadContext, ActionListener.wrap(authResult -> {
+            final Runnable nextStep = () -> extractToken(this::consumeToken);
+
+            final ApiKeyService.ApiKeyCredentials credentials = ApiKeyService.getCredentialsFromHeader(threadContext);
+            if (credentials == null) {
+                nextStep.run();
+                return;
+            }
+
+            final ApiKeyAuthenticator authenticator;
+            // Plain API keys have a URL-safe base64 encoded ID. Service Account API Keys have an id that contains 1 or more '/' characters
+            if (credentials.getId().indexOf('/') == -1) {
+                authenticator = new ApiKeyAuthenticator() {
+                    @Override
+                    public String type() {
+                        return "API Key";
+                    }
+
+                    @Override
+                    public void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx,
+                                             ActionListener<AuthenticationResult> listener) {
+                        apiKeyService.authenticateWithApiKey(credentials, ctx, listener);
+                    }
+
+                    @Override
+                    public Authentication buildAuthentication(AuthenticationResult result) {
+                        return apiKeyService.createApiKeyAuthentication(result, nodeName);
+                    }
+                };
+            } else {
+                authenticator = new ApiKeyAuthenticator() {
+                    @Override
+                    public String type() {
+                        return "Service Account";
+                    }
+
+                    @Override
+                    public void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx,
+                                             ActionListener<AuthenticationResult> listener) {
+                        serviceAccountService.authenticateWithApiKey(credentials, ctx, listener);
+                    }
+
+                    @Override
+                    public Authentication buildAuthentication(AuthenticationResult result) {
+                        return serviceAccountService.buildAuthentication(result, nodeName);
+                    }
+                };
+            }
+
+            authenticator.authenticate(credentials, threadContext, ActionListener.wrap(authResult -> {
                     if (authResult.isAuthenticated()) {
-                        final Authentication authentication = apiKeyService.createApiKeyAuthentication(authResult, nodeName);
+                        final Authentication authentication = authenticator.buildAuthentication(authResult);
                         this.authenticatedBy = authentication.getAuthenticatedBy();
                         writeAuthToContext(authentication);
                     } else if (authResult.getStatus() == AuthenticationResult.Status.TERMINATE) {
                         Exception e = (authResult.getException() != null) ? authResult.getException()
                             : Exceptions.authenticationError(authResult.getMessage());
-                        logger.debug(new ParameterizedMessage("API key service terminated authentication for request [{}]", request), e);
+                        logger.debug(
+                            new ParameterizedMessage(authenticator.type() + " terminated authentication for request [{}]", request), e);
                         listener.onFailure(e);
                     } else {
                         if (authResult.getMessage() != null) {
                             if (authResult.getException() != null) {
-                                logger.warn(new ParameterizedMessage("Authentication using apikey failed - {}", authResult.getMessage()),
+                                logger.warn(new ParameterizedMessage(authenticator.type() + " authentication failed - {}",
+                                        authResult.getMessage()),
                                     authResult.getException());
                             } else {
                                 logger.warn("Authentication using apikey failed - {}", authResult.getMessage());
                             }
                         }
-                        extractToken(this::consumeToken);
+                        nextStep.run();
                     }
                 },
-                e -> listener.onFailure(request.exceptionProcessingRequest(e, null))));
+                e -> listener.onFailure(request.exceptionProcessingRequest(e, null)))
+            );
         }
+
 
         /**
          * Looks to see if the request contains an existing {@link Authentication} and if so, that authentication will be used. The
