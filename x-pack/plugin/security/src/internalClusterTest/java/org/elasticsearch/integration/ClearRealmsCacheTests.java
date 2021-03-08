@@ -236,7 +236,7 @@ public class ClearRealmsCacheTests extends SecurityIntegTestCase {
             for (String username : usernames) {
                 PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
                 realm.authenticate(tokens.get(username), future);
-                User user = future.actionGet().getUser();
+                User user = future.actionGet().getValue();
                 assertThat(user, notNullValue());
                 Map<Realm, User> realmToUser = users.get(username);
                 if (realmToUser == null) {
@@ -253,7 +253,7 @@ public class ClearRealmsCacheTests extends SecurityIntegTestCase {
             for (Realm realm : realms) {
                 PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
                 realm.authenticate(tokens.get(username), future);
-                User user = future.actionGet().getUser();
+                User user = future.actionGet().getValue();
                 assertThat(user, sameInstance(users.get(username).get(realm)));
             }
         }
@@ -266,7 +266,7 @@ public class ClearRealmsCacheTests extends SecurityIntegTestCase {
             for (Realm realm : realms) {
                 PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
                 realm.authenticate(tokens.get(username), future);
-                User user = future.actionGet().getUser();
+                User user = future.actionGet().getValue();
                 assertThat(user, notNullValue());
                 scenario.assertEviction(users.get(username).get(realm), user);
             }

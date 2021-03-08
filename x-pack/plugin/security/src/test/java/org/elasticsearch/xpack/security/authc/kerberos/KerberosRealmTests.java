@@ -21,10 +21,10 @@ import org.elasticsearch.xpack.core.security.authc.AuthenticationResult;
 import org.elasticsearch.xpack.core.security.authc.RealmConfig;
 import org.elasticsearch.xpack.core.security.authc.RealmSettings;
 import org.elasticsearch.xpack.core.security.authc.kerberos.KerberosRealmSettings;
+import org.elasticsearch.xpack.core.security.authc.support.UserRoleMapper.UserData;
 import org.elasticsearch.xpack.core.security.authc.support.UsernamePasswordToken;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.authc.support.MockLookupRealm;
-import org.elasticsearch.xpack.core.security.authc.support.UserRoleMapper.UserData;
 import org.ietf.jgss.GSSException;
 
 import javax.security.auth.login.LoginException;
@@ -46,7 +46,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import static org.elasticsearch.xpack.security.authc.kerberos.KerberosRealmTestCase.buildKerberosRealmSettings;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -85,7 +84,7 @@ public class KerberosRealmTests extends KerberosRealmTestCase {
         mockKerberosTicketValidator(decodedTicket, keytabPath, krbDebug, new Tuple<>(username, "out-token"), null);
         final KerberosAuthenticationToken kerberosAuthenticationToken = new KerberosAuthenticationToken(decodedTicket);
 
-        final PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
+        final PlainActionFuture<AuthenticationResult<User>> future = new PlainActionFuture<>();
         kerberosRealm.authenticate(kerberosAuthenticationToken, future);
         assertSuccessAuthenticationResult(expectedUser, "out-token", future.actionGet());
 
@@ -104,7 +103,7 @@ public class KerberosRealmTests extends KerberosRealmTestCase {
         final boolean krbDebug = config.getSetting(KerberosRealmSettings.SETTING_KRB_DEBUG_ENABLE);
         mockKerberosTicketValidator(decodedTicket, keytabPath, krbDebug, new Tuple<>("does-not-exist@REALM", "out-token"), null);
 
-        final PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
+        final PlainActionFuture<AuthenticationResult<User>> future = new PlainActionFuture<>();
         kerberosRealm.authenticate(new KerberosAuthenticationToken(decodedTicket), future);
 
         ElasticsearchSecurityException e = expectThrows(ElasticsearchSecurityException.class, future::actionGet);
@@ -195,7 +194,7 @@ public class KerberosRealmTests extends KerberosRealmTestCase {
         mockKerberosTicketValidator(decodedTicket, keytabPath, krbDebug, new Tuple<>(username, "out-token"), null);
         final KerberosAuthenticationToken kerberosAuthenticationToken = new KerberosAuthenticationToken(decodedTicket);
 
-        PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
+        PlainActionFuture<AuthenticationResult<User>> future = new PlainActionFuture<>();
         kerberosRealm.authenticate(kerberosAuthenticationToken, future);
         assertSuccessAuthenticationResult(expectedUser, "out-token", future.actionGet());
 

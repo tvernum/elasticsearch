@@ -26,7 +26,7 @@ public class ElasticServiceAccount implements ServiceAccount {
             throw new IllegalArgumentException("the provided role descriptor [" + roleDescriptor.getName()
                 + "] must have the same name as the service account [" + id.accountName() + "]");
         }
-        this.user = new User(id.accountName(), Strings.EMPTY_ARRAY, id + " service account", null, Map.of(), true);
+        this.user = new User(id.accountName(), Strings.EMPTY_ARRAY, "Service account - " + id, null, Map.of(), true);
     }
 
     @Override

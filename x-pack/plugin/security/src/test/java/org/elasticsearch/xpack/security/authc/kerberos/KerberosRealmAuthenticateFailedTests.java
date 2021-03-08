@@ -83,9 +83,9 @@ public class KerberosRealmAuthenticateFailedTests extends KerberosRealmTestCase 
             expectThrows(AssertionError.class,
                     () -> kerberosRealm.authenticate(kerberosAuthenticationToken, PlainActionFuture.newFuture()));
         } else {
-            final PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
+            final PlainActionFuture<AuthenticationResult<User>> future = new PlainActionFuture<>();
             kerberosRealm.authenticate(kerberosAuthenticationToken, future);
-            AuthenticationResult result = future.actionGet();
+            AuthenticationResult<User> result = future.actionGet();
             assertThat(result, is(notNullValue()));
             if (validTicket) {
                 final String expectedUsername = maybeRemoveRealmName(username);
@@ -139,10 +139,10 @@ public class KerberosRealmAuthenticateFailedTests extends KerberosRealmTestCase 
         mockKerberosTicketValidator(decodedTicket, keytabPath, krbDebug, new Tuple<>(username, "out-token"), null);
         final KerberosAuthenticationToken kerberosAuthenticationToken = new KerberosAuthenticationToken(decodedTicket);
 
-        final PlainActionFuture<AuthenticationResult> future = new PlainActionFuture<>();
+        final PlainActionFuture<AuthenticationResult<User>> future = new PlainActionFuture<>();
         kerberosRealm.authenticate(kerberosAuthenticationToken, future);
 
-        AuthenticationResult result = future.actionGet();
+        AuthenticationResult<User> result = future.actionGet();
         assertThat(result.getStatus(), is(equalTo(AuthenticationResult.Status.CONTINUE)));
         verify(mockKerberosTicketValidator, times(1)).validateTicket(aryEq(decodedTicket), eq(keytabPath), eq(krbDebug),
                 any(ActionListener.class));

@@ -40,7 +40,7 @@ public class ApiKeyGenerator {
             return;
         }
         apiKeyService.ensureEnabled();
-        rolesStore.getRoleDescriptors(new HashSet<>(Arrays.asList(authentication.getUser().roles())),
+        rolesStore.getRoleDescriptors(authentication,
             ActionListener.wrap(roleDescriptors -> {
                     for (RoleDescriptor rd : roleDescriptors) {
                         try {

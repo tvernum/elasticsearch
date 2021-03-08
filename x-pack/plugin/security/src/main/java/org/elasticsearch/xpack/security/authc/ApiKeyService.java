@@ -236,11 +236,6 @@ public class ApiKeyService {
         }
     }
 
-    public static boolean isApiKeyAuthentication(Authentication authentication) {
-        return AuthenticationType.API_KEY == authentication.getAuthenticationType()
-            && API_KEY_REALM_TYPE.equals(authentication.getAuthenticatedBy().getType());
-    }
-
     /**
      * Asynchronously creates a new API key based off of the request and authentication
      * @param authentication the authentication that this api key should be based off of
@@ -256,6 +251,11 @@ public class ApiKeyService {
         } else {
             createApiKeyAndIndexIt(authentication, request, userRoles, listener);
         }
+    }
+
+    public static boolean isApiKeyAuthentication(Authentication authentication) {
+        return authentication.getAuthenticatedBy().getType().equals(API_KEY_REALM_TYPE) &&
+            authentication.getAuthenticationType() == AuthenticationType.API_KEY;
     }
 
     private void createApiKeyAndIndexIt(Authentication authentication, CreateApiKeyRequest request, Set<RoleDescriptor> roleDescriptorSet,
@@ -352,7 +352,7 @@ public class ApiKeyService {
      * Checks for the presence of a {@code Authorization} header with a value that starts with
      * {@code ApiKey }. If found this will attempt to authenticate the key.
      */
-    void authenticateWithApiKeyIfPresent(ThreadContext ctx, ActionListener<AuthenticationResult> listener) {
+    void authenticateWithApiKeyIfPresent(ThreadContext ctx, ActionListener<AuthenticationResult<User>> listener) {
         if (isEnabled()) {
             final ApiKeyCredentials credentials;
             try {
@@ -361,42 +361,38 @@ public class ApiKeyService {
                 listener.onResponse(AuthenticationResult.unsuccessful(iae.getMessage(), iae));
                 return;
             }
-            authenticateWithApiKey(credentials, ctx, listener);
+
+            if (credentials != null) {
+                loadApiKeyAndValidateCredentials(ctx, credentials, ActionListener.wrap(
+                    response -> {
+                        credentials.close();
+                        listener.onResponse(response);
+                    },
+                    e -> {
+                        credentials.close();
+                        listener.onFailure(e);
+                    }
+                ));
+            } else {
+                listener.onResponse(AuthenticationResult.notHandled());
+            }
         } else {
             listener.onResponse(AuthenticationResult.notHandled());
         }
     }
 
-    void authenticateWithApiKey(ApiKeyCredentials credentials, ThreadContext threadContext,
-                                ActionListener<AuthenticationResult> listener) {
-        if (credentials != null && isEnabled()) {
-            loadApiKeyAndValidateCredentials(threadContext, credentials, ActionListener.wrap(
-                response -> {
-                    credentials.close();
-                    listener.onResponse(response);
-                },
-                e -> {
-                    credentials.close();
-                    listener.onFailure(e);
-                }
-            ));
-        } else {
-            listener.onResponse(AuthenticationResult.notHandled());
-        }
-    }
-
-    public Authentication createApiKeyAuthentication(AuthenticationResult authResult, String nodeName) {
+    public Authentication createApiKeyAuthentication(AuthenticationResult<User> authResult, String nodeName) {
         if (false == authResult.isAuthenticated()) {
             throw new IllegalArgumentException("API Key authn result must be successful");
         }
-        final User user = authResult.getUser();
+        final User user = authResult.getValue();
         final RealmRef authenticatedBy = new RealmRef(ApiKeyService.API_KEY_REALM_NAME, ApiKeyService.API_KEY_REALM_TYPE, nodeName);
         return new Authentication(user, authenticatedBy, null, Version.CURRENT, Authentication.AuthenticationType.API_KEY,
                 authResult.getMetadata());
     }
 
     void loadApiKeyAndValidateCredentials(ThreadContext ctx, ApiKeyCredentials credentials,
-                                          ActionListener<AuthenticationResult> listener) {
+                                          ActionListener<AuthenticationResult<User>> listener) {
         final String docId = credentials.getId();
 
         Consumer<ApiKeyDoc> validator = apiKeyDoc ->
@@ -492,12 +488,9 @@ public class ApiKeyService {
             .onOrAfter(VERSION_API_KEY_ROLES_AS_BYTES) : "This method only applies to authentication objects created on or after v7.9.0";
 
         final Map<String, Object> metadata = authentication.getMetadata();
-        final String keyId = (String) Objects.requireNonNull(metadata.get(API_KEY_ID_KEY),
-            "Authentication metadata does not contain an API key id");
-        final String roleDescriptorKey = limitedBy ? API_KEY_LIMITED_ROLE_DESCRIPTORS_KEY : API_KEY_ROLE_DESCRIPTORS_KEY;
-        final BytesReference roleBytes = (BytesReference) Objects.requireNonNull(metadata.get(roleDescriptorKey),
-            "Authentication metadata does not contain the API key's role descriptors [" + roleDescriptorKey + "]");
-        return new Tuple<>(keyId, roleBytes);
+        return new Tuple<>(
+            (String) metadata.get(API_KEY_ID_KEY),
+            (BytesReference) metadata.get(limitedBy ? API_KEY_LIMITED_ROLE_DESCRIPTORS_KEY : API_KEY_ROLE_DESCRIPTORS_KEY));
     }
 
     public static class ApiKeyRoleDescriptors {
@@ -578,7 +571,7 @@ public class ApiKeyService {
      * @param listener the listener to notify after verification
      */
     void validateApiKeyCredentials(String docId, ApiKeyDoc apiKeyDoc, ApiKeyCredentials credentials, Clock clock,
-                                   ActionListener<AuthenticationResult> listener) {
+                                   ActionListener<AuthenticationResult<User>> listener) {
         if ("api_key".equals(apiKeyDoc.docType) == false) {
             listener.onResponse(
                 AuthenticationResult.unsuccessful("document [" + docId + "] is [" + apiKeyDoc.docType + "] not an api key", null));
@@ -608,13 +601,13 @@ public class ApiKeyService {
                 if (valueAlreadyInCache.get()) {
                     listenableCacheEntry.addListener(ActionListener.wrap(result -> {
                             if (result.success) {
-                                if (result.verify(credentials.getSecret())) {
+                                if (result.verify(credentials.getKey())) {
                                     // move on
                                     validateApiKeyExpiration(apiKeyDoc, credentials, clock, listener);
                                 } else {
                                     listener.onResponse(AuthenticationResult.unsuccessful("invalid credentials", null));
                                 }
-                            } else if (result.verify(credentials.getSecret())) { // same key, pass the same result
+                            } else if (result.verify(credentials.getKey())) { // same key, pass the same result
                                 listener.onResponse(AuthenticationResult.unsuccessful("invalid credentials", null));
                             } else {
                                 apiKeyAuthCache.invalidate(credentials.getId(), listenableCacheEntry);
@@ -625,7 +618,7 @@ public class ApiKeyService {
                 } else {
                     verifyKeyAgainstHash(apiKeyDoc.hash, credentials, ActionListener.wrap(
                         verified -> {
-                            listenableCacheEntry.onResponse(new CachedApiKeyHashResult(verified, credentials.getSecret()));
+                            listenableCacheEntry.onResponse(new CachedApiKeyHashResult(verified, credentials.getKey()));
                             if (verified) {
                                 // move on
                                 validateApiKeyExpiration(apiKeyDoc, credentials, clock, listener);
@@ -668,7 +661,7 @@ public class ApiKeyService {
 
     // package-private for testing
     void validateApiKeyExpiration(ApiKeyDoc apiKeyDoc, ApiKeyCredentials credentials, Clock clock,
-                                  ActionListener<AuthenticationResult> listener) {
+                                  ActionListener<AuthenticationResult<User>> listener) {
         if (apiKeyDoc.expirationTime == -1 || Instant.ofEpochMilli(apiKeyDoc.expirationTime).isAfter(clock.instant())) {
             final String principal = Objects.requireNonNull((String) apiKeyDoc.creator.get("principal"));
             final String fullName = (String) apiKeyDoc.creator.get("full_name");
@@ -692,7 +685,7 @@ public class ApiKeyService {
      * Gets the API Key from the <code>Authorization</code> header if the header begins with
      * <code>ApiKey </code>
      */
-    public static ApiKeyCredentials getCredentialsFromHeader(ThreadContext threadContext) {
+    static ApiKeyCredentials getCredentialsFromHeader(ThreadContext threadContext) {
         String header = threadContext.getHeader("Authorization");
         if (Strings.hasText(header) && header.regionMatches(true, 0, "ApiKey ", 0, "ApiKey ".length())
             && header.length() > "ApiKey ".length()) {
@@ -728,7 +721,7 @@ public class ApiKeyService {
             Hasher hasher = Hasher.resolveFromHash(apiKeyHash.toCharArray());
             final char[] apiKeyHashChars = apiKeyHash.toCharArray();
             try {
-                return hasher.verify(credentials.getSecret(), apiKeyHashChars);
+                return hasher.verify(credentials.getKey(), apiKeyHashChars);
             } finally {
                 Arrays.fill(apiKeyHashChars, (char) 0);
             }
@@ -756,26 +749,27 @@ public class ApiKeyService {
         }
     }
 
+    // public class for testing
     public static final class ApiKeyCredentials implements Closeable {
         private final String id;
-        private final SecureString secret;
+        private final SecureString key;
 
-        public ApiKeyCredentials(String id, SecureString secret) {
-            this.id = Objects.requireNonNull(id, "API Key Id cannot be null");
-            this.secret = Objects.requireNonNull(secret, "API Key secret cannot be null");
+        public ApiKeyCredentials(String id, SecureString key) {
+            this.id = id;
+            this.key = key;
         }
 
-        public String getId() {
+        String getId() {
             return id;
         }
 
-        public SecureString getSecret() {
-            return secret;
+        SecureString getKey() {
+            return key;
         }
 
         @Override
         public void close() {
-            secret.close();
+            key.close();
         }
     }
 

@@ -18,8 +18,6 @@ import org.elasticsearch.xpack.core.security.authc.AuthenticationResult;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor.IndicesPrivileges;
 import org.elasticsearch.xpack.core.security.user.User;
-import org.elasticsearch.xpack.security.authc.ApiKeyService;
-import org.elasticsearch.xpack.security.authc.ApiKeyService.ApiKeyCredentials;
 import org.elasticsearch.xpack.security.authc.service.ServiceAccount.ServiceAccountId;
 import org.elasticsearch.xpack.security.support.TracingListener;
 
@@ -64,57 +62,35 @@ public class ServiceAccountService {
         this.fileCredentialStore = fileCredentialStore;
     }
 
-    public boolean isServiceAccount(Authentication authentication) {
+    public static boolean isServiceAccount(Authentication authentication) {
         return REALM_TYPE.equals(authentication.getAuthenticatedBy().getType());
     }
 
-    public void authenticateWithApiKey(ApiKeyCredentials credentials, ThreadContext threadContext,
-                                       ActionListener<AuthenticationResult> listener) {
-        listener = new TracingListener<>(listener, "service account authentication", logger);
-        final String keyId = credentials.getId();
+    public void authenticateWithToken(ServiceAccountToken token, ThreadContext threadContext, String nodeName,
+                                      ActionListener<AuthenticationResult<Authentication>> listener) {
 
-        // Split of the key name
-        final int split = keyId.lastIndexOf('/');
-        if (split == -1) {
+        if ("elastic".equals(token.getAccount().namespace()) == false) {
             listener.onResponse(AuthenticationResult.unsuccessful(
-                "service account API Keys must contain two '/' characters, but received [" + keyId + "]",
+                "only 'elastic' service accounts are supported, but received [" + token.getAccount().accountName() + "]",
                 null
             ));
             return;
         }
 
-        final ServiceAccountId accountId;
-        try {
-            accountId = ServiceAccountId.parseAccountName(keyId.substring(0, split));
-        } catch (Exception e) {
-            listener.onResponse(AuthenticationResult.unsuccessful("cannot parse service account name", e));
-            return;
-        }
-
-        final String key = keyId.substring(split+1);
-
-        if ("elastic".equals(accountId.namespace()) == false) {
-            listener.onResponse(AuthenticationResult.unsuccessful(
-                "only 'elastic' service accounts are supported, but received [" + keyId + "]",
-                null
-            ));
-            return;
-        }
-
-        final ServiceAccount account = getServiceAccount(accountId);
+        final ServiceAccount account = getServiceAccount(token.getAccount());
         if (account == null) {
             listener.onResponse(AuthenticationResult.unsuccessful(
-                "the [" + accountId.accountName() + "] service account does not exist",
+                "the [" + token.getAccount().accountName() + "] service account does not exist",
                 null
             ));
             return;
         }
 
-        if (fileCredentialStore.authenticate(credentials)) {
-            listener.onResponse(success(account, credentials));
+        if (fileCredentialStore.authenticate(token)) {
+            listener.onResponse(success(account, token, nodeName));
         } else {
             listener.onResponse(AuthenticationResult.terminate(
-                "failed to authenticate service account [" + accountId.accountName() + "] with key [" + key + "]",
+                "failed to authenticate service account [" + token.getAccount().accountName() + "] with key [" + token.getTokenName() + "]",
                 null
             ));
         }
@@ -124,21 +100,6 @@ public class ServiceAccountService {
     private ServiceAccount getServiceAccount(ServiceAccountId accountId) {
         final ServiceAccount account = ACCOUNTS.get(accountId.serviceName());
         return account;
-    }
-
-    public Authentication buildAuthentication(AuthenticationResult authResult, String nodeName) {
-        if (false == authResult.isAuthenticated()) {
-            throw new IllegalArgumentException("Service Account authentication result must be successful");
-        }
-        final User user = authResult.getUser();
-        // TODO, this is horrible
-        final ElasticServiceAccount account = (ElasticServiceAccount) authResult.getMetadata().get(SERVICE_ACCOUNT_KEY);
-        final String apiKey = (String) authResult.getMetadata().get(ApiKeyService.API_KEY_ID_KEY);
-        final Authentication.RealmRef authenticatedBy = new Authentication.RealmRef(account.id().namespace(), REALM_TYPE, nodeName);
-        return new Authentication(user, authenticatedBy, null, Version.CURRENT, Authentication.AuthenticationType.API_KEY,
-            Map.ofEntries(
-                Map.entry(ApiKeyService.API_KEY_ID_KEY, apiKey)
-            ));
     }
 
     public void getRoleDescriptor(Authentication authentication, ActionListener<RoleDescriptor> listener) {
@@ -156,12 +117,13 @@ public class ServiceAccountService {
         listener.onResponse(account.role());
     }
 
-    private AuthenticationResult success(ServiceAccount account, ApiKeyCredentials apiKey) {
-        final Map<String, Object> metadata = Map.ofEntries(
-            Map.entry(ApiKeyService.API_KEY_ID_KEY, apiKey.getId()),
-            Map.entry(SERVICE_ACCOUNT_KEY, account)
-        );
-        return AuthenticationResult.success(account.asUser(), metadata);
+    private AuthenticationResult<Authentication> success(ServiceAccount account, ServiceAccountToken token, String nodeName) {
+        final User user = account.asUser();
+        final Authentication.RealmRef authenticatedBy = new Authentication.RealmRef(account.id().namespace(), REALM_TYPE, nodeName);
+        return AuthenticationResult.success(
+            new Authentication(user, authenticatedBy, null, Version.CURRENT, Authentication.AuthenticationType.TOKEN, Map.of(
+                "token_name", token.getTokenName()
+            )));
     }
 
 }

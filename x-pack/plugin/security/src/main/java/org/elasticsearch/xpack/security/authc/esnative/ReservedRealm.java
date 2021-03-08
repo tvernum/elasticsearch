@@ -87,7 +87,7 @@ public class ReservedRealm extends CachingUsernamePasswordRealm {
     }
 
     @Override
-    protected void doAuthenticate(UsernamePasswordToken token, ActionListener<AuthenticationResult> listener) {
+    protected void doAuthenticate(UsernamePasswordToken token, ActionListener<AuthenticationResult<User>> listener) {
         if (realmEnabled == false) {
             listener.onResponse(AuthenticationResult.notHandled());
         } else if (ClientReservedRealm.isReserved(token.principal(), config.settings()) == false) {

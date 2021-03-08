@@ -498,7 +498,7 @@ public class NativeUsersStore {
      * @param username username to lookup the user by
      * @param password the plaintext password to verify
      */
-    void verifyPassword(String username, final SecureString password, ActionListener<AuthenticationResult> listener) {
+    void verifyPassword(String username, final SecureString password, ActionListener<AuthenticationResult<User>> listener) {
         getUserAndPassword(username, ActionListener.wrap((userAndPassword) -> {
             if (userAndPassword == null || userAndPassword.passwordHash() == null) {
                 listener.onResponse(AuthenticationResult.notHandled());

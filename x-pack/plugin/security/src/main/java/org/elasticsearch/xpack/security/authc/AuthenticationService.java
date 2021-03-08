@@ -19,6 +19,7 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.cache.Cache;
 import org.elasticsearch.common.cache.CacheBuilder;
 import org.elasticsearch.common.collect.Tuple;
+import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
@@ -47,6 +48,7 @@ import org.elasticsearch.xpack.security.audit.AuditTrail;
 import org.elasticsearch.xpack.security.audit.AuditTrailService;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
 import org.elasticsearch.xpack.security.authc.service.ServiceAccountService;
+import org.elasticsearch.xpack.security.authc.service.ServiceAccountToken;
 import org.elasticsearch.xpack.security.authc.support.RealmUserLookup;
 import org.elasticsearch.xpack.security.operator.OperatorPrivileges.OperatorPrivilegesService;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
@@ -264,14 +266,6 @@ public class AuthenticationService {
         return true;
     }
 
-    private interface ApiKeyAuthenticator {
-        String type();
-
-        void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx, ActionListener<AuthenticationResult> listener);
-
-        Authentication buildAuthentication(AuthenticationResult result);
-    }
-
     /**
      * This class is responsible for taking a request and executing the authentication. The authentication is executed in an asynchronous
      * fashion in order to avoid blocking calls on a network thread. This class also performs the auditing necessary around authentication
@@ -340,104 +334,87 @@ public class AuthenticationService {
                         logger.trace("Found existing authentication [{}] in request [{}]", authentication, request);
                         listener.onResponse(authentication);
                     } else {
-                        tokenService.getAndValidateToken(threadContext, ActionListener.wrap(userToken -> {
-                            if (userToken != null) {
-                                writeAuthToContext(userToken.getAuthentication());
-                            } else {
-                                checkForApiKey();
-                            }
-                        }, e -> {
-                            logger.debug(new ParameterizedMessage("Failed to validate token authentication for request [{}]", request), e);
-                            if (e instanceof ElasticsearchSecurityException &&
-                                tokenService.isExpiredTokenException((ElasticsearchSecurityException) e) == false) {
-                                // intentionally ignore the returned exception; we call this primarily
-                                // for the auditing as we already have a purpose built exception
-                                request.tamperedRequest();
-                            }
-                            listener.onFailure(e);
-                        }));
+                        checkForBearerToken();
                     }
                 });
             }
         }
 
-        private void checkForApiKey() {
-            final Runnable nextStep = () -> extractToken(this::consumeToken);
-
-            final ApiKeyService.ApiKeyCredentials credentials = ApiKeyService.getCredentialsFromHeader(threadContext);
-            if (credentials == null) {
-                nextStep.run();
-                return;
-            }
-
-            final ApiKeyAuthenticator authenticator;
-            // Plain API keys have a URL-safe base64 encoded ID. Service Account API Keys have an id that contains 1 or more '/' characters
-            if (credentials.getId().indexOf('/') == -1) {
-                authenticator = new ApiKeyAuthenticator() {
-                    @Override
-                    public String type() {
-                        return "API Key";
-                    }
-
-                    @Override
-                    public void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx,
-                                             ActionListener<AuthenticationResult> listener) {
-                        apiKeyService.authenticateWithApiKey(credentials, ctx, listener);
-                    }
-
-                    @Override
-                    public Authentication buildAuthentication(AuthenticationResult result) {
-                        return apiKeyService.createApiKeyAuthentication(result, nodeName);
-                    }
-                };
-            } else {
-                authenticator = new ApiKeyAuthenticator() {
-                    @Override
-                    public String type() {
-                        return "Service Account";
-                    }
-
-                    @Override
-                    public void authenticate(ApiKeyService.ApiKeyCredentials credentials, ThreadContext ctx,
-                                             ActionListener<AuthenticationResult> listener) {
-                        serviceAccountService.authenticateWithApiKey(credentials, ctx, listener);
-                    }
-
-                    @Override
-                    public Authentication buildAuthentication(AuthenticationResult result) {
-                        return serviceAccountService.buildAuthentication(result, nodeName);
-                    }
-                };
-            }
-
-            authenticator.authenticate(credentials, threadContext, ActionListener.wrap(authResult -> {
+        private void checkForBearerToken() {
+            final SecureString token = tokenService.extractBearerTokenFromHeader(threadContext);
+            ServiceAccountToken sat = ServiceAccountToken.tryParseToken(token);
+            if (sat != null) {
+                serviceAccountService.authenticateWithToken(sat, threadContext, nodeName, ActionListener.wrap(authResult -> {
                     if (authResult.isAuthenticated()) {
-                        final Authentication authentication = authenticator.buildAuthentication(authResult);
+                        final Authentication authentication = authResult.getValue();
                         this.authenticatedBy = authentication.getAuthenticatedBy();
                         writeAuthToContext(authentication);
                     } else if (authResult.getStatus() == AuthenticationResult.Status.TERMINATE) {
-                        Exception e = (authResult.getException() != null) ? authResult.getException()
-                            : Exceptions.authenticationError(authResult.getMessage());
-                        logger.debug(
-                            new ParameterizedMessage(authenticator.type() + " terminated authentication for request [{}]", request), e);
+                        Exception e = getException(authResult);
+                        logger.debug(new ParameterizedMessage("Service Account authentication was terminated for request [{}]", request), e);
                         listener.onFailure(e);
                     } else {
-                        if (authResult.getMessage() != null) {
-                            if (authResult.getException() != null) {
-                                logger.warn(new ParameterizedMessage(authenticator.type() + " authentication failed - {}",
-                                        authResult.getMessage()),
-                                    authResult.getException());
-                            } else {
-                                logger.warn("Authentication using apikey failed - {}", authResult.getMessage());
-                            }
-                        }
-                        nextStep.run();
+                        logFailure(authResult, "Service Account authentication failed");
+                        extractToken(this::consumeToken);
                     }
                 },
-                e -> listener.onFailure(request.exceptionProcessingRequest(e, null)))
-            );
+                e -> listener.onFailure(request.exceptionProcessingRequest(e, null))))
+                ;
+            } else {
+                tokenService.tryAuthenticateToken(token, ActionListener.wrap(userToken -> {
+                    if (userToken != null) {
+                        writeAuthToContext(userToken.getAuthentication());
+                    } else {
+                        checkForApiKey();
+                    }
+                }, e -> {
+                    logger.debug(new ParameterizedMessage("Failed to validate token authentication for request [{}]", request), e);
+                    if (e instanceof ElasticsearchSecurityException &&
+                        tokenService.isExpiredTokenException((ElasticsearchSecurityException) e) == false) {
+                        // intentionally ignore the returned exception; we call this primarily
+                        // for the auditing as we already have a purpose built exception
+                        request.tamperedRequest();
+                    }
+                    listener.onFailure(e);
+                }));
+            }
         }
 
+        private Exception getException(AuthenticationResult<?> authResult) {
+            return (authResult.getException() != null) ? authResult.getException()
+                                    : Exceptions.authenticationError(authResult.getMessage());
+        }
+
+        private void checkForApiKey() {
+            apiKeyService.authenticateWithApiKeyIfPresent(threadContext, ActionListener.wrap(authResult -> {
+                    if (authResult.isAuthenticated()) {
+                        final Authentication authentication = apiKeyService.createApiKeyAuthentication(authResult, nodeName);
+                        this.authenticatedBy = authentication.getAuthenticatedBy();
+                        writeAuthToContext(authentication);
+                    } else if (authResult.getStatus() == AuthenticationResult.Status.TERMINATE) {
+                        Exception e = getException(authResult);
+                        logger.debug(new ParameterizedMessage("API key service terminated authentication for request [{}]", request), e);
+                        listener.onFailure(e);
+                    } else {
+                        logFailure(authResult, "Authentication using apikey failed");
+                        extractToken(this::consumeToken);
+                    }
+                },
+                e -> listener.onFailure(request.exceptionProcessingRequest(e, null))));
+        }
+
+        private void logFailure(AuthenticationResult<?> result, String context) {
+            if (result.getMessage() == null) {
+                return;
+            }
+
+            final ParameterizedMessage msg = new ParameterizedMessage("{} - {}", context, result.getMessage());
+            if (result.getException() == null) {
+                logger.warn(msg);
+            } else {
+                logger.warn(msg, result.getException());
+            }
+        }
 
         /**
          * Looks to see if the request contains an existing {@link Authentication} and if so, that authentication will be used. The
@@ -515,7 +492,7 @@ public class AuthenticationService {
                     if (realm.supports(authenticationToken)) {
                         logger.trace("Trying to authenticate [{}] using realm [{}] with token [{}] ",
                             token.principal(), realm, token.getClass().getName());
-                        realm.authenticate(authenticationToken, ActionListener.wrap((result) -> {
+                        realm.authenticate(authenticationToken, ActionListener.wrap(result -> {
                             assert result != null : "Realm " + realm + " produced a null authentication result";
                             logger.debug("Authentication of [{}] using realm [{}] with token [{}] was [{}]",
                                 token.principal(), realm, token.getClass().getSimpleName(), result);
@@ -526,7 +503,7 @@ public class AuthenticationService {
                                 if (lastSuccessfulAuthCache != null && startInvalidation == numInvalidation.get()) {
                                     lastSuccessfulAuthCache.put(authenticationToken.principal(), realm);
                                 }
-                                userListener.onResponse(result.getUser());
+                                userListener.onResponse(result.getValue());
                             } else {
                                 // the user was not authenticated, call this so we can audit the correct event
                                 request.realmAuthenticationFailed(authenticationToken, realm.name());

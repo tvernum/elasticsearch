@@ -112,7 +112,7 @@ public abstract class KerberosRealmTestCase extends ESTestCase {
     protected void assertSuccessAuthenticationResult(final User expectedUser, final String outToken, final AuthenticationResult result) {
         assertThat(result, is(notNullValue()));
         assertThat(result.getStatus(), is(equalTo(AuthenticationResult.Status.SUCCESS)));
-        assertThat(result.getUser(), is(equalTo(expectedUser)));
+        assertThat(result.getValue(), is(equalTo(expectedUser)));
         final Map<String, List<String>> responseHeaders = threadPool.getThreadContext().getResponseHeaders();
         assertThat(responseHeaders, is(notNullValue()));
         assertThat(responseHeaders.get(KerberosAuthenticationToken.WWW_AUTHENTICATE).get(0),

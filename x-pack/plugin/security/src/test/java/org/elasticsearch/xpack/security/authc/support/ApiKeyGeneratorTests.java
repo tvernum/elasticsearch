@@ -60,7 +60,7 @@ public class ApiKeyGeneratorTests extends ESTestCase {
             ActionListener<Set<RoleDescriptor>> listener = (ActionListener<Set<RoleDescriptor>>) args[args.length - 1];
             listener.onResponse(roleDescriptors);
             return null;
-        }).when(rolesStore).getRoleDescriptors(anySetOf(String.class), any(ActionListener.class));
+        }).when(rolesStore).getRoleDescriptors(any(Authentication.class), any(ActionListener.class));
 
         CreateApiKeyResponse response = new CreateApiKeyResponse(
             "name", randomAlphaOfLength(18), new SecureString(randomAlphaOfLength(24).toCharArray()), null);

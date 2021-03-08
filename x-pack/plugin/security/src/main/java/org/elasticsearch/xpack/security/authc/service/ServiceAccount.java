@@ -7,9 +7,12 @@
 
 package org.elasticsearch.xpack.security.authc.service;
 
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.user.User;
 
+import java.io.IOException;
 import java.util.Objects;
 
 public interface ServiceAccount {
@@ -18,10 +21,6 @@ public interface ServiceAccount {
         private final String namespace;
         private final String service;
 
-        public ServiceAccountId(String namespace, String service) {
-            this.namespace = Objects.requireNonNull(namespace, "Service Account namespace may not be null");
-            this.service = Objects.requireNonNull(service, "A Service Account's service-name may not be null");
-        }
 
         public static ServiceAccountId parseAccountName(String userPrincipal) {
             final int split = userPrincipal.indexOf('/');
@@ -30,6 +29,21 @@ public interface ServiceAccount {
                     "a service account name must be in the form {namespace}/{service}, but was [" + userPrincipal + "]");
             }
             return new ServiceAccountId(userPrincipal.substring(0, split), userPrincipal.substring(split + 1));
+        }
+
+        public ServiceAccountId(String namespace, String service) {
+            this.namespace = Objects.requireNonNull(namespace, "Service Account namespace may not be null");
+            this.service = Objects.requireNonNull(service, "A Service Account's service-name may not be null");
+        }
+
+        public ServiceAccountId(StreamInput in) throws IOException {
+            this.namespace = in.readString();
+            this.service = in.readString();
+        }
+
+        public void write(StreamOutput out) throws IOException {
+            out.writeString(namespace);
+            out.writeString(service);
         }
 
         public String namespace() {

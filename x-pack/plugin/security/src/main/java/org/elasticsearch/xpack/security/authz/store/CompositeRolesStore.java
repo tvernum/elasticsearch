@@ -231,8 +231,9 @@ public class CompositeRolesStore {
             return;
         }
 
-        final Authentication.AuthenticationType authType = authentication.getAuthenticationType();
-        if (authType == Authentication.AuthenticationType.API_KEY) {
+        if (ServiceAccountService.isServiceAccount(authentication)) {
+            getRolesForServiceAccount(authentication, roleActionListener);
+        } else if (ApiKeyService.isApiKeyAuthentication(authentication)) {
             getRolesForApiKey(authentication, roleActionListener);
         } else {
             Set<String> roleNames = new HashSet<>(Arrays.asList(user.roles()));
@@ -253,15 +254,17 @@ public class CompositeRolesStore {
         }
     }
 
+    private void getRolesForServiceAccount(Authentication authentication, ActionListener<Role> roleActionListener) {
+        serviceAccountService.getRoleDescriptor(authentication,
+            roleActionListener.delegateFailure((listener, roleDescriptor) -> buildOrCacheRole(
+                new RoleKey(Set.of(roleDescriptor.getName()), "service_account"),
+                () -> List.of(roleDescriptor),
+                listener))
+        );
+    }
+
     private void getRolesForApiKey(Authentication authentication, ActionListener<Role> roleActionListener) {
-        if(serviceAccountService.isServiceAccount(authentication)) {
-            serviceAccountService.getRoleDescriptor(authentication,
-                roleActionListener.delegateFailure((listener, roleDescriptor) -> buildOrCacheRole(
-                    new RoleKey(Set.of(roleDescriptor.getName()), "service_account"),
-                    () -> List.of(roleDescriptor),
-                    listener))
-            );
-        } else if (authentication.getVersion().onOrAfter(VERSION_API_KEY_ROLES_AS_BYTES)) {
+        if (authentication.getVersion().onOrAfter(VERSION_API_KEY_ROLES_AS_BYTES)) {
             buildAndCacheRoleForApiKey(authentication, false, ActionListener.wrap(
                 role -> {
                     if (role == Role.EMPTY) {
@@ -358,14 +361,23 @@ public class CompositeRolesStore {
         }
     }
 
-    public void getRoleDescriptors(Set<String> roleNames, ActionListener<Set<RoleDescriptor>> listener) {
-        roleDescriptors(roleNames, ActionListener.wrap(rolesRetrievalResult -> {
-            if (rolesRetrievalResult.isSuccess()) {
-                listener.onResponse(rolesRetrievalResult.getRoleDescriptors());
-            } else {
-                listener.onFailure(new ElasticsearchException("role retrieval had one or more failures"));
-            }
-        }, listener::onFailure));
+    public void getRoleDescriptors(Authentication authentication, ActionListener<Set<RoleDescriptor>> listener) {
+        if (ServiceAccountService.isServiceAccount(authentication)) {
+            serviceAccountService.getRoleDescriptor(authentication, listener.map(Set::of));
+        } else if (ApiKeyService.isApiKeyAuthentication(authentication)) {
+            // Not possible for API keys, because they have limited-by roles.
+            // To return something accurate, we would need to return the key's descriptors & the limited-by descriptors.
+            listener.onResponse(Set.of());
+        } else {
+            roleDescriptors(Set.of(authentication.getUser().roles())
+                , ActionListener.wrap(rolesRetrievalResult -> {
+                    if (rolesRetrievalResult.isSuccess()) {
+                        listener.onResponse(rolesRetrievalResult.getRoleDescriptors());
+                    } else {
+                        listener.onFailure(new ElasticsearchException("role retrieval had one or more failures"));
+                    }
+                }, listener::onFailure));
+        }
     }
 
     private void roleDescriptors(Set<String> roleNames, ActionListener<RolesRetrievalResult> rolesResultListener) {

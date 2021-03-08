@@ -36,7 +36,7 @@ public class FileRealm extends CachingUsernamePasswordRealm {
     }
 
     @Override
-    protected void doAuthenticate(UsernamePasswordToken token, ActionListener<AuthenticationResult> listener) {
+    protected void doAuthenticate(UsernamePasswordToken token, ActionListener<AuthenticationResult<User>> listener) {
         final AuthenticationResult result = userPasswdStore.verifyPassword(token.principal(), token.credentials(), () -> {
             String[] roles = userRolesStore.roles(token.principal());
             return new User(token.principal(), roles);

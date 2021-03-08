@@ -16,7 +16,6 @@ import org.elasticsearch.watcher.FileWatcher;
 import org.elasticsearch.watcher.ResourceWatcherService;
 import org.elasticsearch.xpack.core.XPackPlugin;
 import org.elasticsearch.xpack.core.security.authc.support.Hasher;
-import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.support.FileLineParser;
 import org.elasticsearch.xpack.security.support.FileReloadListener;
 
@@ -49,9 +48,9 @@ public class ServiceAccountFileCredentialStore {
         }
     }
 
-    public boolean authenticate(ApiKeyService.ApiKeyCredentials apiKey) {
-        return Optional.ofNullable(this.credentialHashes.get(apiKey.getId()))
-            .map(hash -> Hasher.verifyHash(apiKey.getSecret(), hash))
+    public boolean authenticate(ServiceAccountToken token) {
+        return Optional.ofNullable(this.credentialHashes.get(token.getQualifiedName()))
+            .map(hash -> Hasher.verifyHash(token.getSecret(), hash))
             .orElse(false);
     }
 
@@ -63,14 +62,17 @@ public class ServiceAccountFileCredentialStore {
         }
     }
 
-    private Map<String, char[]> parseFile(Path path, Logger logger) throws IOException {
+    private static Map<String, char[]> parseFile(Path path, Logger logger) throws IOException {
+        return Map.copyOf(load(path, logger, new HashMap<>()));
+    }
+
+    public static Map<String, char[]> load(Path path, Logger logger, Map<String, char[]> credentials) throws IOException {
         logger.trace("reading service credentials file [{}]...", path.toAbsolutePath());
         if (Files.exists(path) == false) {
             logger.trace("file [{}] does not exist", path.toAbsolutePath());
             return Map.of();
         }
 
-        final Map<String, char[]> credentials = new HashMap<>();
         FileLineParser.parse(path, (line, lineNumber) -> {
             line = line.trim();
 
@@ -90,6 +92,6 @@ public class ServiceAccountFileCredentialStore {
         });
 
         logger.debug("parsed [{}] credentials from file [{}]", credentials.size(), path.toAbsolutePath());
-        return Map.copyOf(credentials);
+        return credentials;
     }
 }
