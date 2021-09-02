@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
+import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.StepListener;
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesAction;
@@ -27,6 +28,7 @@ import org.elasticsearch.action.update.UpdateAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.core.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.core.Tuple;
@@ -57,6 +59,7 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.Authoriza
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.EmptyAuthorizationInfo;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.IndexAuthorizationResult;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.RequestInfo;
+import org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField;
 import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
@@ -75,6 +78,7 @@ import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.operator.OperatorPrivileges.OperatorPrivilegesService;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -173,6 +177,10 @@ public class AuthorizationService {
      */
     public void authorize(final Authentication authentication, final String action, final TransportRequest originalRequest,
                           final ActionListener<Void> listener) throws ElasticsearchSecurityException {
+        if (isPreauthorizedChildAction(authentication, action, originalRequest)) {
+            listener.onResponse(null);
+            return;
+        }
         /* authorization fills in certain transient headers, which must be observed in the listener (action handler execution)
          * as well, but which must not bleed across different action context (eg parent-child action contexts).
          * <p>
@@ -181,7 +189,8 @@ public class AuthorizationService {
          * When the returned {@code StoredContext} is closed, ALL the original headers are restored.
          */
         try (ThreadContext.StoredContext ignore = threadContext.newStoredContext(false,
-                ACTION_SCOPE_AUTHORIZATION_KEYS)) { // this does not clear {@code AuthorizationServiceField.ORIGINATING_ACTION_KEY}
+                ACTION_SCOPE_AUTHORIZATION_KEYS)) {
+            // this does not clear {@code AuthorizationServiceField.ORIGINATING_ACTION_KEY}
             // prior to doing any authorization lets set the originating action in the thread context
             // the originating action is the current action if no originating action has yet been set in the current thread context
             // if there is already an original action, that stays put (eg. the current action is a child action)
@@ -230,6 +239,60 @@ public class AuthorizationService {
                         }, listener::onFailure), threadContext);
                 getAuthorizationEngine(authentication).resolveAuthorizationInfo(requestInfo, authzInfoListener);
             }
+        }
+    }
+
+    /**
+     * @return {@code true} if this action is a child action of an already authorized action that is in the thread context
+     * <strong>and</strong> we can infer that this aciton is authorized from the parent action.
+     */
+    private boolean isPreauthorizedChildAction(Authentication authentication, String action, TransportRequest request) {
+        if (isIndexAction(action) == false) {
+            // For now, we only treat index level actions as inheriting their parent authorization
+            return false;
+        }
+        final String originalAction = threadContext.getTransient(ORIGINATING_ACTION_KEY);
+        if (Strings.isNullOrEmpty(originalAction)) {
+            // No parent action
+            return false;
+        }
+        if (action.startsWith(originalAction) == false) {
+            // Parent action is not a true parent
+            // We want to treat shard level actions (those that append '[s]' and/or '[p]' & '[r]') as children
+            return false;
+        }
+        final IndicesRequest indicesRequest;
+        if (request instanceof IndicesRequest) {
+            indicesRequest = (IndicesRequest) request;
+        } else {
+            // Can only handle indices request here
+            return false;
+        }
+
+        final String[] indices = indicesRequest.indices();
+        if (indices == null || indices.length == 0) {
+            // No indices to check
+            return false;
+        }
+
+        final IndicesAccessControl indicesAccessControl = threadContext.getTransient(AuthorizationServiceField.INDICES_PERMISSIONS_KEY);
+        if (indicesAccessControl == null) {
+            // This is almost certainly an error, but leave it to be handled later
+            return false;
+        }
+
+        if (Arrays.stream(indices).allMatch(idx -> {
+            if (Regex.isSimpleMatchPattern(idx)) {
+                // The request contains a wildcard
+                return false;
+            }
+            IndicesAccessControl.IndexAccessControl iac = indicesAccessControl.getIndexPermissions(idx);
+            return iac != null && iac.isGranted();
+        })) {
+            logger.trace("Short circuit authorization child action [{}] (child of [{}]) on indices [{}]", action, originalAction, indices);
+            return true;
+        } else {
+            return false;
         }
     }
 
