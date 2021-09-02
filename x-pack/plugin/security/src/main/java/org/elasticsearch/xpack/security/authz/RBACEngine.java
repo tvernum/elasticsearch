@@ -19,10 +19,12 @@ import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.bulk.BulkAction;
 import org.elasticsearch.action.bulk.BulkShardRequest;
+import org.elasticsearch.action.bulk.TransportShardBulkAction;
 import org.elasticsearch.action.delete.DeleteAction;
 import org.elasticsearch.action.get.MultiGetAction;
 import org.elasticsearch.action.index.IndexAction;
 import org.elasticsearch.action.search.ClearScrollAction;
+import org.elasticsearch.action.search.ClosePointInTimeAction;
 import org.elasticsearch.action.search.MultiSearchAction;
 import org.elasticsearch.action.search.SearchScrollAction;
 import org.elasticsearch.action.search.SearchScrollRequest;
@@ -32,13 +34,13 @@ import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.transport.TransportActionProxy;
 import org.elasticsearch.transport.TransportRequest;
 import org.elasticsearch.xpack.core.async.DeleteAsyncResultAction;
 import org.elasticsearch.xpack.core.eql.EqlAsyncActionNames;
-import org.elasticsearch.action.search.ClosePointInTimeAction;
 import org.elasticsearch.xpack.core.search.action.GetAsyncSearchAction;
 import org.elasticsearch.xpack.core.search.action.SubmitAsyncSearchAction;
 import org.elasticsearch.xpack.core.security.action.GetApiKeyAction;
@@ -70,6 +72,7 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivileg
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeResolver;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
+import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.NamedClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.support.StringMatcher;
@@ -131,6 +134,50 @@ public class RBACEngine implements AuthorizationEngine {
 
     private void getRoles(User user, Authentication authentication, ActionListener<Role> listener) {
         rolesStore.getRoles(user, authentication, listener);
+    }
+
+    @Override
+    public boolean isChildActionAuthorizedByParent(RequestInfo requestInfo, String parentAction, IndicesAccessControl parentAccessControl) {
+        final String childAction = requestInfo.getAction();
+        if (IndexPrivilege.CREATE_INDEX_MATCHER.test(childAction) || childAction.equals(TransportShardBulkAction.ACTION_NAME)) {
+            // These need special handling, so don't short circuit
+            return false;
+        }
+        if (isScrollRelatedAction(childAction) || isAsyncRelatedAction(childAction)) {
+            // These need special handling, so don't short circuit
+            return false;
+        }
+        if (childAction.startsWith(parentAction) == false) {
+            // Parent action is not a true parent
+            // We want to treat shard level actions (those that append '[s]' and/or '[p]' & '[r]')
+            // or similar (e.g. search phases) as children, but not every action that is triggered
+            // within another action should be authorized this way
+            return false;
+        }
+        final IndicesRequest indicesRequest;
+        if (requestInfo.getRequest() instanceof IndicesRequest) {
+            indicesRequest = (IndicesRequest) requestInfo.getRequest();
+        } else {
+            // Can only handle indices request here
+            return false;
+        }
+
+        final String[] indices = indicesRequest.indices();
+        if (indices == null || indices.length == 0) {
+            // No indices to check
+            return false;
+        }
+
+
+        return Arrays.stream(indices).allMatch(idx -> {
+            if (Regex.isSimpleMatchPattern(idx)) {
+                // The request contains a wildcard
+                return false;
+            }
+            IndicesAccessControl.IndexAccessControl iac = parentAccessControl.getIndexPermissions(idx);
+            // The parent context has already successfully authorized access to this index (by name)
+            return iac != null && iac.isGranted();
+        });
     }
 
     @Override

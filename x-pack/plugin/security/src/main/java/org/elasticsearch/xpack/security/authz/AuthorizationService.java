@@ -57,6 +57,7 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.Authoriza
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.EmptyAuthorizationInfo;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.IndexAuthorizationResult;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.RequestInfo;
+import org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField;
 import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
@@ -169,10 +170,34 @@ public class AuthorizationService {
      * @param action          The action
      * @param originalRequest The request
      * @param listener        The listener that gets called. A call to {@link ActionListener#onResponse(Object)} indicates success
-     * @throws ElasticsearchSecurityException If the given user is no allowed to execute the given request
      */
     public void authorize(final Authentication authentication, final String action, final TransportRequest originalRequest,
-                          final ActionListener<Void> listener) throws ElasticsearchSecurityException {
+                          final ActionListener<Void> listener) {
+
+        final String auditId;
+        try {
+            auditId = requireAuditId(authentication, action, originalRequest);
+        } catch (ElasticsearchSecurityException e) {
+            listener.onFailure(e);
+            return;
+        }
+
+        if (checkOperatorPrivileges(authentication, action, originalRequest, listener) == false) {
+            return;
+        }
+
+        // sometimes a request might be wrapped within another, which is the case for proxied
+        // requests and concrete shard requests
+        final TransportRequest unwrappedRequest = maybeUnwrapRequest(authentication, originalRequest, action, auditId);
+        final RequestInfo requestInfo = new RequestInfo(authentication, unwrappedRequest, action);
+
+        // Detect cases where a child action can be authorized automatically because the parent was authorized
+        final AuthorizationEngine engine = getAuthorizationEngine(authentication);
+        if (shouldAuthorizeAsChildAction(engine, requestInfo)) {
+            authorizeChildAction(engine, requestInfo, auditId, listener);
+            return;
+        }
+
         /* authorization fills in certain transient headers, which must be observed in the listener (action handler execution)
          * as well, but which must not bleed across different action context (eg parent-child action contexts).
          * <p>
@@ -180,57 +205,134 @@ public class AuthorizationService {
          * previous parent action that ran under the same thread context (also on the same node).
          * When the returned {@code StoredContext} is closed, ALL the original headers are restored.
          */
-        try (ThreadContext.StoredContext ignore = threadContext.newStoredContext(false,
-                ACTION_SCOPE_AUTHORIZATION_KEYS)) { // this does not clear {@code AuthorizationServiceField.ORIGINATING_ACTION_KEY}
+        try (ThreadContext.StoredContext ignore = threadContext.newStoredContext(false, ACTION_SCOPE_AUTHORIZATION_KEYS)) {
+            // this does not clear {@code AuthorizationServiceField.ORIGINATING_ACTION_KEY}
             // prior to doing any authorization lets set the originating action in the thread context
             // the originating action is the current action if no originating action has yet been set in the current thread context
             // if there is already an original action, that stays put (eg. the current action is a child action)
             putTransientIfNonExisting(ORIGINATING_ACTION_KEY, action);
 
-            String auditId = AuditUtil.extractRequestId(threadContext);
-            if (auditId == null) {
-                // We would like to assert that there is an existing request-id, but if this is a system action, then that might not be
-                // true because the request-id is generated during authentication
-                if (isInternal(authentication.getUser())) {
-                    auditId = AuditUtil.getOrGenerateRequestId(threadContext);
-                } else {
-                    auditTrailService.get().tamperedRequest(null, authentication, action, originalRequest);
-                    final String message = "Attempt to authorize action [" + action + "] for [" + authentication.getUser().principal()
-                            + "] without an existing request-id";
-                    assert false : message;
-                    listener.onFailure(new ElasticsearchSecurityException(message));
-                    return;
-                }
-            }
-
-            // sometimes a request might be wrapped within another, which is the case for proxied
-            // requests and concrete shard requests
-            final TransportRequest unwrappedRequest = maybeUnwrapRequest(authentication, originalRequest, action, auditId);
-
-            // Check operator privileges
-            // TODO: audit?
-            final ElasticsearchSecurityException operatorException =
-                operatorPrivilegesService.check(action, originalRequest, threadContext);
-            if (operatorException != null) {
-                listener.onFailure(denialException(authentication, action, originalRequest, operatorException));
-                return;
-            }
-            operatorPrivilegesService.maybeInterceptRequest(threadContext, originalRequest);
-
             if (SystemUser.is(authentication.getUser())) {
                 // this never goes async so no need to wrap the listener
                 authorizeSystemUser(authentication, action, auditId, unwrappedRequest, listener);
             } else {
-                final String finalAuditId = auditId;
-                final RequestInfo requestInfo = new RequestInfo(authentication, unwrappedRequest, action);
                 final ActionListener<AuthorizationInfo> authzInfoListener = wrapPreservingContext(ActionListener.wrap(
                         authorizationInfo -> {
                             threadContext.putTransient(AUTHORIZATION_INFO_KEY, authorizationInfo);
-                            maybeAuthorizeRunAs(requestInfo, finalAuditId, authorizationInfo, listener);
+                            maybeAuthorizeRunAs(requestInfo, auditId, authorizationInfo, listener);
                         }, listener::onFailure), threadContext);
-                getAuthorizationEngine(authentication).resolveAuthorizationInfo(requestInfo, authzInfoListener);
+                engine.resolveAuthorizationInfo(requestInfo, authzInfoListener);
             }
         }
+    }
+
+    /**
+     * @return {@code true} if this action is a child action of an already authorized action that is in the thread context
+     * <strong>and</strong> we can infer that this action is authorized from the parent action.
+     */
+    private boolean shouldAuthorizeAsChildAction(AuthorizationEngine engine, RequestInfo requestInfo) {
+        if (SystemUser.is(requestInfo.getAuthentication().getUser())) {
+            // System user requests are already handled efficiently and never use an AuthorizationEngine
+            return false;
+        }
+        if (isIndexAction(requestInfo.getAction()) == false) {
+            // We depend on there being an IndicesAccessControl, so only consult the engine for index actions
+            return false;
+        }
+
+        final String parentAction = threadContext.getTransient(ORIGINATING_ACTION_KEY);
+        if (Strings.isNullOrEmpty(parentAction)) {
+            // No parent action
+            return false;
+        }
+
+        final IndicesAccessControl parentAccessControl = threadContext.getTransient(AuthorizationServiceField.INDICES_PERMISSIONS_KEY);
+        if (parentAccessControl == null) {
+            // This is almost certainly an error, but leave it to be handled later
+            return false;
+        }
+
+        if (engine.isChildActionAuthorizedByParent(requestInfo, parentAction, parentAccessControl)) {
+            logger.trace(
+                "Automatically authorizing child action [{}] (child of [{}]) with request [{}]",
+                requestInfo.getAction(),
+                parentAction,
+                requestInfo.getRequest()
+            );
+            return true;
+        }
+        return false;
+    }
+
+    private void authorizeChildAction(AuthorizationEngine engine, RequestInfo requestInfo, String auditId, ActionListener<Void> listener) {
+        AuthorizationInfo authorizationInfo = threadContext.getTransient(AUTHORIZATION_INFO_KEY);
+        if (authorizationInfo == null) {
+            listener.onFailure(
+                internalError(
+                    "Attempt to authorize child action ["
+                        + requestInfo.getAction()
+                        + "] for ["
+                        + requestInfo.getAuthentication().getUser().principal()
+                        + "] without existing authorization info"
+                )
+            );
+            return;
+        }
+        if (isIndexAction(requestInfo.getAction())) {
+            new AuthorizationResultListener<>(
+                ignore -> runRequestInterceptors(requestInfo, authorizationInfo, engine, listener),
+                listener::onFailure,
+                requestInfo,
+                auditId,
+                authorizationInfo).onResponse(new AuthorizationResult(true));
+        } else {
+            listener.onFailure(internalError("Only index actions can be authorized as child action"));
+        }
+    }
+
+    private String requireAuditId(Authentication authentication, String action, TransportRequest originalRequest) {
+        String auditId = AuditUtil.extractRequestId(threadContext);
+        if (auditId == null) {
+            // We would like to assert that there is an existing request-id, but if this is a system action, then that might not be
+            // true because the request-id is generated during authentication
+            if (isInternal(authentication.getUser())) {
+                auditId = AuditUtil.getOrGenerateRequestId(threadContext);
+            } else {
+                auditTrailService.get().tamperedRequest(null, authentication, action, originalRequest);
+                throw internalError(
+                    "Attempt to authorize action ["
+                        + action
+                        + "] for ["
+                        + authentication.getUser().principal()
+                        + "] without an existing request-id"
+                );
+            }
+        }
+        return auditId;
+    }
+
+    private ElasticsearchSecurityException internalError(String message) {
+        // When running with assertions enabled (testing) kill the node so that there is a hard failure in CI
+        assert false : message;
+        // Otherwise (production) just throw an exception so that we don't authorize something incorrectly
+        return new ElasticsearchSecurityException(message);
+    }
+
+    private boolean checkOperatorPrivileges(
+        Authentication authentication,
+        String action,
+        TransportRequest originalRequest,
+        ActionListener<Void> listener
+    ) {
+        // Check operator privileges
+        // TODO: audit?
+        final ElasticsearchSecurityException operatorException = operatorPrivilegesService.check(action, originalRequest, threadContext);
+        if (operatorException != null) {
+            listener.onFailure(denialException(authentication, action, originalRequest, operatorException));
+            return false;
+        }
+        operatorPrivilegesService.maybeInterceptRequest(threadContext, originalRequest);
+        return true;
     }
 
     private void maybeAuthorizeRunAs(final RequestInfo requestInfo, final String requestId, final AuthorizationInfo authzInfo,

@@ -93,6 +93,16 @@ public interface AuthorizationEngine {
     void resolveAuthorizationInfo(RequestInfo requestInfo, ActionListener<AuthorizationInfo> listener);
 
     /**
+     * Determine whether to treat the action specified in the {@link RequestInfo} parameter as an implicitly authorized child of
+     * the {@code parentAction} (with the given {@link IndicesAccessControl}).
+     * If this returns {@code true} no other methods in the engine will be called for this request, the action will be automatically
+     * authorized (and will be audited if auditing is enabled).
+     */
+    default boolean isChildActionAuthorizedByParent(RequestInfo request, String parentAction, IndicesAccessControl parentAccessControl) {
+        return false;
+    }
+
+    /**
      * Asynchronously authorizes an attempt for a user to run as another user.
      *
      * @param requestInfo object contain the request and associated information such as the action
