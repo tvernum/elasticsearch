@@ -175,26 +175,38 @@ public final class IndicesPermission {
                                                                           FieldPermissionsCache fieldPermissionsCache) {
         // now... every index that is associated with the request, must be granted
         // by at least one indices permission group
-        Map<String, Set<FieldPermissions>> fieldPermissionsByIndex = new HashMap<>();
-        Map<String, DocumentLevelPermissions> roleQueriesByIndex = new HashMap<>();
-        Map<String, Boolean> grantedBuilder = new HashMap<>();
+        Map<String, Set<FieldPermissions>> fieldPermissionsByIndex = new HashMap<>(requestedIndicesOrAliases.size());
+        Map<String, DocumentLevelPermissions> roleQueriesByIndex = new HashMap<>(requestedIndicesOrAliases.size());
+        Map<String, Boolean> grantedBuilder = new HashMap<>(requestedIndicesOrAliases.size());
 
         final boolean isMappingUpdateAction = isMappingUpdateAction(action);
 
         for (String indexOrAlias : requestedIndicesOrAliases) {
             final boolean isBackingIndex;
             final boolean isDataStream;
-            final Set<String> concreteIndices = new HashSet<>();
+            final Set<String> concreteIndices;
             final IndexAbstraction indexAbstraction = lookup.get(indexOrAlias);
             if (indexAbstraction != null) {
-                for (IndexMetadata indexMetadata : indexAbstraction.getIndices()) {
-                    concreteIndices.add(indexMetadata.getIndex().getName());
+                if(indexAbstraction.getType() == IndexAbstraction.Type.CONCRETE_INDEX) {
+                    concreteIndices = Set.of(indexAbstraction.getName());
+                    isDataStream = false;
+                    isBackingIndex = indexAbstraction.getParentDataStream() != null;
+                } else {
+                    final List<IndexMetadata> indices = indexAbstraction.getIndices();
+                    if (indices.size() == 1) {
+                        concreteIndices = Set.of(indices.get(0).getIndex().getName());
+                    } else {
+                        concreteIndices = new HashSet<>(indices.size());
+                        for (var i : indices) {
+                            concreteIndices.add(i.getIndex().getName());
+                        }
+                    }
+                    isDataStream = indexAbstraction.getType() == IndexAbstraction.Type.DATA_STREAM;
+                    isBackingIndex = false;
                 }
-                isBackingIndex = indexAbstraction.getType() == IndexAbstraction.Type.CONCRETE_INDEX &&
-                        indexAbstraction.getParentDataStream() != null;
-                isDataStream = indexAbstraction.getType() == IndexAbstraction.Type.DATA_STREAM;
             } else {
                 isBackingIndex = isDataStream = false;
+                concreteIndices = Set.of();
             }
 
             // true if ANY group covers the given index AND the given action
