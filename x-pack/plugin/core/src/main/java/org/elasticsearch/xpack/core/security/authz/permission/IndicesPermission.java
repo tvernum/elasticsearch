@@ -340,21 +340,46 @@ public final class IndicesPermission {
                     if (actionCheck || bwcMappingActionCheck) {
                         // propagate DLS and FLS permissions over the concrete indices
                         for (String index : resource.concreteIndices) {
-                            Set<FieldPermissions> fieldPermissions = fieldPermissionsByIndex.computeIfAbsent(index, (k) -> new HashSet<>());
-                            fieldPermissionsByIndex.put(resource.name, fieldPermissions);
-                            fieldPermissions.add(group.getFieldPermissions());
 
-                            DocumentLevelPermissions permissions =
-                                    roleQueriesByIndex.computeIfAbsent(index, (k) -> new DocumentLevelPermissions());
-                            roleQueriesByIndex.putIfAbsent(resource.name, permissions);
+                            Set<FieldPermissions> fieldPermissions = fieldPermissionsByIndex.get(index);
+                            if (fieldPermissions == null) {
+                                // Most indices rely on the default (empty) field permissions object, so we optimize for that case
+                                // Using an immutable single item set is significantly faster because it avoids any of the hashing
+                                // and backing set creation.
+                                fieldPermissions = Set.of(group.getFieldPermissions());
+                                fieldPermissionsByIndex.put(index, fieldPermissions);
+                            } else if (fieldPermissions.size() == 1) {
+                                FieldPermissions fp = group.getFieldPermissions();
+                                if (fieldPermissions.contains(fp) == false) {
+                                    // This index doesn't have a single field permissions object, replace the singleton with a real Set
+                                    final FieldPermissions existing = fieldPermissions.iterator().next();
+                                    fieldPermissions = new HashSet<>();
+                                    fieldPermissions.add(existing);
+                                    fieldPermissions.add(fp);
+                                    fieldPermissionsByIndex.put(index, fieldPermissions);
+                                }
+                            } else {
+                                fieldPermissions.add(group.getFieldPermissions());
+                            }
+
+                            DocumentLevelPermissions docPermissions;
                             if (group.hasQuery()) {
-                                permissions.addAll(group.getQuery());
+                                docPermissions = roleQueriesByIndex.computeIfAbsent(index, (k) -> new DocumentLevelPermissions());
+                                docPermissions.addAll(group.getQuery());
                             } else {
                                 // if more than one permission matches for a concrete index here and if
                                 // a single permission doesn't have a role query then DLS will not be
                                 // applied even when other permissions do have a role query
-                                permissions.setAllowAll(true);
+                                docPermissions = DocumentLevelPermissions.ALLOW_ALL;
+                                // don't worry about what's already there - just overwrite it, it avoids doing a 2nd hash lookup.
+                                roleQueriesByIndex.put(index, docPermissions);
                             }
+
+                            if (index.equals(resource.name) == false) {
+                                fieldPermissionsByIndex.put(resource.name, fieldPermissions);
+                                roleQueriesByIndex.put(resource.name, docPermissions);
+                            }
+
                         }
                         if (false == actionCheck) {
                             for (String privilegeName : group.privilege.name()) {
@@ -534,6 +559,11 @@ public final class IndicesPermission {
 
     private static class DocumentLevelPermissions {
 
+        public static final DocumentLevelPermissions ALLOW_ALL = new DocumentLevelPermissions();
+        static {
+            ALLOW_ALL.allowAll = true;
+        }
+
         private Set<BytesReference> queries = null;
         private boolean allowAll = false;
 
@@ -548,10 +578,6 @@ public final class IndicesPermission {
 
         private boolean isAllowAll() {
             return allowAll;
-        }
-
-        private void setAllowAll(boolean allowAll) {
-            this.allowAll = allowAll;
         }
     }
 }
