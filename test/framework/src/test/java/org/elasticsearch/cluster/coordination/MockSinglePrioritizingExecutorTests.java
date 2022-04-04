@@ -13,11 +13,12 @@ import org.elasticsearch.common.util.concurrent.PrioritizedEsThreadPoolExecutor;
 import org.elasticsearch.common.util.concurrent.PrioritizedRunnable;
 import org.elasticsearch.test.ESTestCase;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MockSinglePrioritizingExecutorTests extends ESTestCase {
 
-    public void testPrioritizedEsThreadPoolExecutor() {
+    public void testPrioritizedEsThreadPoolExecutor() throws Exception {
         final DeterministicTaskQueue taskQueue = new DeterministicTaskQueue();
 
         final PrioritizedEsThreadPoolExecutor executor = new MockSinglePrioritizingExecutor(
@@ -43,12 +44,15 @@ public class MockSinglePrioritizingExecutorTests extends ESTestCase {
         });
         assertFalse(called1.get());
         assertFalse(called2.get());
+        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertFalse(called1.get());
         assertTrue(called2.get());
+        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertTrue(called1.get());
         assertTrue(called2.get());
+        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertFalse(taskQueue.hasRunnableTasks());
     }
