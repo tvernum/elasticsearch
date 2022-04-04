@@ -27,6 +27,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class PluginInfoTests extends ESTestCase {
 
+    private static final String CURRENT_JAVA_VERSION = Runtime.version().toString();
+
     public void testReadFromProperties() throws Exception {
         Path pluginDir = createTempDir().resolve("fake-plugin");
         PluginTestUtil.writePluginProperties(
@@ -40,7 +42,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "classname",
             "FakePlugin"
         );
@@ -170,7 +172,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version")
+            CURRENT_JAVA_VERSION
         );
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> PluginInfo.readFromProperties(pluginDir));
         assertThat(e.getMessage(), containsString("property [classname] is missing"));
@@ -189,7 +191,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "classname",
             "FakePlugin",
             "extended.plugins",
@@ -212,7 +214,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "classname",
             "FakePlugin",
             "extended.plugins",
@@ -235,7 +237,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "classname",
             "FakePlugin",
             "extended.plugins",
@@ -371,7 +373,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version")
+            CURRENT_JAVA_VERSION
         );
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> PluginInfo.readFromProperties(pluginDir));
         assertThat(e.getMessage(), containsString("Unknown properties for plugin [my_plugin] in plugin descriptor"));
@@ -392,7 +394,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version")
+            CURRENT_JAVA_VERSION
         );
 
         final PluginInfo pluginInfo = PluginInfo.readFromProperties(pluginDir);
@@ -414,7 +416,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "type",
             "invalid"
         );
@@ -436,7 +438,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "type",
             "bootstrap",
             "java.opts",
@@ -463,7 +465,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "type",
             "isolated",
             "java.opts",
@@ -489,7 +491,7 @@ public class PluginInfoTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            CURRENT_JAVA_VERSION,
             "type",
             "bootstrap"
         );

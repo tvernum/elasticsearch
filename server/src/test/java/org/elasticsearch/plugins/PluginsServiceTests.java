@@ -958,7 +958,7 @@ public class PluginsServiceTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            Runtime.version().toString(),
             "extended.plugins",
             "nonextensible",
             "classname",
@@ -979,7 +979,7 @@ public class PluginsServiceTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            Runtime.version().toString(),
             "classname",
             "test.NonExtensiblePlugin"
         );
