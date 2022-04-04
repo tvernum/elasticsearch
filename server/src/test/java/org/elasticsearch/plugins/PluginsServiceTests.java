@@ -1091,7 +1091,7 @@ public class PluginsServiceTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            Runtime.version().toString(),
             "classname",
             "test.DummyPlugin"
         );
@@ -1119,7 +1119,7 @@ public class PluginsServiceTests extends ESTestCase {
             "elasticsearch.version",
             Version.CURRENT.toString(),
             "java.version",
-            System.getProperty("java.specification.version"),
+            Runtime.version().toString(),
             "classname",
             TestPlugin.class.getName()
         ); // set a class defined outside the bundle (in parent class-loader of plugin)
