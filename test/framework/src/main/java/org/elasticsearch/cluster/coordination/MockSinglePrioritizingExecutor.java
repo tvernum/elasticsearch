@@ -29,30 +29,28 @@ public class MockSinglePrioritizingExecutor extends PrioritizedEsThreadPoolExecu
         DeterministicTaskQueue deterministicTaskQueue,
         ThreadPool threadPool
     ) {
-        super(nodeName, 0, 1, 0L, TimeUnit.MILLISECONDS, r -> new Thread() {
-            @Override
-            public void run() {
-                deterministicTaskQueue.scheduleNow(new Runnable() {
-                    @Override
-                    public void run() {
-                        try (
-                            CloseableThreadContext.Instance ignored = CloseableThreadContext.put(
-                                NODE_ID_LOG_CONTEXT_KEY,
-                                '{' + nodeName + "}{" + nodeId + '}'
-                            )
-                        ) {
-                            r.run();
-                        } catch (KillWorkerError kwe) {
-                            // hacks everywhere
-                        }
+        super(nodeName, 0, 1, 0L, TimeUnit.MILLISECONDS, r -> {
+            deterministicTaskQueue.scheduleNow(new Runnable() {
+                @Override
+                public void run() {
+                    try (
+                        CloseableThreadContext.Instance ignored = CloseableThreadContext.put(
+                            NODE_ID_LOG_CONTEXT_KEY,
+                            '{' + nodeName + "}{" + nodeId + '}'
+                        )
+                    ) {
+                        r.run();
+                    } catch (KillWorkerError kwe) {
+                        // hacks everywhere
                     }
+                }
 
-                    @Override
-                    public String toString() {
-                        return r.toString();
-                    }
-                });
-            }
+                @Override
+                public String toString() {
+                    return r.toString();
+                }
+            });
+            return new Thread(() -> {});
         }, threadPool.getThreadContext(), threadPool.scheduler(), StarvationWatcher.NOOP_STARVATION_WATCHER);
     }
 

@@ -44,15 +44,12 @@ public class MockSinglePrioritizingExecutorTests extends ESTestCase {
         });
         assertFalse(called1.get());
         assertFalse(called2.get());
-        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertFalse(called1.get());
         assertTrue(called2.get());
-        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertTrue(called1.get());
         assertTrue(called2.get());
-        assertBusy(() -> assertTrue(taskQueue.hasRunnableTasks()), 250, TimeUnit.MILLISECONDS);
         taskQueue.runRandomTask();
         assertFalse(taskQueue.hasRunnableTasks());
     }
