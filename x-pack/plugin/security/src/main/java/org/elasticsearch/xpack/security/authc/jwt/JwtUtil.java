@@ -11,7 +11,6 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -33,7 +32,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.SpecialPermission;
-import org.elasticsearch.action.support.PlainActionFuture;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.SettingsException;
@@ -185,16 +184,25 @@ public class JwtUtil {
         return null;
     }
 
-    public static byte[] readUriContents(
+    public static void readUriContents(
         final String jwkSetConfigKeyPkc,
         final URI jwkSetPathPkcUri,
-        final CloseableHttpAsyncClient httpClient
-    ) throws SettingsException {
-        try {
-            return JwtUtil.readBytes(httpClient, jwkSetPathPkcUri);
-        } catch (Exception e) {
-            throw new SettingsException("Can't get contents for setting [" + jwkSetConfigKeyPkc + "] value [" + jwkSetPathPkcUri + "].", e);
-        }
+        final CloseableHttpAsyncClient httpClient,
+        final ActionListener<byte[]> listener
+    ) {
+        JwtUtil.readBytes(
+            httpClient,
+            jwkSetPathPkcUri,
+            ActionListener.wrap(
+                listener::onResponse,
+                ex -> listener.onFailure(
+                    new SettingsException(
+                        "Can't get contents for setting [" + jwkSetConfigKeyPkc + "] value [" + jwkSetPathPkcUri + "].",
+                        ex
+                    )
+                )
+            )
+        );
     }
 
     public static byte[] readFileContents(final String jwkSetConfigKeyPkc, final String jwkSetPathPkc, final Environment environment)
@@ -262,13 +270,11 @@ public class JwtUtil {
     }
 
     /**
-     * Use the HTTP Client to get URL content bytes up to N max bytes.
+     * Use the HTTP Client to get URL content bytes.
      * @param httpClient Configured HTTP/HTTPS client.
      * @param uri URI to download.
-     * @return Byte array of the URI contents up to N max bytes.
      */
-    public static byte[] readBytes(final CloseableHttpAsyncClient httpClient, final URI uri) {
-        final PlainActionFuture<byte[]> plainActionFuture = PlainActionFuture.newFuture();
+    public static void readBytes(final CloseableHttpAsyncClient httpClient, final URI uri, ActionListener<byte[]> listener) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             httpClient.execute(new HttpGet(uri), new FutureCallback<>() {
                 @Override
@@ -278,12 +284,12 @@ public class JwtUtil {
                     if (statusCode == 200) {
                         final HttpEntity entity = result.getEntity();
                         try (InputStream inputStream = entity.getContent()) {
-                            plainActionFuture.onResponse(inputStream.readAllBytes());
+                            listener.onResponse(inputStream.readAllBytes());
                         } catch (Exception e) {
-                            plainActionFuture.onFailure(e);
+                            listener.onFailure(e);
                         }
                     } else {
-                        plainActionFuture.onFailure(
+                        listener.onFailure(
                             new ElasticsearchSecurityException(
                                 "Get [" + uri + "] failed, status [" + statusCode + "], reason [" + statusLine.getReasonPhrase() + "]."
                             )
@@ -293,17 +299,16 @@ public class JwtUtil {
 
                 @Override
                 public void failed(Exception e) {
-                    plainActionFuture.onFailure(new ElasticsearchSecurityException("Get [" + uri + "] failed.", e));
+                    listener.onFailure(new ElasticsearchSecurityException("Get [" + uri + "] failed.", e));
                 }
 
                 @Override
                 public void cancelled() {
-                    plainActionFuture.onFailure(new ElasticsearchSecurityException("Get [" + uri + "] was cancelled."));
+                    listener.onFailure(new ElasticsearchSecurityException("Get [" + uri + "] was cancelled."));
                 }
             });
             return null;
         });
-        return plainActionFuture.actionGet();
     }
 
     public static Path resolvePath(final Environment environment, final String jwkSetPath) {
@@ -335,14 +340,10 @@ public class JwtUtil {
      *   JWSHeader: Header are not support.
      *   JWTClaimsSet: Claims are supported. Claim keys are prefixed by "jwt_claim_".
      *   Base64URL: Signature is not supported.
-     * @param jwt SignedJWT object.
      * @return Map of formatted and filtered values to be used as user metadata.
-     * @throws Exception Parse error.
      */
-    //
     // Values will be filtered by type using isAllowedTypeForClaim().
-    public static Map<String, Object> toUserMetadata(final SignedJWT jwt) throws Exception {
-        final JWTClaimsSet claimsSet = jwt.getJWTClaimsSet();
+    public static Map<String, Object> toUserMetadata(JWTClaimsSet claimsSet) {
         return claimsSet.getClaims()
             .entrySet()
             .stream()
