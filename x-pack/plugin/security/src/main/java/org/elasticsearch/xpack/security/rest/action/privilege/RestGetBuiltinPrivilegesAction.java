@@ -45,17 +45,42 @@ public class RestGetBuiltinPrivilegesAction extends SecurityBaseRestHandler {
 
     @Override
     public RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
+        GetBuiltinPrivilegesRequest.Format format = GetBuiltinPrivilegesRequest.Format.parse(
+            request.param("format", GetBuiltinPrivilegesRequest.Format.DEFAULT_FORMAT_NAME)
+        );
         return channel -> client.execute(
             GetBuiltinPrivilegesAction.INSTANCE,
-            new GetBuiltinPrivilegesRequest(),
+            new GetBuiltinPrivilegesRequest(format),
             new RestBuilderListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(GetBuiltinPrivilegesResponse response, XContentBuilder builder) throws Exception {
                     builder.startObject();
-                    builder.array("cluster", response.getClusterPrivileges());
-                    builder.array("index", response.getIndexPrivileges());
+                    writeArray(builder, format, "cluster", response.getClusterPrivileges());
+                    writeArray(builder, format, "index", response.getIndexPrivileges());
                     builder.endObject();
                     return new RestResponse(RestStatus.OK, builder);
+                }
+
+                private void writeArray(
+                    XContentBuilder builder,
+                    GetBuiltinPrivilegesRequest.Format format,
+                    String name,
+                    GetBuiltinPrivilegesResponse.PrivilegeInfo[] privileges
+                ) throws IOException {
+                    builder.startArray(name);
+                    for (var p : privileges) {
+                        if (format == GetBuiltinPrivilegesRequest.Format.FLAT) {
+                            builder.value(p.name());
+                        } else {
+                            builder.startObject();
+                            builder.field("name", p.name());
+                            if (p.implies().length > 0) {
+                                builder.array("implies", p.implies());
+                            }
+                            builder.endObject();
+                        }
+                    }
+                    builder.endArray();
                 }
             }
         );
