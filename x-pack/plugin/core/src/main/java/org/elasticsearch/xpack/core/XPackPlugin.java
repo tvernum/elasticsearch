@@ -464,7 +464,7 @@ public class XPackPlugin extends XPackClientPlugin
         final SSLConfigurationReloader reloader = new SSLConfigurationReloader(resourceWatcherService, sslConfigurations.values());
         final SSLService sslService = new SSLService(environment, sslConfigurations);
         reloader.setSSLService(sslService);
-            setSslService(sslService);
+        setSslService(sslService);
         return sslService;
     }
 }
