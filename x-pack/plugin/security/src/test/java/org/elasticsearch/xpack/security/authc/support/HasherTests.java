@@ -61,6 +61,7 @@ public class HasherTests extends ESTestCase {
         testHasherSelfGenerated(Hasher.PBKDF2_STRETCH_100000);
         testHasherSelfGenerated(Hasher.PBKDF2_STRETCH_500000);
         testHasherSelfGenerated(Hasher.PBKDF2_STRETCH_1000000);
+        testHasherSelfGenerated(Hasher.PBKDF2_COMPAT);
     }
 
     public void testMd5SelfGenerated() throws Exception {
@@ -246,6 +247,13 @@ public class HasherTests extends ESTestCase {
             ),
             sameInstance(Hasher.PBKDF2_STRETCH_1000000)
         );
+        assertThat(
+            Hasher.resolveFromHash(
+                "{PBKDF2_COMPAT}5000$eKeQvMztiIcqBynTNDFBseOBww3GBpHDZI6EPPVHYUw=$4587yrxUa02RZ1jeW1WOaMjRn5qT9iQ5/DIHk0nW2bE="
+                    .toCharArray()
+            ),
+            sameInstance(Hasher.PBKDF2_COMPAT)
+        );
         assertThat(Hasher.resolveFromHash("notavalidhashformat".toCharArray()), sameInstance(Hasher.NOOP));
     }
 
@@ -255,6 +263,75 @@ public class HasherTests extends ESTestCase {
         Hasher pbkdfHasher = randomFrom(Hasher.PBKDF2, Hasher.PBKDF2_50000, Hasher.PBKDF2_1000000);
         ElasticsearchException e = expectThrows(ElasticsearchException.class, () -> pbkdfHasher.hash(passwd));
         assertThat(e.getMessage(), containsString("Error using PBKDF2 implementation from the selected Security Provider"));
+    }
+
+    public void testPbkdf2Compat() {
+        // PBKDF2withHMACSHA512, 16 byte salt, 512 bit key
+        check(
+            "{PBKDF2_COMPAT}10000$"
+                + "NUG78+T6yahKzMHPgTbFmw==$"
+                + "Ohp+ZCG936Q+w1XTquEz5SmQmDUJVv5ZxilRaDPpHFRzHNDMjeFl8btefZd/0yNtfQPwpfhe5DSDFlPP9WMxEQ==",
+            "passw0rd",
+            true
+        );
+        check(
+            "{PBKDF2_COMPAT}10000,SHA512$"
+                + "NUG78+T6yahKzMHPgTbFmw==$"
+                + "Ohp+ZCG936Q+w1XTquEz5SmQmDUJVv5ZxilRaDPpHFRzHNDMjeFl8btefZd/0yNtfQPwpfhe5DSDFlPP9WMxEQ==",
+            "passw0rd",
+            true
+        );
+        check(
+            "{PBKDF2_COMPAT}10000,SHA1$"
+                + "NUG78+T6yahKzMHPgTbFmw==$"
+                + "Ohp+ZCG936Q+w1XTquEz5SmQmDUJVv5ZxilRaDPpHFRzHNDMjeFl8btefZd/0yNtfQPwpfhe5DSDFlPP9WMxEQ==",
+            "passw0rd",
+            false
+        );
+        check(
+            "{PBKDF2_COMPAT}10000,SHA512$"
+                + "NUG78+T6yahKzMHPgTbFmw==$"
+                + "Ohp+ZCG936Q+w1XTquEz5SmQmDUJVv5ZxilRaDPpHFRzHNDMjeFl8btefZd/0yNtfQPwpfhe5DSDFlPP9WMxEQ==",
+            "s3cr3t",
+            false
+        );
+        check(
+            "{PBKDF2_COMPAT}10000$"
+                + "NUG78+T6yahKzMHPgTbFmw==$"
+                + "Ohp+ZCG936Q+w1XTquEz5SmQmDUJVv5ZxilRaDPpHFRzHNDMjeFl8btefZd/0yNtfQPwpfhe5DSDFlPP9WMxEQ==",
+            "s3cr3t",
+            false
+        );
+        // PBKDF2withHMACSHA1, 64 byte salt, 128 bit key
+        check(
+            "{PBKDF2_COMPAT}2500,SHA1$"
+                + "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdA==$"
+                + "uk3MMHULkjieFgdAwGp0FQ==",
+            "correct horse battery staple",
+            true
+        );
+        check(
+            "{PBKDF2_COMPAT}2500,SHA256$"
+                + "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdA==$"
+                + "uk3MMHULkjieFgdAwGp0FQ==",
+            "correct horse battery staple",
+            false
+        );
+        check(
+            "{PBKDF2_COMPAT}1000,SHA1$"
+                + "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdA==$"
+                + "uk3MMHULkjieFgdAwGp0FQ==",
+            "correct horse battery staple",
+            false
+        );
+        check(
+            "{PBKDF2_COMPAT}2500,SHA1$"
+                + "c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdHNhbHRzYWx0c2FsdA==$"
+                + "uk3MMHULkjieFgdAwGp0FQ==",
+            "incorrect cow generator paperclip",
+            false
+        );
+
     }
 
     private static void testHasherSelfGenerated(Hasher hasher) {

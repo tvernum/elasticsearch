@@ -366,6 +366,19 @@ public enum Hasher {
 
     },
 
+    PBKDF2_COMPAT() {
+        @Override
+        public char[] hash(SecureString data) {
+            // Always hash using our default PBKDF2 settings - this enum instance is just for dynamic reading of existing hashes
+            return getPbkdf2Hash(data, PBKDF2_DEFAULT_COST, PBKDF2_COMPAT_PREFIX);
+        }
+
+        @Override
+        public boolean verify(SecureString data, char[] hash) {
+            return Hasher.verifyDynamicPbkdf2Hash(data, hash, PBKDF2_COMPAT_PREFIX);
+        }
+    },
+
     SHA1() {
         @Override
         public char[] hash(SecureString text) {
@@ -482,6 +495,7 @@ public enum Hasher {
     private static final String SSHA256_PREFIX = "{SSHA256}";
     private static final String PBKDF2_PREFIX = "{PBKDF2}";
     private static final String PBKDF2_STRETCH_PREFIX = "{PBKDF2_STRETCH}";
+    private static final String PBKDF2_COMPAT_PREFIX = "{PBKDF2_COMPAT}";
     private static final int PBKDF2_DEFAULT_COST = 10000;
     private static final int PBKDF2_KEY_LENGTH = 256;
     private static final int BCRYPT_DEFAULT_COST = 10;
@@ -550,6 +564,8 @@ public enum Hasher {
         } else if (CharArrays.charsBeginsWith(PBKDF2_PREFIX, hash)) {
             int cost = Integer.parseInt(new String(Arrays.copyOfRange(hash, PBKDF2_PREFIX.length(), hash.length - 90)));
             return cost == PBKDF2_DEFAULT_COST ? Hasher.PBKDF2 : resolve("pbkdf2_" + cost);
+        } else if (CharArrays.charsBeginsWith(PBKDF2_COMPAT_PREFIX, hash)) {
+            return Hasher.PBKDF2_COMPAT;
         } else if (CharArrays.charsBeginsWith(SHA1_PREFIX, hash)) {
             return Hasher.SHA1;
         } else if (CharArrays.charsBeginsWith(MD5_PREFIX, hash)) {
@@ -611,25 +627,101 @@ public enum Hasher {
     }
 
     private static boolean verifyPbkdf2Hash(SecureString data, char[] hash, String prefix) {
+        if (CharArrays.charsBeginsWith(prefix, hash) == false) {
+            return false;
+        }
+
         // Base64 string length : (4*(n/3)) rounded up to the next multiple of 4 because of padding.
         // n is 32 (PBKDF2_KEY_LENGTH in bytes), so tokenLength is 44
         final int tokenLength = 44;
         char[] hashChars = null;
         char[] saltChars = null;
-        char[] computedPwdHash = null;
         try {
-            if (CharArrays.charsBeginsWith(prefix, hash) == false) {
-                return false;
-            }
             hashChars = Arrays.copyOfRange(hash, hash.length - tokenLength, hash.length);
             saltChars = Arrays.copyOfRange(hash, hash.length - (2 * tokenLength + 1), hash.length - (tokenLength + 1));
             int cost = Integer.parseInt(new String(Arrays.copyOfRange(hash, prefix.length(), hash.length - (2 * tokenLength + 2))));
-            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2withHMACSHA512");
+            return verifyPbkdf2Hash(data, cost, "SHA512", PBKDF2_KEY_LENGTH, saltChars, hashChars);
+        } finally {
+            if (null != hashChars) {
+                Arrays.fill(hashChars, '\u0000');
+            }
+            if (null != saltChars) {
+                Arrays.fill(saltChars, '\u0000');
+            }
+        }
+    }
+
+    private static boolean verifyDynamicPbkdf2Hash(SecureString data, char[] hash, String prefix) {
+        if (CharArrays.charsBeginsWith(prefix, hash) == false) {
+            return false;
+        }
+
+        int separator1 = -1, separator2 = -1, comma = -1;
+        for (int i = 0; i < hash.length; i++) {
+            if (hash[i] == ',') {
+                comma = i;
+            } else if (hash[i] == '$') {
+                separator1 = i;
+                break;
+            }
+        }
+        if (separator1 == -1) {
+            return false;
+        }
+        for (int i = separator1 + 1; i < hash.length; i++) {
+            if (hash[i] == '$') {
+                separator2 = i;
+                break;
+            }
+        }
+        if (separator2 == -1) {
+            return false;
+        }
+
+        char[] hashChars = null;
+        char[] saltChars = null;
+        try {
+            hashChars = Arrays.copyOfRange(hash, separator2 + 1, hash.length);
+            saltChars = Arrays.copyOfRange(hash, separator1 + 1, separator2);
+
+            final String hashAlgo;
+            if (comma == -1) {
+                hashAlgo = "SHA512";
+                comma = separator1;
+            } else {
+                hashAlgo = new String(hash, comma + 1, separator1 - comma - 1);
+            }
+            final int cost = Integer.parseInt(new String(hash, prefix.length(), comma - prefix.length()));
+            // Convert from base64 (*3/4) to nearest multiple of 16 bytes (/16 * 16) to bits (*8)
+            // n * 3 / 4 / 16 * 16 * 8 ==> n * 3 / 64 * 128
+            final int keySize = (hashChars.length * 3) / 64 * 128;
+            return verifyPbkdf2Hash(data, cost, hashAlgo, keySize, saltChars, hashChars);
+        } finally {
+            if (null != hashChars) {
+                Arrays.fill(hashChars, '\u0000');
+            }
+            if (null != saltChars) {
+                Arrays.fill(saltChars, '\u0000');
+            }
+        }
+    }
+
+    private static boolean verifyPbkdf2Hash(
+        SecureString data,
+        int cost,
+        String hashAlgo,
+        int keyLength,
+        char[] saltChars,
+        char[] hashChars
+    ) {
+        char[] computedPwdHash = null;
+        try {
+            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2withHMAC" + hashAlgo);
             PBEKeySpec keySpec = new PBEKeySpec(
                 data.getChars(),
                 Base64.getDecoder().decode(CharArrays.toUtf8Bytes(saltChars)),
                 cost,
-                PBKDF2_KEY_LENGTH
+                keyLength
             );
             computedPwdHash = CharArrays.utf8BytesToChars(
                 Base64.getEncoder().encode(secretKeyFactory.generateSecret(keySpec).getEncoded())
@@ -643,12 +735,6 @@ public enum Hasher {
             // salt, iv, or password length is not met. We catch this because we don't want the JVM to exit.
             throw new ElasticsearchException("Error using PBKDF2 implementation from the selected Security Provider", e);
         } finally {
-            if (null != hashChars) {
-                Arrays.fill(hashChars, '\u0000');
-            }
-            if (null != saltChars) {
-                Arrays.fill(saltChars, '\u0000');
-            }
             if (null != computedPwdHash) {
                 Arrays.fill(computedPwdHash, '\u0000');
             }
