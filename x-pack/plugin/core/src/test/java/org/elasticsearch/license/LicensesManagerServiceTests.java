@@ -7,6 +7,7 @@
 package org.elasticsearch.license;
 
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.TimeValue;
@@ -76,14 +77,14 @@ public class LicensesManagerServiceTests extends ESSingleNodeTestCase {
         License goldLicense = TestUtils.generateSignedLicense("gold", TimeValue.timeValueSeconds(5));
         // put gold license
         TestUtils.registerAndAckSignedLicenses(licenseService, goldLicense, LicensesStatus.VALID);
-        LicensesMetadata licensesMetadata = clusterService.state().metadata().custom(LicensesMetadata.TYPE);
-        assertThat(LicenseService.getLicense(licensesMetadata), equalTo(goldLicense));
+        Metadata metadata = clusterService.state().metadata();
+        assertThat(LicenseService.getLicense(metadata), equalTo(goldLicense));
 
         License platinumLicense = TestUtils.generateSignedLicense("platinum", TimeValue.timeValueSeconds(3));
         // put platinum license
         TestUtils.registerAndAckSignedLicenses(licenseService, platinumLicense, LicensesStatus.VALID);
-        licensesMetadata = clusterService.state().metadata().custom(LicensesMetadata.TYPE);
-        assertThat(LicenseService.getLicense(licensesMetadata), equalTo(platinumLicense));
+        metadata = clusterService.state().metadata();
+        assertThat(LicenseService.getLicense(metadata), equalTo(platinumLicense));
     }
 
     public void testInvalidLicenseStorage() throws Exception {

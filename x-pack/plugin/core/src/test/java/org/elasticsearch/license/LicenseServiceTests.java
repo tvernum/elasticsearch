@@ -178,8 +178,6 @@ public class LicenseServiceTests extends ESTestCase {
             mock(ThreadPool.class),
             clusterService,
             clock,
-            TestEnvironment.newEnvironment(settings),
-            mock(ResourceWatcherService.class),
             mock(XPackLicenseState.class)
         );
 
@@ -268,15 +266,7 @@ public class LicenseServiceTests extends ESTestCase {
         final ResourceWatcherService resourceWatcherService = mock(ResourceWatcherService.class);
         final XPackLicenseState licenseState = mock(XPackLicenseState.class);
         final ThreadPool threadPool = mock(ThreadPool.class);
-        final LicenseService service = new LicenseService(
-            settings,
-            threadPool,
-            clusterService,
-            clock,
-            env,
-            resourceWatcherService,
-            licenseState
-        );
+        final LicenseService service = new LicenseService(settings, threadPool, clusterService, clock, licenseState);
 
         final PutLicenseRequest request = new PutLicenseRequest();
         request.license(toSpec(license), XContentType.JSON);

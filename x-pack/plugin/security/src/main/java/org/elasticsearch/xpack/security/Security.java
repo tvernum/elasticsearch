@@ -601,6 +601,8 @@ public class Security extends Plugin
             return Collections.singletonList(new SecurityUsageServices(null, null, null, null, null));
         }
 
+        LicenseService.setStore(new FixedLicenseStore());
+
         systemIndices.init(client, clusterService);
 
         scriptServiceReference.set(scriptService);
@@ -1707,7 +1709,7 @@ public class Security extends Plugin
         @Override
         public void accept(DiscoveryNode node, ClusterState state) {
             if (inFipsMode) {
-                License license = LicenseService.getLicense(state.metadata());
+                License license = LicenseService.getLicense(state);
                 if (license != null && XPackLicenseState.isFipsAllowedForOperationMode(license.operationMode()) == false) {
                     throw new IllegalStateException(
                         "FIPS mode cannot be used with a ["
