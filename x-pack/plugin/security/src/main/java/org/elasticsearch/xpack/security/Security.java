@@ -1724,6 +1724,10 @@ public class Security extends Plugin
         return MapperPlugin.super.getFieldFilter();
     }
 
+    public SecurityContext getSecurityContext() {
+        return securityContext.get();
+    }
+
     @Override
     public BiConsumer<DiscoveryNode, ClusterState> getJoinValidator() {
         if (enabled) {

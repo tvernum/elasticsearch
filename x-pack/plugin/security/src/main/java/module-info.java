@@ -48,6 +48,7 @@ module org.elasticsearch.security {
     requires oauth2.oidc.sdk;
     requires org.slf4j;
     requires unboundid.ldapsdk;
+    requires org.elasticsearch.painless.spi;
 
     exports org.elasticsearch.xpack.security.action to org.elasticsearch.server;
     exports org.elasticsearch.xpack.security.action.apikey to org.elasticsearch.server;
@@ -63,7 +64,13 @@ module org.elasticsearch.security {
     exports org.elasticsearch.xpack.security.action.token to org.elasticsearch.server;
     exports org.elasticsearch.xpack.security.action.user to org.elasticsearch.server;
 
+    exports org.elasticsearch.xpack.security.script;
+
     exports org.elasticsearch.xpack.security.authc to org.elasticsearch.xcontent;
+
+    opens org.elasticsearch.xpack.security.script to org.elasticsearch.painless.spi; // whitelist resource access
+
+    provides org.elasticsearch.painless.spi.PainlessExtension with org.elasticsearch.xpack.security.script.SecurityPainlessExtension;
 
     provides org.elasticsearch.cli.CliToolProvider
         with
