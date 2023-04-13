@@ -514,7 +514,8 @@ public class Security extends Plugin
     private final SetOnce<TransportInterceptor> securityInterceptor = new SetOnce<>();
     private final SetOnce<IPFilter> ipFilter = new SetOnce<>();
     private final SetOnce<AuthenticationService> authcService = new SetOnce<>();
-    private final SetOnce<SecondaryAuthenticator> secondayAuthc = new SetOnce<>();
+    private final SetOnce<SecondaryAuthenticator> secondaryAuthc = new SetOnce<>();
+    private final SetOnce<OperatorPrivilegesService> operatorPrivilegesService = new SetOnce<>();
     private final SetOnce<AuditTrailService> auditTrailService = new SetOnce<>();
     private final SetOnce<SecurityContext> securityContext = new SetOnce<>();
     private final SetOnce<ThreadContext> threadContext = new SetOnce<>();
@@ -880,6 +881,7 @@ public class Security extends Plugin
         } else {
             operatorPrivilegesService = OperatorPrivileges.NOOP_OPERATOR_PRIVILEGES_SERVICE;
         }
+        this.operatorPrivilegesService.set(operatorPrivilegesService);
         authcService.set(
             new AuthenticationService(
                 settings,
@@ -942,7 +944,7 @@ public class Security extends Plugin
             authcService.get(),
             auditTrailService
         );
-        this.secondayAuthc.set(secondaryAuthenticator);
+        this.secondaryAuthc.set(secondaryAuthenticator);
         components.add(secondaryAuthenticator);
 
         ipFilter.set(new IPFilter(settings, auditTrailService, clusterService.getClusterSettings(), getLicenseState()));
@@ -1671,7 +1673,8 @@ public class Security extends Plugin
             enabled,
             threadContext,
             authcService.get(),
-            secondayAuthc.get(),
+            secondaryAuthc.get(),
+            operatorPrivilegesService.get(),
             auditTrailService.get(),
             handler
         );

@@ -20,6 +20,8 @@ import org.elasticsearch.xpack.core.security.authc.AuthenticationField;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.Security;
 
+import java.util.function.Function;
+
 public class OperatorPrivileges {
 
     private static final Logger logger = LogManager.getLogger(OperatorPrivileges.class);
@@ -46,6 +48,16 @@ public class OperatorPrivileges {
             String action,
             TransportRequest request,
             ThreadContext threadContext
+        );
+
+        /**
+         * Check whether the user is an operator, otherwise fail with the provided message.
+         * @return An exception if user is an non-operator and the request is operator-only. Otherwise returns null.
+         */
+        ElasticsearchSecurityException checkOperatorUser(
+            Authentication authentication,
+            ThreadContext threadContext,
+            String attemptedAction
         );
 
         /**
@@ -94,11 +106,35 @@ public class OperatorPrivileges {
             }
         }
 
+        public ElasticsearchSecurityException checkOperatorUser(
+            Authentication authentication,
+            ThreadContext threadContext,
+            String attemptedAction
+        ) {
+            return check(authentication, threadContext, ignore -> attemptedAction);
+        }
+
         public ElasticsearchSecurityException check(
             Authentication authentication,
             String action,
             TransportRequest request,
             ThreadContext threadContext
+        ) {
+            return check(authentication, threadContext, user -> {
+                // Only check whether request is operator-only when user is NOT an operator
+                logger.trace("Checking operator-only violation for user [{}] and action [{}]", user, action);
+                final OperatorOnlyRegistry.OperatorPrivilegesViolation violation = operatorOnlyRegistry.check(action, request);
+                if (violation != null) {
+                    return violation.message();
+                }
+                return null;
+            });
+        }
+
+        private ElasticsearchSecurityException check(
+            Authentication authentication,
+            ThreadContext threadContext,
+            Function<User, String> checkOperatorAction
         ) {
             if (false == shouldProcess()) {
                 return null;
@@ -108,17 +144,20 @@ public class OperatorPrivileges {
             if (User.isInternal(user) && false == authentication.isRunAs()) {
                 return null;
             }
-            if (false == AuthenticationField.PRIVILEGE_CATEGORY_VALUE_OPERATOR.equals(
-                threadContext.getHeader(AuthenticationField.PRIVILEGE_CATEGORY_KEY)
-            )) {
-                // Only check whether request is operator-only when user is NOT an operator
-                logger.trace("Checking operator-only violation for user [{}] and action [{}]", user, action);
-                final OperatorOnlyRegistry.OperatorPrivilegesViolation violation = operatorOnlyRegistry.check(action, request);
-                if (violation != null) {
-                    return new ElasticsearchSecurityException("Operator privileges are required for " + violation.message());
+            if (isFlaggedAsOperator(threadContext) == false) {
+                String message = checkOperatorAction.apply(user);
+                if (message != null) {
+                    logger.debug("Rejecting operator-only action [{}] for user [{}]", message, user);
+                    return new ElasticsearchSecurityException("Operator privileges are required for " + message);
                 }
             }
             return null;
+        }
+
+        private static boolean isFlaggedAsOperator(ThreadContext threadContext) {
+            return AuthenticationField.PRIVILEGE_CATEGORY_VALUE_OPERATOR.equals(
+                threadContext.getHeader(AuthenticationField.PRIVILEGE_CATEGORY_KEY)
+            );
         }
 
         public void maybeInterceptRequest(ThreadContext threadContext, TransportRequest request) {
@@ -143,6 +182,15 @@ public class OperatorPrivileges {
             String action,
             TransportRequest request,
             ThreadContext threadContext
+        ) {
+            return null;
+        }
+
+        @Override
+        public ElasticsearchSecurityException checkOperatorUser(
+            Authentication authentication,
+            ThreadContext threadContext,
+            String attemptedAction
         ) {
             return null;
         }

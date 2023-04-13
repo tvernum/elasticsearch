@@ -9,20 +9,25 @@ package org.elasticsearch.xpack.security.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.util.Supplier;
+import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.internal.node.NodeClient;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.rest.RestChannel;
+import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestRequestFilter;
 import org.elasticsearch.rest.RestResponse;
+import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.security.audit.AuditTrailService;
 import org.elasticsearch.xpack.security.authc.AuthenticationService;
 import org.elasticsearch.xpack.security.authc.support.SecondaryAuthenticator;
+import org.elasticsearch.xpack.security.operator.OperatorPrivileges;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.elasticsearch.core.Strings.format;
 
@@ -33,6 +38,7 @@ public class SecurityRestFilter implements RestHandler {
     private final RestHandler restHandler;
     private final AuthenticationService authenticationService;
     private final SecondaryAuthenticator secondaryAuthenticator;
+    private final OperatorPrivileges.OperatorPrivilegesService operatorPrivilegesService;
     private final AuditTrailService auditTrailService;
     private final boolean enabled;
     private final ThreadContext threadContext;
@@ -42,6 +48,7 @@ public class SecurityRestFilter implements RestHandler {
         ThreadContext threadContext,
         AuthenticationService authenticationService,
         SecondaryAuthenticator secondaryAuthenticator,
+        OperatorPrivileges.OperatorPrivilegesService operatorPrivilegesService,
         AuditTrailService auditTrailService,
         RestHandler restHandler
     ) {
@@ -49,6 +56,7 @@ public class SecurityRestFilter implements RestHandler {
         this.threadContext = threadContext;
         this.authenticationService = authenticationService;
         this.secondaryAuthenticator = secondaryAuthenticator;
+        this.operatorPrivilegesService = operatorPrivilegesService;
         this.auditTrailService = auditTrailService;
         this.restHandler = restHandler;
     }
@@ -83,6 +91,7 @@ public class SecurityRestFilter implements RestHandler {
                 logger.trace("Authenticated REST request [{}] as {}", request.uri(), authentication);
             }
             auditTrailService.get().authenticationSuccess(wrappedRequest);
+            checkAllowedHeaders(authentication, request.getHeaders());
             secondaryAuthenticator.authenticateAndAttachToContext(wrappedRequest, ActionListener.wrap(secondaryAuthentication -> {
                 if (secondaryAuthentication != null) {
                     logger.trace("Found secondary authentication {} in REST request [{}]", secondaryAuthentication, request.uri());
@@ -90,6 +99,20 @@ public class SecurityRestFilter implements RestHandler {
                 doHandleRequest(request, channel, client);
             }, e -> handleException(request, channel, e)));
         }, e -> handleException(request, channel, e)));
+    }
+
+    private void checkAllowedHeaders(Authentication authentication, Map<String, List<String>> headers) {
+        if (headers.containsKey(RestController.ELASTIC_INTERNAL_ORIGIN_HTTP_HEADER)) {
+            // This header is only allowed by operators
+            final ElasticsearchSecurityException ex = operatorPrivilegesService.checkOperatorUser(
+                authentication,
+                threadContext,
+                "the [" + RestController.ELASTIC_INTERNAL_ORIGIN_HTTP_HEADER + "] header"
+            );
+            if (ex != null) {
+                throw ex;
+            }
+        }
     }
 
     private void doHandleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
