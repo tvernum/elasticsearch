@@ -222,6 +222,11 @@ public class SessionFactoryTests extends ESTestCase {
         return new SessionFactory(realmConfig, null, threadPool) {
 
             @Override
+            public void reload(Settings settings) {
+                // no-op
+            }
+
+            @Override
             public void session(String user, SecureString password, ActionListener<LdapSession> listener) {
                 listener.onResponse(null);
             }

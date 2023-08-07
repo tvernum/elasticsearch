@@ -13,6 +13,7 @@ import org.elasticsearch.ElasticsearchTimeoutException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ContextPreservingActionListener;
 import org.elasticsearch.common.settings.Setting;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.core.IOUtils;
@@ -40,6 +41,7 @@ import org.elasticsearch.xpack.security.authc.support.CachingUsernamePasswordRea
 import org.elasticsearch.xpack.security.authc.support.DelegatedAuthorizationSupport;
 import org.elasticsearch.xpack.security.authc.support.mapper.CompositeRoleMapper;
 import org.elasticsearch.xpack.security.authc.support.mapper.NativeRoleMappingStore;
+import org.elasticsearch.xpack.security.support.ReloadableSecurityComponent;
 
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +59,7 @@ import static org.elasticsearch.xpack.security.authc.ldap.LdapUserSearchSessionF
 /**
  * Authenticates username/password tokens against ldap, locates groups and maps them to roles.
  */
-public final class LdapRealm extends CachingUsernamePasswordRealm {
+public final class LdapRealm extends CachingUsernamePasswordRealm implements ReloadableSecurityComponent {
 
     private final SessionFactory sessionFactory;
     private final UserRoleMapper roleMapper;
@@ -89,6 +91,11 @@ public final class LdapRealm extends CachingUsernamePasswordRealm {
         this.threadPool = threadPool;
         this.executionTimeout = config.getSetting(LdapRealmSettings.EXECUTION_TIMEOUT);
         roleMapper.refreshRealmOnChange(this);
+    }
+
+    @Override
+    public void reload(Settings settings) {
+        this.sessionFactory.reload(settings);
     }
 
     static SessionFactory sessionFactory(RealmConfig config, SSLService sslService, ThreadPool threadPool) throws LDAPException {

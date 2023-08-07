@@ -35,6 +35,7 @@ import org.elasticsearch.xpack.core.security.authc.file.FileRealmSettings;
 import org.elasticsearch.xpack.core.security.authc.kerberos.KerberosRealmSettings;
 import org.elasticsearch.xpack.security.Security;
 import org.elasticsearch.xpack.security.authc.esnative.ReservedRealm;
+import org.elasticsearch.xpack.security.support.ReloadableSecurityComponent;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -57,7 +58,7 @@ import java.util.stream.StreamSupport;
 /**
  * Serves as a realms registry (also responsible for ordering the realms appropriately)
  */
-public class Realms extends AbstractLifecycleComponent implements Iterable<Realm> {
+public class Realms extends AbstractLifecycleComponent implements Iterable<Realm>, ReloadableSecurityComponent {
 
     private static final Logger logger = LogManager.getLogger(Realms.class);
     private static final DeprecationLogger deprecationLogger = DeprecationLogger.getLogger(logger.getName());
@@ -195,6 +196,15 @@ public class Realms extends AbstractLifecycleComponent implements Iterable<Realm
     @Override
     public Iterator<Realm> iterator() {
         return getActiveRealms().iterator();
+    }
+
+    @Override
+    public void reload(Settings settings) {
+        this.allConfiguredRealms.forEach(realm -> {
+            if (realm instanceof ReloadableSecurityComponent reload) {
+                reload.reload(settings);
+            }
+        });
     }
 
     /**

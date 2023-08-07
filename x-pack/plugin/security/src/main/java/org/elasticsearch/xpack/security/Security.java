@@ -77,6 +77,7 @@ import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.plugins.MapperPlugin;
 import org.elasticsearch.plugins.NetworkPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.ReloadablePlugin;
 import org.elasticsearch.plugins.SearchPlugin;
 import org.elasticsearch.plugins.SystemIndexPlugin;
 import org.elasticsearch.plugins.interceptor.RestInterceptorActionPlugin;
@@ -362,6 +363,7 @@ import org.elasticsearch.xpack.security.rest.action.user.RestPutUserAction;
 import org.elasticsearch.xpack.security.rest.action.user.RestSetEnabledAction;
 import org.elasticsearch.xpack.security.support.CacheInvalidatorRegistry;
 import org.elasticsearch.xpack.security.support.ExtensionComponents;
+import org.elasticsearch.xpack.security.support.ReloadableSecurityComponent;
 import org.elasticsearch.xpack.security.support.SecuritySystemIndices;
 import org.elasticsearch.xpack.security.transport.RemoteClusterCredentialsResolver;
 import org.elasticsearch.xpack.security.transport.SecurityHttpSettings;
@@ -413,7 +415,8 @@ public class Security extends Plugin
         MapperPlugin,
         ExtensiblePlugin,
         SearchPlugin,
-        RestInterceptorActionPlugin {
+        RestInterceptorActionPlugin,
+        ReloadablePlugin {
 
     public static final String SECURITY_CRYPTO_THREAD_POOL_NAME = XPackField.SECURITY + "-crypto";
 
@@ -551,6 +554,8 @@ public class Security extends Plugin
     private final SetOnce<ReservedRoleMappingAction> reservedRoleMappingAction = new SetOnce<>();
 
     private final SetOnce<WorkflowService> workflowService = new SetOnce<>();
+
+    private final List<ReloadableSecurityComponent> reloadableComponents = new ArrayList<>();
 
     public Security(Settings settings) {
         this(settings, Collections.emptyList());
@@ -1030,6 +1035,11 @@ public class Security extends Plugin
 
         cacheInvalidatorRegistry.validate();
 
+        components.stream()
+            .filter(ReloadableSecurityComponent.class::isInstance)
+            .map(ReloadableSecurityComponent.class::cast)
+            .forEach(this.reloadableComponents::add);
+
         return components;
     }
 
@@ -1211,6 +1221,11 @@ public class Security extends Plugin
         // hide settings
         settingsList.add(Setting.stringListSetting(SecurityField.setting("hide_settings"), Property.NodeScope, Property.Filtered));
         return settingsList;
+    }
+
+    @Override
+    public void reload(Settings settings) throws Exception {
+        this.reloadableComponents.forEach(c -> c.reload(settings));
     }
 
     @Override
