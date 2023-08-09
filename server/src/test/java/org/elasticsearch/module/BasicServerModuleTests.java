@@ -38,8 +38,6 @@ public class BasicServerModuleTests extends ESTestCase {
     public void testQualifiedExports() {
         var md = getServerDescriptor();
 
-        // The package containing the RestInterceptor type, org.elasticsearch.plugins.interceptor,
-        // should only be exported to security.
         assertThat(
             md.exports(),
             hasItem(
