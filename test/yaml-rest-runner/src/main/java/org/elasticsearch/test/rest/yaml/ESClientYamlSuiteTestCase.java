@@ -492,6 +492,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
             {
                 template.startArray("index_patterns").value("*").endArray();
                 if (useComponentTemplate) {
+                    template.field("priority", 65); // low priority, and hopefully obscure enough not to conflict
                     template.startObject("template");
                 }
                 template.startObject("settings");
