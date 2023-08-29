@@ -29,9 +29,17 @@ import java.util.function.Function;
  *    }
  * }</pre>
  * <p>
- * The feature flag will be enabled automatically in all {@link Build#isSnapshot() snapshot} builds.
- * The feature flag can be enabled in release builds by setting the system property "es.{name}_feature_flag_enabled" to {@code true}
- * (e.g. {@code -Des.xyzzy_feature_flag_enabled=true}
+ * The default value for all feature flags is controlled by the system property "es.feature_flag_default".
+ * If this system property is not set, it defaults to {@code true} (features enabled) on {@link Build#isSnapshot() snapshot} builds and
+ * {@code false} on release builds.
+ * </p>
+ * <p>
+ * If the default value for feature flags is enabled, then <em>all</em> feature flags are enabled, and it not possible to disable them
+ * individually.
+ * </p>
+ * <p>
+ * If the default value for feature flags is disabled, then individual feature flags may be enabled by setting the
+ * system property "es.{name}_feature_flag_enabled" to {@code true} (e.g. {@code -Des.xyzzy_feature_flag_enabled=true}.
  * </p>
  */
 public class FeatureFlag {
@@ -42,6 +50,8 @@ public class FeatureFlag {
     private final boolean enabled;
 
     private static final Function<String, String> GET_SYSTEM_PROPERTY = System::getProperty;
+
+    private static final String SYSPROP_DEFAULT_FLAG_VALUE = "es.feature_flag_default";
 
     public FeatureFlag(String name) {
         this(name, "enabled", Build.current(), GET_SYSTEM_PROPERTY);
@@ -67,18 +77,27 @@ public class FeatureFlag {
         assert name.indexOf('.') == -1 : "Feature flag names may not contain a '.' character";
         assert name.contains("feature_flag") == false : "Feature flag names may not contain the string 'feature_flag'";
 
+        final boolean defaultEnabled = parseSystemProperty(getSystemProperty, SYSPROP_DEFAULT_FLAG_VALUE, build.isSnapshot());
         final String propertyName = "es." + name + "_feature_flag_" + suffix;
-        if (build.isSnapshot()) {
+        if (defaultEnabled) {
             enabled = parseSystemProperty(getSystemProperty, propertyName, true);
             if (enabled == false) {
                 throw new IllegalArgumentException(
-                    "Feature flag " + name + " (via system property '" + propertyName + "') cannot be disabled in snapshot builds"
+                    "Feature flags are enabled by default in this build. Feature flag ["
+                        + name
+                        + "] (via system property '"
+                        + propertyName
+                        + "') cannot be disabled"
                 );
             }
-            logger.info("The current build is a snapshot, feature flag [{}] is enabled", name);
+            logger.info("The current build enables all feature flags by default. Feature flag [{}] is enabled", name);
         } else {
             enabled = parseSystemProperty(getSystemProperty, propertyName, false);
-            logger.debug("The current build is a not snapshot, feature flag [{}] is {}", name, enabled ? "enabled" : "disabled");
+            logger.info(
+                "The current build disables feature flags by default. Feature flag [{}] is {}",
+                name,
+                enabled ? "enabled" : "disabled"
+            );
         }
     }
 

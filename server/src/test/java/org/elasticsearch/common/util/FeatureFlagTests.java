@@ -47,7 +47,7 @@ public class FeatureFlagTests extends ESTestCase {
     }
 
     public void testSetFeatureFlagDefaultEnabledInSnapshotBuild() {
-        final Properties properties = new Properties();
+        final Properties properties = randomBoolean() ? new Properties() : setProperty("es.feature_flag_default", "true");
         final FeatureFlag flag = newFeatureFlag(properties, true);
         assertThat(flag.isEnabled(), is(true));
     }
@@ -58,10 +58,34 @@ public class FeatureFlagTests extends ESTestCase {
         assertThat(flag.isEnabled(), is(true));
     }
 
-    public void testSetFeatureFlagCannotBeDisabledInSnapshotBuild() {
+    public void testSingleFeatureFlagCannotBeDisabledInSnapshotBuild() {
         final Properties properties = setProperty("es.test_feature_flag_enabled", "false");
         final IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> newFeatureFlag(properties, true));
-        assertThat(ex.getMessage(), containsString("cannot be disabled in snapshot builds"));
+        assertThat(ex.getMessage(), containsString("enabled by default"));
+        assertThat(ex.getMessage(), containsString("cannot be disabled"));
+    }
+
+    public void testCanDisableAllFeatureFlagsInSnapshotBuild() {
+        final Properties properties = setProperty("es.feature_flag_default", "false");
+        final FeatureFlag flag = newFeatureFlag(properties, true);
+        assertThat(flag.isEnabled(), is(false));
+    }
+
+    public void testCanDisableOnlyOneFeatureFlagInSnapshotBuild() {
+        final Build build = randomBuild(true);
+        final Properties properties = setProperties("es.feature_flag_default", "false", "es.test1_feature_flag_enabled", "true");
+
+        final FeatureFlag flag1 = new FeatureFlag("test1", "enabled", build, properties::getProperty);
+        assertThat(flag1.isEnabled(), is(true));
+
+        final FeatureFlag flag2 = new FeatureFlag("test2", "enabled", build, properties::getProperty);
+        assertThat(flag2.isEnabled(), is(false));
+    }
+
+    public void testCanEnableAllFeatureFlagsInReleaseBuild() {
+        final Properties properties = setProperty("es.feature_flag_default", "true");
+        final FeatureFlag flag = newFeatureFlag(properties, false);
+        assertThat(flag.isEnabled(), is(true));
     }
 
     private static FeatureFlag newFeatureFlag(Properties properties, boolean isSnapshot) {
@@ -72,6 +96,17 @@ public class FeatureFlagTests extends ESTestCase {
     private static Properties setProperty(String key, String value) {
         Properties properties = new Properties();
         properties.setProperty(key, value);
+        return properties;
+    }
+
+    private static Properties setProperties(String... nameAndValue) {
+        if (nameAndValue.length % 2 != 0) {
+            throw new IllegalArgumentException("Must have an even number of arguments");
+        }
+        Properties properties = new Properties();
+        for (int i = 0; i < nameAndValue.length; i += 2) {
+            properties.setProperty(nameAndValue[i], nameAndValue[i + 1]);
+        }
         return properties;
     }
 
