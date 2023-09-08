@@ -41,6 +41,7 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.ssl.PemUtils;
+import org.elasticsearch.common.util.LazyInitializable;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -69,6 +70,7 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -102,7 +104,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import javax.net.ssl.SSLContext;
 
 import static java.util.Collections.sort;
@@ -130,6 +131,8 @@ public abstract class ESRestTestCase extends ESTestCase {
 
     public static final String CLIENT_SOCKET_TIMEOUT = "client.socket.timeout";
     public static final String CLIENT_PATH_PREFIX = "client.path.prefix";
+
+    private LazyInitializable<RestTestCluster, RuntimeException> testCluster = new LazyInitializable<>(this::findTestCluster);
 
     /**
      * Convert the entity from a {@link Response} into a map of maps.
@@ -280,16 +283,27 @@ public abstract class ESRestTestCase extends ESTestCase {
         return availableFeatures.contains(feature);
     }
 
-    protected String getTestRestCluster() {
-        String cluster = System.getProperty("tests.rest.cluster");
-        if (cluster == null) {
-            throw new RuntimeException(
-                "Must specify [tests.rest.cluster] system property with a comma delimited list of [host:port] "
-                    + "to which to send REST requests"
-            );
+    private RestTestCluster findTestCluster() {
+        final String sysPropName = "tests.rest.cluster";
+        String clusterAddress = System.getProperty(sysPropName);
+        if (clusterAddress != null) {
+            return new RestTestCluster.ExternalCluster(clusterAddress);
         }
+        RestTestCluster.InternalCluster internalCluster = RestTestCluster.InternalCluster.build(this);
+        if (internalCluster != null) {
+            return internalCluster;
+        }
+        throw new RuntimeException(
+            "Must configure a "
+                + ClassRule.class
+                + " with an internal cluster /or/ specify ["
+                + sysPropName
+                + "] system property with a comma delimited list of [host:port] to which to send REST requests "
+        );
+    }
 
-        return cluster;
+    protected String getTestRestCluster() {
+        return testCluster.getOrCompute().getHttpAddress();
     }
 
     protected String getTestReadinessPorts() {
@@ -1293,6 +1307,11 @@ public abstract class ESRestTestCase extends ESTestCase {
         Settings.Builder builder = Settings.builder();
         if (System.getProperty("tests.rest.client_path_prefix") != null) {
             builder.put(CLIENT_PATH_PREFIX, System.getProperty("tests.rest.client_path_prefix"));
+        }
+
+        final RestTestCluster.HttpHeader credentials = testCluster.getOrCompute().getAdminCredentials();
+        if (credentials != null) {
+            builder.put(ThreadContext.PREFIX + "." + credentials.name(), credentials.value());
         }
         return builder.build();
     }
