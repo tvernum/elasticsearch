@@ -52,13 +52,59 @@ public abstract class EqlRestValidationTestCase extends RemoteClusterAwareEqlRes
         assertOK(provisioningAdminClient().performRequest(new Request("POST", "/" + indexName + "/_refresh")));
     }
 
-    protected abstract String getInexistentIndexErrorMessage();
+    protected abstract boolean isSecurityEnabled();
 
-    protected String getInexistentWildcardErrorMessage() {
-        return getInexistentIndexErrorMessage();
+    protected String getInexistentIndexErrorMessage() {
+        if (isSecurityEnabled()) {
+            return "\"root_cause\":[{\"type\":\"verification_exception\",\"reason\":\"Found 1 problem\\nline -1:-1: Unknown index ";
+        } else {
+            return "\"root_cause\":[{\"type\":\"verification_exception\",\"reason\":\"Found 1 problem\\nline -1:-1: Unknown index ";
+        }
     }
 
-    protected abstract void assertErrorMessageWhenAllowNoIndicesIsFalse(String reqParameter) throws IOException;
+    protected String getInexistentWildcardErrorMessage() {
+        if (isSecurityEnabled()) {
+            return """
+                "root_cause":[{"type":"verification_exception","reason":"Found 1 problem\\nline -1:-1: Unknown index [*,-*]"}],\
+                "type":"index_not_found_exception","reason":"no such index\s""";
+        } else {
+            return getInexistentIndexErrorMessage();
+        }
+    }
+
+    protected void assertErrorMessageWhenAllowNoIndicesIsFalse(String reqParameter) throws IOException {
+        if (isSecurityEnabled()) {
+            assertErrorMessage("inexistent1*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent1*]\"""");
+            assertErrorMessage("inexistent1*,inexistent2*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent1*]\"""");
+            assertErrorMessage("test_eql,inexistent*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent*]\"""");
+            // TODO: revisit the next two tests when https://github.com/elastic/elasticsearch/issues/64190 is closed
+            assertErrorMessage("inexistent", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent]\"""");
+            assertErrorMessage("inexistent1,inexistent2", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [null]\"""");
+        } else {
+            assertErrorMessage("inexistent1*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent1*]\"""");
+            assertErrorMessage("inexistent1*,inexistent2*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent1*]\"""");
+            assertErrorMessage("test_eql,inexistent*", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent*]\"""");
+            assertErrorMessage("inexistent", reqParameter, """
+                "root_cause":[{"type":"index_not_found_exception","reason":"no such index [inexistent]\"""");
+            // TODO: revisit after
+            // https://github.com/elastic/elasticsearch/issues/64197
+            // is closed
+            assertErrorMessage(
+                "inexistent1,inexistent2",
+                reqParameter,
+                "\"root_cause\":[{\"type\":\"index_not_found_exception\",\"reason\":\"no such index [null]\","
+                    + "\"resource.type\":\"index_expression\",\"resource.id\":[\"inexistent1\",\"inexistent2\"]}]"
+            );
+        }
+    }
 
     public void testDefaultIndicesOptions() throws IOException {
         assertErrorMessages(inexistentIndexNameWithWildcard, EMPTY, getInexistentWildcardErrorMessage());

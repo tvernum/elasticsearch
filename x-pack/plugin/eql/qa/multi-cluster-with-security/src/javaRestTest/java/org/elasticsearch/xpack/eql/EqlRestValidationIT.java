@@ -20,6 +20,11 @@ public class EqlRestValidationIT extends EqlRestValidationTestCase {
         return "\"root_cause\":[{\"type\":\"index_not_found_exception\",\"reason\":\"no such index ";
     }
 
+    @Override
+    protected boolean isSecurityEnabled() {
+        return true;
+    }
+
     protected void assertErrorMessageWhenAllowNoIndicesIsFalse(String reqParameter) throws IOException {
         assertErrorMessage("inexistent1*", reqParameter, getInexistentIndexErrorMessage() + "[" + indexPattern("inexistent1*") + "]\"");
         assertErrorMessage(

@@ -119,7 +119,7 @@ public abstract class RemoteClusterAwareEqlRestTestCase extends ESRestTestCase {
 
     @Override
     protected Settings restClientSettings() {
-        return secureRemoteClientSettings();
+        return Settings.builder().put(super.restClientSettings()).put(secureRemoteClientSettings()).build();
     }
 
     protected static Settings secureRemoteClientSettings() {
