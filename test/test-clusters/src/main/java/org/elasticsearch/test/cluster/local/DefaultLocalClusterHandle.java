@@ -10,7 +10,6 @@ package org.elasticsearch.test.cluster.local;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.test.cluster.ClusterHandle;
 import org.elasticsearch.test.cluster.LogType;
 import org.elasticsearch.test.cluster.local.AbstractLocalClusterFactory.Node;
 import org.elasticsearch.test.cluster.local.model.User;
@@ -186,9 +185,18 @@ public class DefaultLocalClusterHandle implements LocalClusterHandle {
         }
     }
 
+    @Override
+    public boolean isSecurityEnabled() {
+        return isSecurityEnabled(nodes.get(0));
+    }
+
+    private boolean isSecurityEnabled(Node node) {
+        return Boolean.parseBoolean(node.getSpec().getSetting("xpack.security.enabled", "true"));
+    }
+
     private WaitForHttpResource configureWaitForReady() throws MalformedURLException {
         Node node = nodes.get(0);
-        boolean securityEnabled = Boolean.parseBoolean(node.getSpec().getSetting("xpack.security.enabled", "true"));
+        boolean securityEnabled = isSecurityEnabled(node);
         boolean sslEnabled = Boolean.parseBoolean(node.getSpec().getSetting("xpack.security.http.ssl.enabled", "false"));
         boolean securityAutoConfigured = isSecurityAutoConfigured(node);
         String scheme = securityEnabled && (sslEnabled || securityAutoConfigured) ? "https" : "http";

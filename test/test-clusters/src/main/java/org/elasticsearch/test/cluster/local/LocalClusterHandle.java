@@ -93,4 +93,9 @@ public interface LocalClusterHandle extends ClusterHandle {
      * Returns an {@link InputStream} for the given node log.
      */
     InputStream getNodeLog(int index, LogType logType);
+
+    /**
+     * Returns {@code true} if the cluster has security enabled.
+     */
+    boolean isSecurityEnabled();
 }

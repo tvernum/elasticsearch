@@ -146,6 +146,12 @@ public class DefaultLocalElasticsearchCluster<S extends LocalClusterSpec, H exte
         return handle.getNodeLog(index, logType);
     }
 
+    @Override
+    public boolean isSecurityEnabled() {
+        checkHandle();
+        return handle.isSecurityEnabled();
+    }
+
     protected H getHandle() {
         return handle;
     }
