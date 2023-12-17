@@ -51,19 +51,21 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
     private final XPackLicenseState licenseState;
     private final SecurityContext securityContext;
     private final ScriptService scriptService;
+    private final boolean strictTermsEnum;
 
     public SecurityIndexReaderWrapper(
         Function<ShardId, SearchExecutionContext> searchExecutionContextProvider,
         DocumentSubsetBitsetCache bitsetCache,
         SecurityContext securityContext,
         XPackLicenseState licenseState,
-        ScriptService scriptService
-    ) {
+        ScriptService scriptService,
+        boolean strictTermsEnum) {
         this.scriptService = scriptService;
         this.searchExecutionContextProvider = searchExecutionContextProvider;
         this.bitsetCache = bitsetCache;
         this.securityContext = securityContext;
         this.licenseState = licenseState;
+        this.strictTermsEnum = strictTermsEnum;
     }
 
     @Override
@@ -87,16 +89,17 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
                 return reader;
             }
 
-            DirectoryReader wrappedReader = reader;
+            DirectoryReader wrappedReader = permissions.getFieldPermissions().filter(reader);
             DocumentPermissions documentPermissions = permissions.getDocumentPermissions();
             if (documentPermissions.hasDocumentLevelPermissions()) {
                 BooleanQuery filterQuery = documentPermissions.filter(getUser(), scriptService, shardId, searchExecutionContextProvider);
                 if (filterQuery != null) {
-                    wrappedReader = DocumentSubsetReader.wrap(wrappedReader, bitsetCache, new ConstantScoreQuery(filterQuery));
+                    wrappedReader =
+                        DocumentSubsetReader.wrap(wrappedReader, bitsetCache, new ConstantScoreQuery(filterQuery), strictTermsEnum);
                 }
             }
 
-            return permissions.getFieldPermissions().filter(wrappedReader);
+            return wrappedReader;
         } catch (IOException e) {
             logger.error("Unable to apply field level security");
             throw ExceptionsHelper.convertToElastic(e);

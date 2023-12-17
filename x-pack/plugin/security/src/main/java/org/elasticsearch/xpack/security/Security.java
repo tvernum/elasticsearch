@@ -24,6 +24,7 @@ import org.elasticsearch.action.support.DestructiveOperations;
 import org.elasticsearch.bootstrap.BootstrapCheck;
 import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.cluster.node.DiscoveryNode;
@@ -1250,7 +1251,6 @@ public class Security extends Plugin
                             null,
                             () -> {
                                 throw new IllegalArgumentException("permission filters are not allowed to use the current timestamp");
-
                             },
                             null,
                             // Don't use runtime mappings in the security query
@@ -1259,7 +1259,8 @@ public class Security extends Plugin
                         dlsBitsetCache.get(),
                         securityContext.get(),
                         getLicenseState(),
-                        indexService.getScriptService()
+                        indexService.getScriptService(),
+                        IndexMetadata.INDEX_STRICT_TERMS_ENUM_SETTING.get(indexService.getIndexSettings().getSettings())
                     )
                 );
                 /*

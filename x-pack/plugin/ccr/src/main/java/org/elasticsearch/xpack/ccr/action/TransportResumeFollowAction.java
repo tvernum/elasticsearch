@@ -449,6 +449,7 @@ public class TransportResumeFollowAction extends AcknowledgedTransportMasterNode
         IndexMetadata.INDEX_BLOCKS_READ_ONLY_ALLOW_DELETE_SETTING,
         IndexMetadata.INDEX_PRIORITY_SETTING,
         IndexMetadata.SETTING_WAIT_FOR_ACTIVE_SHARDS,
+        IndexMetadata.INDEX_STRICT_TERMS_ENUM_SETTING,
         IndexMetadata.INDEX_HIDDEN_SETTING,
         EnableAllocationDecider.INDEX_ROUTING_REBALANCE_ENABLE_SETTING,
         EnableAllocationDecider.INDEX_ROUTING_ALLOCATION_ENABLE_SETTING,

@@ -498,6 +498,14 @@ public class IndexMetadata implements Diffable<IndexMetadata>, ToXContentFragmen
         Property.ServerlessPublic
     );
 
+    public static final String SETTING_STRICT_TERMS_ENUM = "index.strict_terms_enum.enabled";
+    public static final Setting<Boolean> INDEX_STRICT_TERMS_ENUM_SETTING = Setting.boolSetting(
+        SETTING_STRICT_TERMS_ENUM,
+        false,
+        Property.Dynamic,
+        Property.IndexScope
+    );
+
     /**
      * Legacy index setting, kept for 7.x BWC compatibility. This setting has no effect in 8.x. Do not use.
      * TODO: Remove in 9.0

@@ -17,6 +17,7 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.UnwrapForGlobalOrdsFilterDirectoryReader;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.index.fielddata.IndexFieldDataCache;
 import org.elasticsearch.index.fielddata.IndexOrdinalsFieldData;
@@ -142,6 +143,9 @@ public abstract class AbstractIndexOrdinalsFieldData implements IndexOrdinalsFie
 
     @Override
     public IndexOrdinalsFieldData loadGlobalDirect(DirectoryReader indexReader) throws Exception {
+        if (indexReader instanceof UnwrapForGlobalOrdsFilterDirectoryReader unwrap) {
+            indexReader = UnwrapForGlobalOrdsFilterDirectoryReader.unwrapOnce(unwrap);
+        }
         return GlobalOrdinalsBuilder.build(
             indexReader,
             this,
