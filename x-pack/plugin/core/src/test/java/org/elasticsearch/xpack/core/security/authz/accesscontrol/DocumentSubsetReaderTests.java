@@ -43,10 +43,10 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
-import java.util.concurrent.Executors;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -110,19 +110,25 @@ public class DocumentSubsetReaderTests extends ESTestCase {
         assertThat(result.totalHits.value, equalTo(1L));
         assertThat(result.scoreDocs[0].doc, equalTo(0));
 
-        indexSearcher = newSearcher(DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value2")), randomBoolean()));
+        indexSearcher = newSearcher(
+            DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value2")), randomBoolean())
+        );
         assertThat(indexSearcher.getIndexReader().numDocs(), equalTo(1));
         result = indexSearcher.search(new MatchAllDocsQuery(), 1);
         assertThat(result.totalHits.value, equalTo(1L));
         assertThat(result.scoreDocs[0].doc, equalTo(1));
 
         // this doc has been marked as deleted:
-        indexSearcher = newSearcher(DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value3")), randomBoolean()));
+        indexSearcher = newSearcher(
+            DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value3")), randomBoolean())
+        );
         assertThat(indexSearcher.getIndexReader().numDocs(), equalTo(0));
         result = indexSearcher.search(new MatchAllDocsQuery(), 1);
         assertThat(result.totalHits.value, equalTo(0L));
 
-        indexSearcher = newSearcher(DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value4")), randomBoolean()));
+        indexSearcher = newSearcher(
+            DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value4")), randomBoolean())
+        );
         assertThat(indexSearcher.getIndexReader().numDocs(), equalTo(1));
         result = indexSearcher.search(new MatchAllDocsQuery(), 1);
         assertThat(result.totalHits.value, equalTo(1L));
@@ -157,20 +163,20 @@ public class DocumentSubsetReaderTests extends ESTestCase {
         iw.close();
         openDirectoryReader();
 
-        IndexSearcher indexSearcher = new IndexSearcher(DocumentSubsetReader.wrap(directoryReader, bitsetCache,
-            new TermQuery(new Term("field", "value2")), true));
+        IndexSearcher indexSearcher = new IndexSearcher(
+            DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("field", "value2")), true)
+        );
 
         TermsAggCollector collector = new TermsAggCollector("field", false);
         indexSearcher.search(new MatchAllDocsQuery(), collector);
         Map<String, Long> counts = collector.getCounts();
         assertEquals(Collections.singletonMap("value2", 2L), counts);
 
-        UnsupportedOperationException uoe = expectThrows(UnsupportedOperationException.class,
-            () -> {
-                TermsAggCollector collector2 = new TermsAggCollector("field", true);
-                indexSearcher.search(new MatchAllDocsQuery(), collector2);
-                collector2.getCounts();
-            });
+        UnsupportedOperationException uoe = expectThrows(UnsupportedOperationException.class, () -> {
+            TermsAggCollector collector2 = new TermsAggCollector("field", true);
+            indexSearcher.search(new MatchAllDocsQuery(), collector2);
+            collector2.getCounts();
+        });
         assertThat(uoe.getMessage(), containsString("Lookup by ord on random ords is disallowed"));
     }
 
@@ -201,23 +207,22 @@ public class DocumentSubsetReaderTests extends ESTestCase {
         iw.close();
         openDirectoryReader();
 
-        IndexSearcher indexSearcher = new IndexSearcher(DocumentSubsetReader.wrap(directoryReader, bitsetCache,
-            new TermQuery(new Term("keep_me", "yes")), true));
+        IndexSearcher indexSearcher = new IndexSearcher(
+            DocumentSubsetReader.wrap(directoryReader, bitsetCache, new TermQuery(new Term("keep_me", "yes")), true)
+        );
 
-        UnsupportedOperationException uoe = expectThrows(UnsupportedOperationException.class,
-            () -> {
-                TermsAggCollector collector = new TermsAggCollector("field", false);
-                indexSearcher.search(new MatchAllDocsQuery(), collector);
-                collector.getCounts();
-            });
+        UnsupportedOperationException uoe = expectThrows(UnsupportedOperationException.class, () -> {
+            TermsAggCollector collector = new TermsAggCollector("field", false);
+            indexSearcher.search(new MatchAllDocsQuery(), collector);
+            collector.getCounts();
+        });
         assertThat(uoe.getMessage(), containsString("This query type is disallowed"));
 
-        uoe = expectThrows(UnsupportedOperationException.class,
-            () -> {
-                TermsAggCollector collector = new TermsAggCollector("field", true);
-                indexSearcher.search(new MatchAllDocsQuery(), collector);
-                collector.getCounts();
-            });
+        uoe = expectThrows(UnsupportedOperationException.class, () -> {
+            TermsAggCollector collector = new TermsAggCollector("field", true);
+            indexSearcher.search(new MatchAllDocsQuery(), collector);
+            collector.getCounts();
+        });
         assertThat(uoe.getMessage(), containsString("This query type is disallowed"));
     }
 

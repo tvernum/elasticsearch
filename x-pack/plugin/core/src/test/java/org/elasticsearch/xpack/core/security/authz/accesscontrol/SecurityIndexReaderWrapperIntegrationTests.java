@@ -285,8 +285,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
                     return indicesAccessControl;
                 }
                 IndicesAccessControl limitedByIndicesAccessControl = new IndicesAccessControl(
-                
-                
+
                     true,
                     singletonMap("_index", limitedIndexAccessControl)
                 );

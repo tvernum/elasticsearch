@@ -59,7 +59,8 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
         SecurityContext securityContext,
         XPackLicenseState licenseState,
         ScriptService scriptService,
-        boolean strictTermsEnum) {
+        boolean strictTermsEnum
+    ) {
         this.scriptService = scriptService;
         this.searchExecutionContextProvider = searchExecutionContextProvider;
         this.bitsetCache = bitsetCache;
@@ -94,8 +95,12 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
             if (documentPermissions.hasDocumentLevelPermissions()) {
                 BooleanQuery filterQuery = documentPermissions.filter(getUser(), scriptService, shardId, searchExecutionContextProvider);
                 if (filterQuery != null) {
-                    wrappedReader =
-                        DocumentSubsetReader.wrap(wrappedReader, bitsetCache, new ConstantScoreQuery(filterQuery), strictTermsEnum);
+                    wrappedReader = DocumentSubsetReader.wrap(
+                        wrappedReader,
+                        bitsetCache,
+                        new ConstantScoreQuery(filterQuery),
+                        strictTermsEnum
+                    );
                 }
             }
 
