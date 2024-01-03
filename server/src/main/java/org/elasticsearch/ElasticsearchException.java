@@ -373,6 +373,11 @@ public class ElasticsearchException extends RuntimeException implements ToXConte
             exception.metadataToXContent(builder, params);
         }
 
+        if (builder.getNestingDepth() >= 10) {
+            builder.field("truncated", true);
+            return;
+        }
+
         if (params.paramAsBoolean(REST_EXCEPTION_SKIP_CAUSE, REST_EXCEPTION_SKIP_CAUSE_DEFAULT) == false) {
             if (cause != null) {
                 builder.field(CAUSED_BY);

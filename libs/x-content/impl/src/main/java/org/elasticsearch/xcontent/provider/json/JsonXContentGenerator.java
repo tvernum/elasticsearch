@@ -596,4 +596,21 @@ public class JsonXContentGenerator implements XContentGenerator {
     public boolean isClosed() {
         return generator.isClosed();
     }
+
+    @Override
+    public int getNestingDepth() {
+        JsonStreamContext context = generator.getOutputContext();
+        int depth = context.getNestingDepth();
+        // Not all generators in Jackson actually track the depth :(
+        // we may need to calculate it ourselves
+        if (depth <= 0) {
+            while (context != null && context.inRoot() == false) {
+                if (context.inArray() || context.inObject()) {
+                    depth++;
+                }
+                context = context.getParent();
+            }
+        }
+        return depth;
+    }
 }

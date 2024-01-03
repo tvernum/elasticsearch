@@ -161,4 +161,9 @@ public interface XContentGenerator extends Closeable, Flushable {
      */
     boolean isClosed();
 
+    /**
+     * Returns the current nesting depth - that is, the count of arrays and objects that have been started, but not ended.
+     */
+    int getNestingDepth();
+
 }

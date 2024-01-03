@@ -1351,4 +1351,8 @@ public final class XContentBuilder implements Closeable, Flushable {
             }
         }
     }
+
+    public int getNestingDepth() {
+        return generator.getNestingDepth();
+    }
 }

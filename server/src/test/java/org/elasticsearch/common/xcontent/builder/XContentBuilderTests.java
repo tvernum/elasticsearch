@@ -544,4 +544,55 @@ public class XContentBuilderTests extends ESTestCase {
     public void testEnumIsXContentable() {
         XContentBuilder.ensureToXContentable(XContentableEnum.A);
     }
+
+    public void testNestingDepth() throws Exception {
+        XContentBuilder builder = XContentFactory.contentBuilder(randomFrom(XContentType.values()));
+        doTestNestingDepth(builder, 1, randomIntBetween(4, 12));
+    }
+
+    private void doTestNestingDepth(XContentBuilder builder, int expectedDepth, int maxDepth) throws IOException {
+        final boolean object = randomBoolean();
+        if (object) {
+            builder.startObject();
+        } else {
+            builder.startArray();
+        }
+
+        // randomly add non-nested values to this array/object
+        int preChildren = randomIntBetween(0, 3);
+        for (int i = 0; i < preChildren; i++) {
+            assertThat(builder.getNestingDepth(), equalTo(expectedDepth));
+            if (object) {
+                builder.field("pre_" + i);
+            }
+            builder.value(randomAlphaOfLength(1));
+        }
+
+        assertThat(builder.getNestingDepth(), equalTo(expectedDepth));
+
+        if (expectedDepth < maxDepth) {
+            if (object) {
+                builder.field(randomAlphaOfLengthBetween(1, 8));
+            }
+            doTestNestingDepth(builder, expectedDepth + 1, maxDepth);
+
+            // randomly add additional non-nested values to this array/object
+            int postChildren = randomIntBetween(0, 3);
+            for (int i = 0; i < postChildren; i++) {
+                assertThat(builder.getNestingDepth(), equalTo(expectedDepth));
+                if (object) {
+                    builder.field("post_" + i);
+                }
+                builder.value(randomInt(99));
+            }
+
+            assertThat(builder.getNestingDepth(), equalTo(expectedDepth));
+        }
+
+        if (object) {
+            builder.endObject();
+        } else {
+            builder.endArray();
+        }
+    }
 }
