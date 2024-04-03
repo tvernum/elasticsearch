@@ -11,6 +11,7 @@ package org.elasticsearch.plugins.internal;
 import org.elasticsearch.common.logging.DynamicContextDataProvider;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Elasticsearch plugins may provide an implementation of this class (via SPI) in order to add extra fields to the JSON based log file.
@@ -18,5 +19,7 @@ import java.util.Map;
  * @see DynamicContextDataProvider
  */
 public interface LoggingDataProvider {
+    Set<String> getDataKeys();
+
     void collectData(Map<String, String> data);
 }

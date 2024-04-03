@@ -11,11 +11,19 @@ package org.elasticsearch.test.logging.plugin;
 import org.elasticsearch.plugins.internal.LoggingDataProvider;
 
 import java.util.Map;
+import java.util.Set;
 
 public class CustomDataProvider implements LoggingDataProvider {
 
+    private static final String SAMPLE_KEY = "test.extension";
+
+    @Override
+    public Set<String> getDataKeys() {
+        return Set.of(SAMPLE_KEY);
+    }
+
     @Override
     public void collectData(Map<String, String> data) {
-        data.put("test.extension", "sample-spi-value");
+        data.put(SAMPLE_KEY, "sample-spi-value");
     }
 }

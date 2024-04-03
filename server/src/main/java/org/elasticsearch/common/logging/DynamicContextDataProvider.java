@@ -9,12 +9,12 @@
 package org.elasticsearch.common.logging;
 
 import org.apache.logging.log4j.core.util.ContextDataProvider;
-import org.elasticsearch.common.util.Maps;
+import org.elasticsearch.common.logging.internal.FixedKeyStringMap;
 import org.elasticsearch.plugins.internal.LoggingDataProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -36,11 +36,7 @@ public class DynamicContextDataProvider implements ContextDataProvider {
     // This is not a set-once because some integration tests may try to set it twice
     private static final AtomicReference<List<? extends LoggingDataProvider>> DATA_PROVIDERS = new AtomicReference<>();
 
-    /**
-     * Use to track the largest map size we've produced so that we can pre-allocate the next map to be the same size and reduce
-     * reallocation costs
-     */
-    private final AtomicInteger mapSize = new AtomicInteger(0);
+    private final AtomicReference<FixedKeyStringMap> referenceMap = new AtomicReference<>(null);
 
     public static void setDataProviders(List<? extends LoggingDataProvider> dataProviders) {
         DynamicContextDataProvider.DATA_PROVIDERS.compareAndSet(null, List.copyOf(dataProviders));
@@ -50,15 +46,15 @@ public class DynamicContextDataProvider implements ContextDataProvider {
     public Map<String, String> supplyContextData() {
         final List<? extends LoggingDataProvider> providers = DATA_PROVIDERS.get();
         if (providers != null && providers.isEmpty() == false) {
-            var expectedSize = mapSize.get();
-            if (expectedSize == 0) {
-                // This is the first map we've produced, so start with an allocation that ought to be big enough, but not too big
-                expectedSize = 10;
+            if (referenceMap.get() == null) {
+                // FixedKeyStringMap is a more efficient way to store the context data if it has a known set of keys
+                // We populate a reference value and then clone that each time to reduce memory + CPU usage
+                final List<String> keys = new ArrayList<>();
+                providers.forEach(p -> keys.addAll(p.getDataKeys()));
+                referenceMap.compareAndSet(null, new FixedKeyStringMap(keys));
             }
-            final Map<String, String> data = Maps.newLinkedHashMapWithExpectedSize(expectedSize);
+            final Map<String, String> data = referenceMap.get().emptyClone();
             providers.forEach(p -> p.collectData(data));
-            final var newMapSize = data.size();
-            mapSize.updateAndGet(oldSize -> oldSize >= newMapSize ? oldSize : newMapSize);
             return data;
         } else {
             return Map.of();
