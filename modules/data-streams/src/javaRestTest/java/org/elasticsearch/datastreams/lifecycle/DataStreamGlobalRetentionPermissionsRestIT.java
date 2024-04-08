@@ -80,22 +80,22 @@ public class DataStreamGlobalRetentionPermissionsRestIT extends ESRestTestCase {
 
     private Settings restManageGlobalRetentionClientSettings() {
         String token = basicAuthHeaderValue("test_manage_global_retention", new SecureString(PASSWORD.toCharArray()));
-        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
+        return Settings.builder().put(super.restClientSettings()).put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     private Settings restMonitorGlobalRetentionClientSettings() {
         String token = basicAuthHeaderValue("test_monitor_global_retention", new SecureString(PASSWORD.toCharArray()));
-        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
+        return Settings.builder().put(super.restClientSettings()).put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     private Settings restOnlyManageLifecycleClientSettings() {
         String token = basicAuthHeaderValue("test_monitor", new SecureString(PASSWORD.toCharArray()));
-        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
+        return Settings.builder().put(super.restClientSettings()).put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     private Settings restNoPrivilegeClientSettings() {
         String token = basicAuthHeaderValue("test_no_privilege", new SecureString(PASSWORD.toCharArray()));
-        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
+        return Settings.builder().put(super.restClientSettings()).put(ThreadContext.PREFIX + ".Authorization", token).build();
     }
 
     public void testManageGlobalRetentionPrivileges() throws Exception {
