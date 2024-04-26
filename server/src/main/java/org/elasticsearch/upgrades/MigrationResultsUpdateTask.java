@@ -71,12 +71,14 @@ public class MigrationResultsUpdateTask extends ClusterStateUpdateTask {
 
     @Override
     public ClusterState execute(ClusterState currentState) throws Exception {
-        FeatureMigrationResults currentResults = currentState.metadata().custom(FeatureMigrationResults.TYPE);
+        FeatureMigrationResults currentResults = currentState.metadata().projectCustom(FeatureMigrationResults.TYPE);
         if (currentResults == null) {
             currentResults = new FeatureMigrationResults(new HashMap<>());
         }
         FeatureMigrationResults newResults = currentResults.withResult(featureName, status);
-        final Metadata newMetadata = Metadata.builder(currentState.metadata()).putCustom(FeatureMigrationResults.TYPE, newResults).build();
+        final Metadata newMetadata = Metadata.builder(currentState.metadata())
+            .putProjectCustom(FeatureMigrationResults.TYPE, newResults)
+            .build();
         final ClusterState newState = ClusterState.builder(currentState).metadata(newMetadata).build();
         return newState;
     }

@@ -46,7 +46,10 @@ import org.elasticsearch.action.support.SubscribableListener;
 import org.elasticsearch.bootstrap.BootstrapForTesting;
 import org.elasticsearch.client.internal.Requests;
 import org.elasticsearch.cluster.ClusterModule;
+import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.UUIDs;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -1755,6 +1758,25 @@ public abstract class ESTestCase extends LuceneTestCase {
      */
     protected NamedWriteableRegistry writableRegistry() {
         return new NamedWriteableRegistry(ClusterModule.getNamedWriteables());
+    }
+
+    /**
+     * Returns a {@link ClusterState} object that is empty except for a single default project.
+     * This is essentially equivalent to how {@link ClusterState#EMPTY_STATE} behaved prior to the introduction of multi-project support
+     */
+    protected static ClusterState clusterStateWithSingleEmptyProject() {
+        return clusterStateWithSingleEmptyProject(ClusterName.DEFAULT);
+    }
+
+    /**
+     * Returns a {@link ClusterState} object (with a specific name) that is empty except for a single default project.
+     */
+    protected static ClusterState clusterStateWithSingleEmptyProject(String clusterName) {
+        return clusterStateWithSingleEmptyProject(new ClusterName(clusterName));
+    }
+
+    private static ClusterState clusterStateWithSingleEmptyProject(ClusterName clusterName) {
+        return ClusterState.builder(clusterName).metadata(Metadata.builder().createDefaultProject().build()).build();
     }
 
     /**

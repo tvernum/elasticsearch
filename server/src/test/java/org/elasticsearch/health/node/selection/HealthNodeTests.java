@@ -57,7 +57,7 @@ public class HealthNodeTests extends ESTestCase {
         PersistentTasksCustomMetadata.Builder tasks = PersistentTasksCustomMetadata.builder();
         tasks.addTask(HealthNode.TASK_NAME, HealthNode.TASK_NAME, HealthNodeTaskParams.INSTANCE, NO_NODE_FOUND);
         ClusterState state = ClusterStateCreationUtils.state(node1, node1, allNodes)
-            .copyAndUpdateMetadata(b -> b.putCustom(PersistentTasksCustomMetadata.TYPE, tasks.build()));
+            .copyAndUpdateMetadata(b -> b.putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasks.build()));
         assertThat(HealthNode.findHealthNode(state), nullValue());
     }
 

@@ -10,6 +10,7 @@ import org.elasticsearch.TransportVersion;
 import org.elasticsearch.TransportVersions;
 import org.elasticsearch.cluster.AbstractNamedDiffable;
 import org.elasticsearch.cluster.NamedDiff;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -23,7 +24,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
 
-public class WatcherMetadata extends AbstractNamedDiffable<Metadata.Custom> implements Metadata.Custom {
+// @TODO[MultiProject] This should probably be Project scoped, but do we care?
+public class WatcherMetadata extends AbstractNamedDiffable<ClusterMetadata.ClusterCustom> implements ClusterMetadata.ClusterCustom {
 
     public static final String TYPE = "watcher";
 
@@ -56,8 +58,8 @@ public class WatcherMetadata extends AbstractNamedDiffable<Metadata.Custom> impl
         this(streamInput.readBoolean());
     }
 
-    public static NamedDiff<Metadata.Custom> readDiffFrom(StreamInput streamInput) throws IOException {
-        return readDiffFrom(Metadata.Custom.class, TYPE, streamInput);
+    public static NamedDiff<ClusterMetadata.ClusterCustom> readDiffFrom(StreamInput streamInput) throws IOException {
+        return readDiffFrom(ClusterMetadata.ClusterCustom.class, TYPE, streamInput);
     }
 
     @Override
@@ -85,7 +87,7 @@ public class WatcherMetadata extends AbstractNamedDiffable<Metadata.Custom> impl
         return Objects.hash(manuallyStopped);
     }
 
-    public static Metadata.Custom fromXContent(XContentParser parser) throws IOException {
+    public static ClusterMetadata.ClusterCustom fromXContent(XContentParser parser) throws IOException {
         XContentParser.Token token;
         Boolean manuallyStopped = null;
         String currentFieldName = null;

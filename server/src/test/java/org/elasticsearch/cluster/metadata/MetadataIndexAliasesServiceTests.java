@@ -81,7 +81,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     public void testAddAndRemove() {
         // Create a state with a single index
         String index = randomAlphaOfLength(5);
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
 
         // Add an alias to it
         ClusterState after = service.applyAliasActions(
@@ -123,7 +126,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     public void testMustExist() {
         // Create a state with a single index
         String index = randomAlphaOfLength(5);
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
 
         // Add an alias to it
         ClusterState after = service.applyAliasActions(
@@ -168,7 +174,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     public void testMultipleIndices() {
         final var length = randomIntBetween(2, 8);
         final Set<String> indices = Sets.newHashSetWithExpectedSize(length);
-        ClusterState before = ClusterState.builder(ClusterName.DEFAULT).build();
+        ClusterState before = ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build();
         final var addActions = new ArrayList<AliasAction>(length);
         for (int i = 0; i < length; i++) {
             final String index = randomValueOtherThanMany(v -> indices.add(v) == false, () -> randomAlphaOfLength(8));
@@ -198,7 +204,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testChangingWriteAliasStateIncreasesAliasesVersion() {
         final String index = randomAlphaOfLength(8);
-        final ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        final ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
 
         final ClusterState afterAddWriteAlias = service.applyAliasActions(
             before,
@@ -221,7 +230,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testAddingAliasMoreThanOnceShouldOnlyIncreaseAliasesVersionByOne() {
         final String index = randomAlphaOfLength(8);
-        final ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        final ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
 
         // add an alias to the index multiple times
         final int length = randomIntBetween(2, 8);
@@ -236,7 +248,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testAliasesVersionUnchangedWhenActionsAreIdempotent() {
         final String index = randomAlphaOfLength(8);
-        final ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        final ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
 
         // add some aliases to the index
         final int length = randomIntBetween(1, 8);
@@ -260,7 +275,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testSwapIndexWithAlias() {
         // Create "test" and "test_2"
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            "test"
+        );
         before = createIndex(before, "test_2");
 
         // Now remove "test" and add an alias to "test" to "test_2" in one go
@@ -277,7 +295,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testAddAliasToRemovedIndex() {
         // Create "test"
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            "test"
+        );
 
         // Attempt to add an alias to "test" at the same time as we remove it
         IndexNotFoundException e = expectThrows(
@@ -292,7 +313,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testRemoveIndexTwice() {
         // Create "test"
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            "test"
+        );
 
         // Try to remove an index twice. This should just remove the index once....
         ClusterState after = service.applyAliasActions(
@@ -303,7 +327,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     }
 
     public void testAddWriteOnlyWithNoExistingAliases() {
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            "test"
+        );
 
         ClusterState after = service.applyAliasActions(
             before,
@@ -341,7 +368,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2))
             .build();
 
         ClusterState after = service.applyAliasActions(before, List.of(new AliasAction.Add("test", "alias", null, null, null, null, null)));
@@ -371,7 +398,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2))
             .build();
 
         Boolean unsetValue = randomBoolean() ? null : false;
@@ -407,7 +434,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2).put(indexMetadata3))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2).put(indexMetadata3))
             .build();
 
         assertNull(before.metadata().getIndicesLookup().get("alias").getWriteIndex());
@@ -438,7 +465,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2))
             .build();
 
         assertNull(before.metadata().index("test").getAliases().get("alias").writeIndex());
@@ -464,7 +491,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2))
             .build();
 
         Exception exception = expectThrows(
@@ -481,7 +508,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     }
 
     public void testHiddenPropertyValidation() {
-        ClusterState originalState = ClusterState.EMPTY_STATE;
+        ClusterState originalState = clusterStateWithSingleEmptyProject();
         originalState = createIndex(originalState, "test1");
         originalState = createIndex(originalState, "test2");
 
@@ -556,7 +583,7 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(1);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata).put(indexMetadata2))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata).put(indexMetadata2))
             .build();
 
         {
@@ -596,7 +623,12 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
             .numberOfReplicas(1)
             .build();
         ClusterState state = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata, true).put(newInstance(dataStreamName, singletonList(indexMetadata.getIndex()))))
+            .metadata(
+                Metadata.builder()
+                    .createDefaultProject()
+                    .put(indexMetadata, true)
+                    .put(newInstance(dataStreamName, singletonList(indexMetadata.getIndex())))
+            )
             .build();
 
         IllegalArgumentException exception = expectThrows(
@@ -690,7 +722,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
     public void testAddAndRemoveAliasClusterStateUpdate() throws Exception {
         // Create a state with a single index
         String index = randomAlphaOfLength(5);
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
         IndicesAliasesClusterStateUpdateRequest addAliasRequest = new IndicesAliasesClusterStateUpdateRequest(
             List.of(new AliasAction.Add(index, "test", null, null, null, null, null)),
             List.of(AliasActionResult.buildSuccess(List.of(index), AliasActions.add().aliases("test").indices(index)))
@@ -722,7 +757,10 @@ public class MetadataIndexAliasesServiceTests extends ESTestCase {
 
     public void testEmptyTaskListProducesSameClusterState() throws Exception {
         String index = randomAlphaOfLength(5);
-        ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
+        ClusterState before = createIndex(
+            ClusterState.builder(ClusterName.DEFAULT).metadata(Metadata.builder().createDefaultProject()).build(),
+            index
+        );
         ClusterState after = ClusterStateTaskExecutorUtils.executeAndAssertSuccessful(before, service.getExecutor(), List.of());
         assertSame(before, after);
     }

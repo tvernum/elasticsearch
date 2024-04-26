@@ -27,7 +27,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
 
-public class DesiredNodesMetadata extends AbstractNamedDiffable<Metadata.Custom> implements Metadata.Custom {
+public class DesiredNodesMetadata extends AbstractNamedDiffable<ClusterMetadata.ClusterCustom> implements ClusterMetadata.ClusterCustom {
     private static final TransportVersion MIN_SUPPORTED_VERSION = TransportVersions.V_8_1_0;
     public static final String TYPE = "desired_nodes";
 
@@ -61,8 +61,8 @@ public class DesiredNodesMetadata extends AbstractNamedDiffable<Metadata.Custom>
         latestDesiredNodes.writeTo(out);
     }
 
-    public static NamedDiff<Metadata.Custom> readDiffFrom(StreamInput in) throws IOException {
-        return readDiffFrom(Metadata.Custom.class, TYPE, in);
+    public static NamedDiff<ClusterMetadata.ClusterCustom> readDiffFrom(StreamInput in) throws IOException {
+        return readDiffFrom(ClusterMetadata.ClusterCustom.class, TYPE, in);
     }
 
     public static DesiredNodesMetadata fromXContent(XContentParser parser) throws IOException {
@@ -75,7 +75,7 @@ public class DesiredNodesMetadata extends AbstractNamedDiffable<Metadata.Custom>
     }
 
     public static DesiredNodesMetadata fromClusterState(ClusterState clusterState) {
-        return clusterState.metadata().custom(TYPE, EMPTY);
+        return clusterState.metadata().clusterCustom(TYPE, EMPTY);
     }
 
     @Nullable

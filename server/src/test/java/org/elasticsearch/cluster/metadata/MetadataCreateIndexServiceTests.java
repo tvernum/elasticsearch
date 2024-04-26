@@ -123,7 +123,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
 
     private ClusterState createClusterState(String name, int numShards, int numReplicas, Settings settings) {
         int numRoutingShards = settings.getAsInt(IndexMetadata.INDEX_NUMBER_OF_ROUTING_SHARDS_SETTING.getKey(), numShards);
-        Metadata.Builder metaBuilder = Metadata.builder();
+        Metadata.Builder metaBuilder = Metadata.builder().createDefaultProject();
         IndexMetadata indexMetadata = IndexMetadata.builder(name)
             .settings(settings(IndexVersion.current()).put(settings))
             .numberOfShards(numShards)
@@ -677,7 +677,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         IndexTemplateMetadata templateMetadata = addMatchingTemplate(builder -> {
             builder.settings(Settings.builder().put("template_setting", "value1"));
         });
-        Metadata metadata = new Metadata.Builder().templates(Map.of("template_1", templateMetadata)).build();
+        Metadata metadata = new Metadata.Builder().createDefaultProject().templates(Map.of("template_1", templateMetadata)).build();
         ClusterState clusterState = ClusterState.builder(ClusterName.DEFAULT).metadata(metadata).build();
         request.settings(Settings.builder().put("request_setting", "value2").build());
 
@@ -708,7 +708,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
                 request.index(),
                 request.aliases(),
                 List.of(),
-                Metadata.builder().build(),
+                Metadata.builder().createDefaultProject().build(),
                 xContentRegistry(),
                 searchExecutionContext,
                 IndexNameExpressionResolver::resolveDateMathExpression,
@@ -726,7 +726,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request.index(),
             request.aliases(),
             List.of(),
-            Metadata.builder().build(),
+            Metadata.builder().createDefaultProject().build(),
             xContentRegistry(),
             searchExecutionContext,
             IndexNameExpressionResolver::resolveDateMathExpression,
@@ -760,7 +760,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request.index(),
             request.aliases(),
             MetadataIndexTemplateService.resolveAliases(List.of(templateMetadata)),
-            Metadata.builder().build(),
+            Metadata.builder().createDefaultProject().build(),
             xContentRegistry(),
             searchExecutionContext,
             IndexNameExpressionResolver::resolveDateMathExpression,
@@ -768,7 +768,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         );
 
         Settings aggregatedIndexSettings = aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             templateMetadata.settings(),
             null,
@@ -791,7 +791,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
 
     public void testDefaultSettings() {
         Settings aggregatedIndexSettings = aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             Settings.EMPTY,
             null,
@@ -807,7 +807,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
 
     public void testSettingsFromClusterState() {
         Settings aggregatedIndexSettings = aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             Settings.EMPTY,
             null,
@@ -846,7 +846,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         );
 
         Settings aggregatedIndexSettings = aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             MetadataIndexTemplateService.resolveSettings(templates),
             null,
@@ -860,7 +860,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request.index(),
             request.aliases(),
             MetadataIndexTemplateService.resolveAliases(templates),
-            Metadata.builder().build(),
+            Metadata.builder().createDefaultProject().build(),
             xContentRegistry(),
             searchExecutionContext,
             IndexNameExpressionResolver::resolveDateMathExpression,
@@ -901,7 +901,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request.index(),
             request.aliases(),
             MetadataIndexTemplateService.resolveAliases(templates),
-            Metadata.builder().build(),
+            Metadata.builder().createDefaultProject().build(),
             xContentRegistry(),
             searchExecutionContext,
             IndexNameExpressionResolver::resolveDateMathExpression,
@@ -951,7 +951,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             .numberOfReplicas(0)
             .build();
         ClusterState currentClusterState = ClusterState.builder(ClusterState.EMPTY_STATE)
-            .metadata(Metadata.builder().put(existingWriteIndex, false).build())
+            .metadata(Metadata.builder().createDefaultProject().put(existingWriteIndex, false).build())
             .build();
 
         IndexMetadata newIndex = IndexMetadata.builder("test")
@@ -977,7 +977,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
     }
 
     public void testClusterStateCreateIndex() {
-        ClusterState currentClusterState = ClusterState.builder(ClusterState.EMPTY_STATE).build();
+        ClusterState currentClusterState = ClusterState.builder(clusterStateWithSingleEmptyProject()).build();
 
         IndexMetadata newIndexMetadata = IndexMetadata.builder("test")
             .settings(settings(IndexVersion.current()).put(SETTING_READ_ONLY, true))
@@ -1009,6 +1009,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         ClusterState currentClusterState = ClusterState.builder(ClusterState.EMPTY_STATE)
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("my-index")
                             .settings(settings(IndexVersion.current()).put(SETTING_READ_ONLY, true))
@@ -1174,7 +1175,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request.dataStreamName(null);
         }
         Settings aggregatedIndexSettings = aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             templateSettings,
             null,
@@ -1235,7 +1236,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
             request = new CreateIndexClusterStateUpdateRequest("create index", "test", "test");
             request.settings(Settings.builder().put(INDEX_SOFT_DELETES_SETTING.getKey(), false).build());
             aggregateIndexSettings(
-                ClusterState.EMPTY_STATE,
+                clusterStateWithSingleEmptyProject(),
                 request,
                 Settings.EMPTY,
                 null,
@@ -1273,7 +1274,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         IllegalArgumentException error = expectThrows(
             IllegalArgumentException.class,
             () -> aggregateIndexSettings(
-                ClusterState.EMPTY_STATE,
+                clusterStateWithSingleEmptyProject(),
                 request,
                 Settings.EMPTY,
                 null,
@@ -1304,7 +1305,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
         settings.put(SETTING_VERSION_CREATED, IndexVersionUtils.randomPreviousCompatibleVersion(random(), IndexVersions.V_8_0_0));
         request.settings(settings.build());
         aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             Settings.EMPTY,
             null,
@@ -1327,7 +1328,7 @@ public class MetadataCreateIndexServiceTests extends ESTestCase {
 
         request.settings(settings.build());
         aggregateIndexSettings(
-            ClusterState.EMPTY_STATE,
+            clusterStateWithSingleEmptyProject(),
             request,
             Settings.EMPTY,
             null,

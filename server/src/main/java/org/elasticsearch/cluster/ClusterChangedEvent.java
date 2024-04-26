@@ -8,6 +8,7 @@
 
 package org.elasticsearch.cluster;
 
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.IndexGraveyard;
 import org.elasticsearch.cluster.metadata.IndexGraveyard.IndexGraveyardDiff;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
@@ -120,11 +121,12 @@ public class ClusterChangedEvent {
      * returned iff they have been added, updated or removed between the previous and the current state
      */
     public Set<String> changedCustomMetadataSet() {
+        // @TODO[MultiProject] Do we need an equivalent for project custom changes?
         Set<String> result = new HashSet<>();
-        Map<String, Metadata.Custom> currentCustoms = state.metadata().customs();
-        Map<String, Metadata.Custom> previousCustoms = previousState.metadata().customs();
+        Map<String, ClusterMetadata.ClusterCustom> currentCustoms = state.metadata().customs();
+        Map<String, ClusterMetadata.ClusterCustom> previousCustoms = previousState.metadata().customs();
         if (currentCustoms.equals(previousCustoms) == false) {
-            for (Map.Entry<String, Metadata.Custom> currentCustomMetadata : currentCustoms.entrySet()) {
+            for (Map.Entry<String, ClusterMetadata.ClusterCustom> currentCustomMetadata : currentCustoms.entrySet()) {
                 // new custom md added or existing custom md changed
                 if (previousCustoms.containsKey(currentCustomMetadata.getKey()) == false
                     || currentCustomMetadata.getValue().equals(previousCustoms.get(currentCustomMetadata.getKey())) == false) {
@@ -132,7 +134,7 @@ public class ClusterChangedEvent {
                 }
             }
             // existing custom md deleted
-            for (Map.Entry<String, Metadata.Custom> previousCustomMetadata : previousCustoms.entrySet()) {
+            for (Map.Entry<String, ClusterMetadata.ClusterCustom> previousCustomMetadata : previousCustoms.entrySet()) {
                 if (currentCustoms.containsKey(previousCustomMetadata.getKey()) == false) {
                     result.add(previousCustomMetadata.getKey());
                 }

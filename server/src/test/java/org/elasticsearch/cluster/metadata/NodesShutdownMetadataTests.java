@@ -36,7 +36,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSerializationTestCase<Metadata.Custom> {
+public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSerializationTestCase<ClusterMetadata.ClusterCustom> {
 
     public void testInsertNewNodeShutdownMetadata() {
         NodesShutdownMetadata nodesShutdownMetadata = new NodesShutdownMetadata(new HashMap<>());
@@ -95,7 +95,7 @@ public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSeriali
             ClusterState state = ClusterState.builder(ClusterName.DEFAULT).nodes(nodes).build();
 
             state = ClusterState.builder(state)
-                .metadata(Metadata.builder(state.metadata()).putCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata).build())
+                .metadata(Metadata.builder(state.metadata()).putClusterCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata).build())
                 .nodes(DiscoveryNodes.builder(state.nodes()).add(DiscoveryNodeUtils.create("_node_1")).build())
                 .build();
 
@@ -125,7 +125,7 @@ public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSeriali
     }
 
     @Override
-    protected Writeable.Reader<Diff<Metadata.Custom>> diffReader() {
+    protected Writeable.Reader<Diff<ClusterMetadata.ClusterCustom>> diffReader() {
         return NodesShutdownMetadata.NodeShutdownMetadataDiff::new;
     }
 
@@ -135,7 +135,7 @@ public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSeriali
     }
 
     @Override
-    protected Writeable.Reader<Metadata.Custom> instanceReader() {
+    protected Writeable.Reader<ClusterMetadata.ClusterCustom> instanceReader() {
         return NodesShutdownMetadata::new;
     }
 
@@ -164,12 +164,12 @@ public class NodesShutdownMetadataTests extends ChunkedToXContentDiffableSeriali
     }
 
     @Override
-    protected Metadata.Custom makeTestChanges(Metadata.Custom testInstance) {
+    protected ClusterMetadata.ClusterCustom makeTestChanges(ClusterMetadata.ClusterCustom testInstance) {
         return randomValueOtherThan(testInstance, this::createTestInstance);
     }
 
     @Override
-    protected Metadata.Custom mutateInstance(Metadata.Custom instance) {
+    protected ClusterMetadata.ClusterCustom mutateInstance(ClusterMetadata.ClusterCustom instance) {
         return makeTestChanges(instance);
     }
 }

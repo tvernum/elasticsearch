@@ -63,6 +63,7 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
         ReservedStateMetadata reservedStateMetadata1 = ReservedStateMetadata.builder("namespace_two").putHandler(hmTwo).build();
 
         Metadata metadata = Metadata.builder()
+            .createDefaultProject()
             .put(
                 IndexTemplateMetadata.builder("foo")
                     .patterns(Collections.singletonList("bar"))
@@ -255,24 +256,29 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                 "settings" : {
                   "index.version.created" : "%s"
                 },
-                "templates" : {
-                  "template" : {
-                    "order" : 0,
-                    "index_patterns" : [
-                      "pattern1",
-                      "pattern2"
-                    ],
-                    "settings" : {
-                      "index.version.created" : "%s"
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : {
+                      "template" : {
+                        "order" : 0,
+                        "index_patterns" : [
+                          "pattern1",
+                          "pattern2"
+                        ],
+                        "settings" : {
+                          "index.version.created" : "%s"
+                        },
+                        "mappings" : {
+                          "key1" : { }
+                        },
+                        "aliases" : { }
+                      }
                     },
-                    "mappings" : {
-                      "key1" : { }
-                    },
-                    "aliases" : { }
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
+                    }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : { }
               }
@@ -285,6 +291,7 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
         Metadata metadata = Metadata.builder()
             .clusterUUID("clusterUUID")
             .coordinationMetadata(CoordinationMetadata.builder().build())
+            .createDefaultProject()
             .put(
                 IndexMetadata.builder("index")
                     .state(IndexMetadata.State.OPEN)
@@ -318,45 +325,50 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                   "last_accepted_config" : [ ],
                   "voting_config_exclusions" : [ ]
                 },
-                "templates" : { },
-                "indices" : {
-                  "index" : {
-                    "version" : 2,
-                    "mapping_version" : 1,
-                    "settings_version" : 1,
-                    "aliases_version" : 1,
-                    "routing_num_shards" : 1,
-                    "state" : "open",
-                    "settings" : {
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : { },
+                    "indices" : {
                       "index" : {
-                        "number_of_shards" : "1",
-                        "number_of_replicas" : "2",
-                        "version" : {
-                          "created" : "%s"
+                        "version" : 2,
+                        "mapping_version" : 1,
+                        "settings_version" : 1,
+                        "aliases_version" : 1,
+                        "routing_num_shards" : 1,
+                        "state" : "open",
+                        "settings" : {
+                          "index" : {
+                            "number_of_shards" : "1",
+                            "number_of_replicas" : "2",
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : {
+                          "type" : {
+                            "key" : "value"
+                          }
+                        },
+                        "aliases" : [ ],
+                        "primary_terms" : {
+                          "0" : 1
+                        },
+                        "in_sync_allocations" : {
+                          "0" : [ ]
+                        },
+                        "rollover_info" : { },
+                        "system" : false,
+                        "timestamp_range" : {
+                          "shards" : [ ]
                         }
                       }
                     },
-                    "mappings" : {
-                      "type" : {
-                        "key" : "value"
-                      }
-                    },
-                    "aliases" : [ ],
-                    "primary_terms" : {
-                      "0" : 1
-                    },
-                    "in_sync_allocations" : {
-                      "0" : [ ]
-                    },
-                    "rollover_info" : { },
-                    "system" : false,
-                    "timestamp_range" : {
-                      "shards" : [ ]
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
                     }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : { }
               }
@@ -403,26 +415,31 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                 "settings" : {
                   "index.version.created" : "%s"
                 },
-                "templates" : {
-                  "template" : {
-                    "order" : 0,
-                    "index_patterns" : [
-                      "pattern1",
-                      "pattern2"
-                    ],
-                    "settings" : {
-                      "index" : {
-                        "version" : {
-                          "created" : "%s"
-                        }
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : {
+                      "template" : {
+                        "order" : 0,
+                        "index_patterns" : [
+                          "pattern1",
+                          "pattern2"
+                        ],
+                        "settings" : {
+                          "index" : {
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : { },
+                        "aliases" : { }
                       }
                     },
-                    "mappings" : { },
-                    "aliases" : { }
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
+                    }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : { }
               }
@@ -466,67 +483,72 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                     }
                   ]
                 },
-                "templates" : {
-                  "template" : {
-                    "order" : 0,
-                    "index_patterns" : [
-                      "pattern1",
-                      "pattern2"
-                    ],
-                    "settings" : {
-                      "index.version.created" : "%s"
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : {
+                      "template" : {
+                        "order" : 0,
+                        "index_patterns" : [
+                          "pattern1",
+                          "pattern2"
+                        ],
+                        "settings" : {
+                          "index.version.created" : "%s"
+                        },
+                        "mappings" : {
+                          "key1" : { }
+                        },
+                        "aliases" : { }
+                      }
                     },
-                    "mappings" : {
-                      "key1" : { }
-                    },
-                    "aliases" : { }
-                  }
-                },
-                "indices" : {
-                  "index" : {
-                    "version" : 2,
-                    "mapping_version" : 1,
-                    "settings_version" : 1,
-                    "aliases_version" : 1,
-                    "routing_num_shards" : 1,
-                    "state" : "open",
-                    "settings" : {
-                      "index.number_of_replicas" : "2",
-                      "index.number_of_shards" : "1",
-                      "index.version.created" : "%s"
-                    },
-                    "mappings" : {
-                      "type" : {
-                        "type1" : {
-                          "key" : "value"
+                    "indices" : {
+                      "index" : {
+                        "version" : 2,
+                        "mapping_version" : 1,
+                        "settings_version" : 1,
+                        "aliases_version" : 1,
+                        "routing_num_shards" : 1,
+                        "state" : "open",
+                        "settings" : {
+                          "index.number_of_replicas" : "2",
+                          "index.number_of_shards" : "1",
+                          "index.version.created" : "%s"
+                        },
+                        "mappings" : {
+                          "type" : {
+                            "type1" : {
+                              "key" : "value"
+                            }
+                          }
+                        },
+                        "aliases" : [
+                          "alias"
+                        ],
+                        "primary_terms" : {
+                          "0" : 1
+                        },
+                        "in_sync_allocations" : {
+                          "0" : [
+                            "allocationId"
+                          ]
+                        },
+                        "rollover_info" : {
+                          "rolloveAlias" : {
+                            "met_conditions" : { },
+                            "time" : 1
+                          }
+                        },
+                        "system" : false,
+                        "timestamp_range" : {
+                          "shards" : [ ]
                         }
                       }
                     },
-                    "aliases" : [
-                      "alias"
-                    ],
-                    "primary_terms" : {
-                      "0" : 1
-                    },
-                    "in_sync_allocations" : {
-                      "0" : [
-                        "allocationId"
-                      ]
-                    },
-                    "rollover_info" : {
-                      "rolloveAlias" : {
-                        "met_conditions" : { },
-                        "time" : 1
-                      }
-                    },
-                    "system" : false,
-                    "timestamp_range" : {
-                      "shards" : [ ]
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
                     }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : { }
               }
@@ -570,73 +592,78 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                     }
                   ]
                 },
-                "templates" : {
-                  "template" : {
-                    "order" : 0,
-                    "index_patterns" : [
-                      "pattern1",
-                      "pattern2"
-                    ],
-                    "settings" : {
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : {
+                      "template" : {
+                        "order" : 0,
+                        "index_patterns" : [
+                          "pattern1",
+                          "pattern2"
+                        ],
+                        "settings" : {
+                          "index" : {
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : { },
+                        "aliases" : { }
+                      }
+                    },
+                    "indices" : {
                       "index" : {
-                        "version" : {
-                          "created" : "%s"
+                        "version" : 2,
+                        "mapping_version" : 1,
+                        "settings_version" : 1,
+                        "aliases_version" : 1,
+                        "routing_num_shards" : 1,
+                        "state" : "open",
+                        "settings" : {
+                          "index" : {
+                            "number_of_shards" : "1",
+                            "number_of_replicas" : "2",
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : {
+                          "type" : {
+                            "type1" : {
+                              "key" : "value"
+                            }
+                          }
+                        },
+                        "aliases" : [
+                          "alias"
+                        ],
+                        "primary_terms" : {
+                          "0" : 1
+                        },
+                        "in_sync_allocations" : {
+                          "0" : [
+                            "allocationId"
+                          ]
+                        },
+                        "rollover_info" : {
+                          "rolloveAlias" : {
+                            "met_conditions" : { },
+                            "time" : 1
+                          }
+                        },
+                        "system" : false,
+                        "timestamp_range" : {
+                          "shards" : [ ]
                         }
                       }
                     },
-                    "mappings" : { },
-                    "aliases" : { }
-                  }
-                },
-                "indices" : {
-                  "index" : {
-                    "version" : 2,
-                    "mapping_version" : 1,
-                    "settings_version" : 1,
-                    "aliases_version" : 1,
-                    "routing_num_shards" : 1,
-                    "state" : "open",
-                    "settings" : {
-                      "index" : {
-                        "number_of_shards" : "1",
-                        "number_of_replicas" : "2",
-                        "version" : {
-                          "created" : "%s"
-                        }
-                      }
-                    },
-                    "mappings" : {
-                      "type" : {
-                        "type1" : {
-                          "key" : "value"
-                        }
-                      }
-                    },
-                    "aliases" : [
-                      "alias"
-                    ],
-                    "primary_terms" : {
-                      "0" : 1
-                    },
-                    "in_sync_allocations" : {
-                      "0" : [
-                        "allocationId"
-                      ]
-                    },
-                    "rollover_info" : {
-                      "rolloveAlias" : {
-                        "met_conditions" : { },
-                        "time" : 1
-                      }
-                    },
-                    "system" : false,
-                    "timestamp_range" : {
-                      "shards" : [ ]
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
                     }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : { }
               }
@@ -706,73 +733,78 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
                     }
                   ]
                 },
-                "templates" : {
-                  "template" : {
-                    "order" : 0,
-                    "index_patterns" : [
-                      "pattern1",
-                      "pattern2"
-                    ],
-                    "settings" : {
+                "projects" : {
+                  "clusterUUID" : {
+                    "id" : "clusterUUID",
+                    "templates" : {
+                      "template" : {
+                        "order" : 0,
+                        "index_patterns" : [
+                          "pattern1",
+                          "pattern2"
+                        ],
+                        "settings" : {
+                          "index" : {
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : { },
+                        "aliases" : { }
+                      }
+                    },
+                    "indices" : {
                       "index" : {
-                        "version" : {
-                          "created" : "%s"
+                        "version" : 2,
+                        "mapping_version" : 1,
+                        "settings_version" : 1,
+                        "aliases_version" : 1,
+                        "routing_num_shards" : 1,
+                        "state" : "open",
+                        "settings" : {
+                          "index" : {
+                            "number_of_shards" : "1",
+                            "number_of_replicas" : "2",
+                            "version" : {
+                              "created" : "%s"
+                            }
+                          }
+                        },
+                        "mappings" : {
+                          "type" : {
+                            "type1" : {
+                              "key" : "value"
+                            }
+                          }
+                        },
+                        "aliases" : [
+                          "alias"
+                        ],
+                        "primary_terms" : {
+                          "0" : 1
+                        },
+                        "in_sync_allocations" : {
+                          "0" : [
+                            "allocationId"
+                          ]
+                        },
+                        "rollover_info" : {
+                          "rolloveAlias" : {
+                            "met_conditions" : { },
+                            "time" : 1
+                          }
+                        },
+                        "system" : false,
+                        "timestamp_range" : {
+                          "shards" : [ ]
                         }
                       }
                     },
-                    "mappings" : { },
-                    "aliases" : { }
-                  }
-                },
-                "indices" : {
-                  "index" : {
-                    "version" : 2,
-                    "mapping_version" : 1,
-                    "settings_version" : 1,
-                    "aliases_version" : 1,
-                    "routing_num_shards" : 1,
-                    "state" : "open",
-                    "settings" : {
-                      "index" : {
-                        "number_of_shards" : "1",
-                        "number_of_replicas" : "2",
-                        "version" : {
-                          "created" : "%s"
-                        }
-                      }
-                    },
-                    "mappings" : {
-                      "type" : {
-                        "type1" : {
-                          "key" : "value"
-                        }
-                      }
-                    },
-                    "aliases" : [
-                      "alias"
-                    ],
-                    "primary_terms" : {
-                      "0" : 1
-                    },
-                    "in_sync_allocations" : {
-                      "0" : [
-                        "allocationId"
-                      ]
-                    },
-                    "rollover_info" : {
-                      "rolloveAlias" : {
-                        "met_conditions" : { },
-                        "time" : 1
-                      }
-                    },
-                    "system" : false,
-                    "timestamp_range" : {
-                      "shards" : [ ]
+                    "index-graveyard" : {
+                      "tombstones" : [ ]
                     }
                   }
-                },
-                "index-graveyard" : {
-                  "tombstones" : [ ]
                 },
                 "reserved_state" : {
                   "namespace_one" : {
@@ -837,6 +869,7 @@ public class ToAndFromJsonMetadataTests extends ESTestCase {
             )
             .persistentSettings(Settings.builder().put(SETTING_VERSION_CREATED, IndexVersion.current()).build())
             .transientSettings(Settings.builder().put(SETTING_VERSION_CREATED, IndexVersion.current()).build())
+            .createDefaultProject()
             .put(
                 IndexMetadata.builder("index")
                     .state(IndexMetadata.State.OPEN)

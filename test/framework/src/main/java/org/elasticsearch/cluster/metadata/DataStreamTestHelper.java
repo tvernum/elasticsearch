@@ -440,7 +440,7 @@ public final class DataStreamTestHelper {
         boolean replicated,
         boolean storeFailures
     ) {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         getClusterStateWithDataStreams(builder, dataStreams, indexNames, currentTime, settings, replicas, replicated, storeFailures);
         return ClusterState.builder(new ClusterName("_name")).metadata(builder).build();
     }
@@ -516,7 +516,7 @@ public final class DataStreamTestHelper {
     }
 
     public static ClusterState getClusterStateWithDataStream(String dataStream, List<Tuple<Instant, Instant>> timeSlices) {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         getClusterStateWithDataStream(builder, dataStream, timeSlices);
         return ClusterState.builder(new ClusterName("_name")).metadata(builder).build();
     }

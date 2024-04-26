@@ -14,6 +14,7 @@ import org.elasticsearch.cluster.DiffableUtils;
 import org.elasticsearch.cluster.NamedDiff;
 import org.elasticsearch.cluster.SimpleDiffable;
 import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Iterators;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -40,8 +41,9 @@ import java.util.stream.Collectors;
 /**
  * Custom cluster state metadata that stores all the snapshot lifecycle
  * policies and their associated metadata
+ * @TODO[MultiProject] Should SLM be cluster scoped or project scoped?
  */
-public class SnapshotLifecycleMetadata implements Metadata.Custom {
+public class SnapshotLifecycleMetadata implements ProjectMetadata.ProjectCustom {
 
     public static final String TYPE = "snapshot_lifecycle";
 
@@ -121,7 +123,7 @@ public class SnapshotLifecycleMetadata implements Metadata.Custom {
     }
 
     @Override
-    public Diff<Metadata.Custom> diff(Metadata.Custom previousState) {
+    public Diff<ProjectMetadata.ProjectCustom> diff(ProjectMetadata.ProjectCustom previousState) {
         return new SnapshotLifecycleMetadataDiff((SnapshotLifecycleMetadata) previousState, this);
     }
 
@@ -178,7 +180,7 @@ public class SnapshotLifecycleMetadata implements Metadata.Custom {
             && this.slmStats.equals(other.slmStats);
     }
 
-    public static class SnapshotLifecycleMetadataDiff implements NamedDiff<Metadata.Custom> {
+    public static class SnapshotLifecycleMetadataDiff implements NamedDiff<ProjectMetadata.ProjectCustom> {
 
         final Diff<Map<String, SnapshotLifecyclePolicyMetadata>> lifecycles;
         final OperationMode operationMode;
@@ -206,7 +208,7 @@ public class SnapshotLifecycleMetadata implements Metadata.Custom {
         }
 
         @Override
-        public Metadata.Custom apply(Metadata.Custom part) {
+        public ProjectMetadata.ProjectCustom apply(ProjectMetadata.ProjectCustom part) {
             TreeMap<String, SnapshotLifecyclePolicyMetadata> newLifecycles = new TreeMap<>(
                 lifecycles.apply(((SnapshotLifecycleMetadata) part).snapshotConfigurations)
             );

@@ -453,9 +453,9 @@ public class DataStreamLifecycleServiceTests extends ESTestCase {
         Metadata.Builder metaBuilder = Metadata.builder(previousState.metadata());
         for (Index index : deletedIndices) {
             metaBuilder.remove(index.getName());
-            IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metaBuilder.indexGraveyard());
+            IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metaBuilder.project().indexGraveyard());
             graveyardBuilder.addTombstone(index);
-            metaBuilder.indexGraveyard(graveyardBuilder.build());
+            metaBuilder.project().indexGraveyard(graveyardBuilder.build());
         }
         newStateBuilder.metadata(metaBuilder);
         ClusterState stateWithDeletedIndices = newStateBuilder.nodes(buildNodes(nodeId).masterNodeId(nodeId)).build();

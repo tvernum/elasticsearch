@@ -208,7 +208,7 @@ public class HealthNodeTaskExecutorTests extends ESTestCase {
         );
 
         return ClusterState.builder(clusterState)
-            .metadata(Metadata.builder(clusterState.metadata()).putCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata).build())
+            .metadata(Metadata.builder(clusterState.metadata()).putClusterCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata).build())
             .build();
     }
 
@@ -217,7 +217,8 @@ public class HealthNodeTaskExecutorTests extends ESTestCase {
         PersistentTasksCustomMetadata.Builder tasks = PersistentTasksCustomMetadata.builder();
         tasks.addTask(HealthNode.TASK_NAME, HealthNode.TASK_NAME, new HealthNodeTaskParams(), NO_NODE_FOUND);
 
-        Metadata.Builder metadata = Metadata.builder(clusterState.metadata()).putCustom(PersistentTasksCustomMetadata.TYPE, tasks.build());
+        Metadata.Builder metadata = Metadata.builder(clusterState.metadata())
+            .putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasks.build());
         return builder.metadata(metadata).build();
     }
 }

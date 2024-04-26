@@ -912,7 +912,7 @@ public class DesiredBalanceReconcilerTests extends ESAllocationTestCase {
         // filter forbids this
         final var shuttingDownState = allocationService.reroute(
             clusterState.copyAndUpdateMetadata(
-                tmpMetadata -> tmpMetadata.putCustom(
+                tmpMetadata -> tmpMetadata.putClusterCustom(
                     NodesShutdownMetadata.TYPE,
                     new NodesShutdownMetadata(
                         Map.of(

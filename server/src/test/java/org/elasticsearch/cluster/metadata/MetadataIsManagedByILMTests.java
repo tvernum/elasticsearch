@@ -23,7 +23,7 @@ public class MetadataIsManagedByILMTests extends ESTestCase {
         {
             // index has no ILM policy configured
             IndexMetadata indexMetadata = createIndexMetadataBuilderForIndex("test-no-ilm-policy").build();
-            Metadata metadata = Metadata.builder().put(indexMetadata, true).build();
+            Metadata metadata = Metadata.builder().createDefaultProject().put(indexMetadata, true).build();
 
             assertThat(metadata.isIndexManagedByILM(indexMetadata), is(false));
         }
@@ -34,7 +34,7 @@ public class MetadataIsManagedByILMTests extends ESTestCase {
                 "testindex",
                 Settings.builder().put("index.lifecycle.name", "metrics").build()
             ).build();
-            Metadata metadata = Metadata.builder().build();
+            Metadata metadata = Metadata.builder().createDefaultProject().build();
 
             assertThat(metadata.isIndexManagedByILM(indexMetadata), is(false));
         }
@@ -45,7 +45,7 @@ public class MetadataIsManagedByILMTests extends ESTestCase {
                 "testindex",
                 Settings.builder().put("index.lifecycle.name", "metrics").build()
             ).build();
-            Metadata metadata = Metadata.builder().put(indexMetadata, true).build();
+            Metadata metadata = Metadata.builder().createDefaultProject().put(indexMetadata, true).build();
             assertThat(metadata.isIndexManagedByILM(indexMetadata), is(true));
         }
 
@@ -67,7 +67,7 @@ public class MetadataIsManagedByILMTests extends ESTestCase {
                 false,
                 new DataStreamLifecycle()
             );
-            Metadata metadata = Metadata.builder().put(indexMetadata, true).put(dataStream).build();
+            Metadata metadata = Metadata.builder().createDefaultProject().put(indexMetadata, true).put(dataStream).build();
 
             assertThat(metadata.isIndexManagedByILM(indexMetadata), is(true));
         }
@@ -90,7 +90,7 @@ public class MetadataIsManagedByILMTests extends ESTestCase {
                 false,
                 new DataStreamLifecycle()
             );
-            Metadata metadata = Metadata.builder().put(indexMetadata, true).put(dataStream).build();
+            Metadata metadata = Metadata.builder().createDefaultProject().put(indexMetadata, true).put(dataStream).build();
 
             assertThat(metadata.isIndexManagedByILM(indexMetadata), is(false));
         }

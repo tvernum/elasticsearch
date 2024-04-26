@@ -904,7 +904,7 @@ public class DiskThresholdMonitorTests extends ESAllocationTestCase {
             .metadata(
                 Metadata.builder(clusterState.metadata())
                     .put(indexMetadata, true)
-                    .putCustom(
+                    .putClusterCustom(
                         NodesShutdownMetadata.TYPE,
                         new NodesShutdownMetadata(
                             Collections.singletonMap(
@@ -985,7 +985,9 @@ public class DiskThresholdMonitorTests extends ESAllocationTestCase {
         assertNull(indicesToRelease.get());
 
         final ClusterState clusterStateNoShutdown = ClusterState.builder(clusterState)
-            .metadata(Metadata.builder(clusterState.metadata()).put(indexMetadata, true).removeCustom(NodesShutdownMetadata.TYPE).build())
+            .metadata(
+                Metadata.builder(clusterState.metadata()).put(indexMetadata, true).removeClusterCustom(NodesShutdownMetadata.TYPE).build()
+            )
             .blocks(ClusterBlocks.builder().addBlocks(indexMetadata).build())
             .build();
 
@@ -1288,7 +1290,7 @@ public class DiskThresholdMonitorTests extends ESAllocationTestCase {
             .put(IndexMetadata.builder("test").settings(settings(IndexVersion.current())).numberOfShards(1).numberOfReplicas(1));
         boolean shutdownMetadataInState = randomBoolean();
         if (shutdownMetadataInState) {
-            metadataBuilder.putCustom(
+            metadataBuilder.putClusterCustom(
                 NodesShutdownMetadata.TYPE,
                 new NodesShutdownMetadata(
                     Collections.singletonMap(

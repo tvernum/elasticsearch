@@ -243,7 +243,7 @@ public class ReadinessServiceTests extends ESTestCase implements ReadinessClient
         ClusterState nodeShuttingDownState = ClusterState.builder(completeState)
             .metadata(
                 Metadata.builder(completeState.metadata())
-                    .putCustom(
+                    .putClusterCustom(
                         NodesShutdownMetadata.TYPE,
                         new NodesShutdownMetadata(
                             Collections.singletonMap(

@@ -169,7 +169,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
     public void testRollover() {
         DataStream ds = DataStreamTestHelper.randomInstance().promoteDataStream();
-        Tuple<String, Long> newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.EMPTY_METADATA);
+        Tuple<String, Long> newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.builder().createDefaultProject().build());
         final DataStream rolledDs = ds.rollover(new Index(newCoordinates.v1(), UUIDs.randomBase64UUID()), newCoordinates.v2(), false, null);
         assertThat(rolledDs.getName(), equalTo(ds.getName()));
         assertThat(rolledDs.getGeneration(), equalTo(ds.getGeneration() + 1));
@@ -186,7 +186,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         // create some indices with names that conflict with the names of the data stream's backing indices
         int numConflictingIndices = randomIntBetween(1, 10);
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         for (int k = 1; k <= numConflictingIndices; k++) {
             IndexMetadata im = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(ds.getName(), ds.getGeneration() + k, 0L))
                 .settings(settings(IndexVersion.current()))
@@ -212,7 +212,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             .setReplicated(false)
             .setIndexMode(randomBoolean() ? IndexMode.STANDARD : null)
             .build();
-        var newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.EMPTY_METADATA);
+        var newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.builder().createDefaultProject().build());
 
         var rolledDs = ds.rollover(new Index(newCoordinates.v1(), UUIDs.randomBase64UUID()), newCoordinates.v2(), true, null);
         assertThat(rolledDs.getName(), equalTo(ds.getName()));
@@ -225,7 +225,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
     public void testRolloverDowngradeToRegularDataStream() {
         DataStream ds = DataStreamTestHelper.randomInstance().copy().setReplicated(false).setIndexMode(IndexMode.TIME_SERIES).build();
-        var newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.EMPTY_METADATA);
+        var newCoordinates = ds.nextWriteIndexAndGeneration(Metadata.builder().createDefaultProject().build());
 
         var rolledDs = ds.rollover(new Index(newCoordinates.v1(), UUIDs.randomBase64UUID()), newCoordinates.v2(), false, null);
         assertThat(rolledDs.getName(), equalTo(ds.getName()));
@@ -238,7 +238,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
     public void testRolloverFailureStore() {
         DataStream ds = DataStreamTestHelper.randomInstance(true).promoteDataStream();
-        Tuple<String, Long> newCoordinates = ds.nextFailureStoreWriteIndexAndGeneration(Metadata.EMPTY_METADATA);
+        Tuple<String, Long> newCoordinates = ds.nextFailureStoreWriteIndexAndGeneration(Metadata.builder().createDefaultProject().build());
         final DataStream rolledDs = ds.rolloverFailureStore(new Index(newCoordinates.v1(), UUIDs.randomBase64UUID()), newCoordinates.v2());
         assertThat(rolledDs.getName(), equalTo(ds.getName()));
         assertThat(rolledDs.getGeneration(), equalTo(ds.getGeneration() + 1));
@@ -342,7 +342,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddBackingIndex() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -370,7 +370,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddBackingIndexThatIsPartOfAnotherDataStream() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream ds1 = createRandomDataStream();
         DataStream ds2 = createRandomDataStream();
@@ -401,7 +401,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddBackingIndexThatIsPartOfDataStreamFailureStore() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream ds1 = createRandomDataStream();
         DataStream ds2 = createRandomDataStream();
@@ -431,7 +431,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddExistingBackingIndex() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -450,7 +450,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddBackingIndexWithAliases() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -492,7 +492,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddFailureStoreIndex() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -522,7 +522,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddFailureStoreIndexThatIsPartOfAnotherDataStream() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream ds1 = createRandomDataStream();
         DataStream ds2 = createRandomDataStream();
@@ -555,7 +555,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddFailureStoreIndexThatIsPartOfDataStreamBackingIndices() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream ds1 = createRandomDataStream();
         DataStream ds2 = createRandomDataStream();
@@ -588,7 +588,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddExistingFailureStoreIndex() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -607,7 +607,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     }
 
     public void testAddFailureStoreIndexWithAliases() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
 
         DataStream original = createRandomDataStream();
         builder.put(original);
@@ -1146,7 +1146,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             DataStreamMetadata.dataStreamMetadata(now, null)
         );
 
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         DataStream dataStream = createDataStream(
             builder,
             dataStreamName,
@@ -1221,7 +1221,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // no lifecycle configured so we expect an empty list
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1240,7 +1240,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
                 TimeValue.timeValueSeconds(2500),
                 randomBoolean() ? TimeValue.timeValueSeconds(randomIntBetween(2500, 5000)) : null
             );
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1259,7 +1259,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
         {
             // no retention configured but we have max retention
             DataStreamGlobalRetention globalRetention = new DataStreamGlobalRetention(null, TimeValue.timeValueSeconds(2500));
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1276,7 +1276,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
         }
 
         {
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1294,7 +1294,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // even though all indices match the write index should not be returned
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1315,7 +1315,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // no index matches the retention age
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1331,7 +1331,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // no indices are returned as even though all pass retention age none are managed by data stream lifecycle
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1361,7 +1361,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             DataStreamMetadata.dataStreamMetadata(now, null, now - 1000), // origination date within retention
             DataStreamMetadata.dataStreamMetadata(now, null)
         );
-        Metadata.Builder metadataBuilder = Metadata.builder();
+        Metadata.Builder metadataBuilder = Metadata.builder().createDefaultProject();
         AtomicReference<TimeValue> testRetentionReference = new AtomicReference<>(null);
         DataStream dataStream = createDataStream(
             metadataBuilder,
@@ -1426,7 +1426,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
         );
 
         {
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1487,7 +1487,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // non-timeseries indices should be skipped
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1530,7 +1530,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // backing indices for data streams without lifecycle don't match any rounds
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1554,7 +1554,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // backing indices for data streams without downsampling configured don't match any rounds
-            Metadata.Builder builder = Metadata.builder();
+            Metadata.Builder builder = Metadata.builder().createDefaultProject();
             DataStream dataStream = createDataStream(
                 builder,
                 dataStreamName,
@@ -1587,7 +1587,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             DataStreamMetadata.dataStreamMetadata(now - 2000, now - 1000),
             DataStreamMetadata.dataStreamMetadata(now, null)
         );
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         DataStream dataStream = createDataStream(
             builder,
             dataStreamName,
@@ -1609,7 +1609,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // false if data stream doesn't have a lifecycle
-            Metadata.Builder newBuilder = Metadata.builder();
+            Metadata.Builder newBuilder = Metadata.builder().createDefaultProject();
             DataStream unmanagedDataStream = createDataStream(
                 newBuilder,
                 dataStreamName,
@@ -1626,7 +1626,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
 
         {
             // false for indices that have an ILM policy configured
-            Metadata.Builder builderWithIlm = Metadata.builder();
+            Metadata.Builder builderWithIlm = Metadata.builder().createDefaultProject();
             DataStream ds = createDataStream(
                 builderWithIlm,
                 dataStreamName,
@@ -1646,7 +1646,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             // true for indices that have an ILM policy configured AND the prefer_ilm setting configured to false
             {
                 // false for indices that have an ILM policy configured
-                Metadata.Builder builderWithIlm = Metadata.builder();
+                Metadata.Builder builderWithIlm = Metadata.builder().createDefaultProject();
                 DataStream ds = createDataStream(
                     builderWithIlm,
                     dataStreamName,
@@ -1685,7 +1685,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
             DataStreamMetadata.dataStreamMetadata(now, null, now - 1000), // origination date within retention
             DataStreamMetadata.dataStreamMetadata(now, null, now - 7000) // write index origination date older than retention
         );
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         DataStream dataStream = createDataStream(
             builder,
             dataStreamName,
@@ -1801,7 +1801,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     public void testGetIndicesWithinMaxAgeRange() {
         final TimeValue maxIndexAge = TimeValue.timeValueDays(7);
 
-        final Metadata.Builder metadataBuilder = Metadata.builder();
+        final Metadata.Builder metadataBuilder = Metadata.builder().createDefaultProject();
         final int numberOfBackingIndicesOlderThanMinAge = randomIntBetween(0, 10);
         final int numberOfBackingIndicesWithinMinAnge = randomIntBetween(0, 10);
         final int numberOfShards = 1;
@@ -1866,7 +1866,7 @@ public class DataStreamTests extends AbstractXContentSerializingTestCase<DataStr
     public void testGetIndicesWithinMaxAgeRangeAllIndicesOutsideRange() {
         final TimeValue maxIndexAge = TimeValue.timeValueDays(7);
 
-        final Metadata.Builder metadataBuilder = Metadata.builder();
+        final Metadata.Builder metadataBuilder = Metadata.builder().createDefaultProject();
         final int numberOfBackingIndicesOlderThanMinAge = randomIntBetween(5, 10);
         final int numberOfShards = 1;
         final List<Index> backingIndices = new ArrayList<>();

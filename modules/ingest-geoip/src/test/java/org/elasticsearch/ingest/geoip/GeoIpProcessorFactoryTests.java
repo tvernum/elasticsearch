@@ -462,7 +462,7 @@ public class GeoIpProcessorFactoryTests extends ESTestCase {
             .updateTaskState(GeoIpDownloader.GEOIP_DOWNLOADER, GeoIpTaskState.EMPTY)
             .build();
         ClusterState clusterState = ClusterState.builder(ClusterState.EMPTY_STATE)
-            .metadata(Metadata.builder().putCustom(PersistentTasksCustomMetadata.TYPE, tasks))
+            .metadata(Metadata.builder().putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasks))
             .build();
         when(clusterService.state()).thenReturn(clusterState);
         GeoIpProcessor.Factory factory = new GeoIpProcessor.Factory(databaseNodeService);

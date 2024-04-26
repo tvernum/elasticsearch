@@ -101,6 +101,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndexNamesStrictExpand() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foobar").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foofoo-closed").state(IndexMetadata.State.CLOSE))
@@ -176,6 +177,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndexNamesLenientExpand() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foobar").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foofoo-closed").state(IndexMetadata.State.CLOSE))
@@ -236,6 +238,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndexNamesIgnoreUnavailableDisallowEmpty() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo"))
             .put(indexBuilder("foobar"))
             .put(indexBuilder("foofoo-closed").state(IndexMetadata.State.CLOSE))
@@ -290,6 +293,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndexNamesExpandWildcards() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo").state(IndexMetadata.State.CLOSE))
             .put(indexBuilder("bar"))
             .put(indexBuilder("foobar").putAlias(AliasMetadata.builder("barbaz")))
@@ -507,6 +511,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndexNamesNoExpandWildcards() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foobar").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foofoo-closed").state(IndexMetadata.State.CLOSE))
@@ -635,6 +640,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIndexOptionsSingleIndexNoExpandWildcards() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foobar").putAlias(AliasMetadata.builder("foofoobar")))
             .put(indexBuilder("foofoo-closed").state(IndexMetadata.State.CLOSE))
@@ -720,7 +726,9 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testIndexOptionsEmptyCluster() {
-        ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(Metadata.builder().build()).build();
+        ClusterState state = ClusterState.builder(new ClusterName("_name"))
+            .metadata(Metadata.builder().createDefaultProject().build())
+            .build();
 
         IndicesOptions options = IndicesOptions.strictExpandOpen();
         final IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
@@ -809,7 +817,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesIgnoreIndicesOneMissingIndex() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -835,7 +843,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesIgnoreIndicesOneMissingIndexOtherFound() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -850,7 +858,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesIgnoreIndicesAllMissing() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -877,7 +885,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesIgnoreIndicesEmptyRequest() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(indexBuilder("testXXX")).put(indexBuilder("kuku"));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -891,7 +899,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesNoIndicesErrorMessage() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject();
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -906,7 +914,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testConcreteIndicesNoIndicesErrorMessageNoExpand() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject();
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -922,6 +930,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndicesWildcardExpansion() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX").state(State.OPEN))
             .put(indexBuilder("testXXY").state(State.OPEN))
             .put(indexBuilder("testXYY").state(State.CLOSE))
@@ -963,6 +972,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndicesWildcardWithNegation() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX").state(State.OPEN))
             .put(indexBuilder("testXXY").state(State.OPEN))
             .put(indexBuilder("testXYY").state(State.OPEN))
@@ -1056,6 +1066,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteIndicesWildcardAndAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo_foo").state(State.OPEN).putAlias(AliasMetadata.builder("foo")))
             .put(indexBuilder("bar_bar").state(State.OPEN).putAlias(AliasMetadata.builder("foo")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -1157,6 +1168,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         {
             // A visible index with a visible alias and a hidden index with a hidden alias
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(indexBuilder(visibleIndex).state(State.OPEN).putAlias(AliasMetadata.builder(visibleAlias)))
                 .put(
                     indexBuilder(hiddenIndex, Settings.builder().put(INDEX_HIDDEN_SETTING.getKey(), true).build()).state(State.OPEN)
@@ -1200,6 +1212,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         {
             // A visible alias that points to one hidden and one visible index
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(indexBuilder(visibleIndex).state(State.OPEN).putAlias(AliasMetadata.builder(visibleAlias)))
                 .put(
                     indexBuilder(hiddenIndex, Settings.builder().put(INDEX_HIDDEN_SETTING.getKey(), true).build()).state(State.OPEN)
@@ -1226,6 +1239,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         {
             // A hidden alias that points to one hidden and one visible index
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(indexBuilder(visibleIndex).state(State.OPEN).putAlias(AliasMetadata.builder(hiddenAlias).isHidden(true)))
                 .put(
                     indexBuilder(hiddenIndex, Settings.builder().put(INDEX_HIDDEN_SETTING.getKey(), true).build()).state(State.OPEN)
@@ -1257,6 +1271,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         {
             // A hidden alias with a dot-prefixed name that points to one hidden index with a dot prefix, and one hidden index without
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(
                     indexBuilder(dottedHiddenIndex, Settings.builder().put(INDEX_HIDDEN_SETTING.getKey(), true).build()).state(State.OPEN)
                         .putAlias(AliasMetadata.builder(dottedHiddenAlias).isHidden(true))
@@ -1293,6 +1308,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndicesOptions includeHiddenOptions = IndicesOptions.fromOptions(false, true, true, false, true, true, false, false, false);
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder(hiddenIndex, Settings.builder().put(INDEX_HIDDEN_SETTING.getKey(), true).build()).state(State.OPEN)
                     .putAlias(AliasMetadata.builder(hiddenAlias).isHidden(true))
@@ -1331,7 +1347,9 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
             );
 
             {
-                ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(Metadata.builder().build()).build();
+                ClusterState state = ClusterState.builder(new ClusterName("_name"))
+                    .metadata(Metadata.builder().createDefaultProject().build())
+                    .build();
                 IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
                     state,
                     indicesOptions,
@@ -1351,6 +1369,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
             {
                 // with existing indices, asking for all indices should return all open/closed indices depending on options
                 Metadata.Builder mdBuilder = Metadata.builder()
+                    .createDefaultProject()
                     .put(indexBuilder("aaa").state(State.OPEN).putAlias(AliasMetadata.builder("aaa_alias1")))
                     .put(indexBuilder("bbb").state(State.OPEN).putAlias(AliasMetadata.builder("bbb_alias1")))
                     .put(indexBuilder("ccc").state(State.CLOSE).putAlias(AliasMetadata.builder("ccc_alias1")));
@@ -1385,6 +1404,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         for (int i = 0; i < 10; i++) {
             IndicesOptions indicesOptions = IndicesOptions.fromOptions(randomBoolean(), randomBoolean(), randomBoolean(), randomBoolean());
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(indexBuilder("aaa").state(State.OPEN).putAlias(AliasMetadata.builder("aaa_alias1")))
                 .put(indexBuilder("bbb").state(State.OPEN).putAlias(AliasMetadata.builder("bbb_alias1")))
                 .put(indexBuilder("ccc").state(State.CLOSE).putAlias(AliasMetadata.builder("ccc_alias1")));
@@ -1457,6 +1477,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIndexOptionsFailClosedIndicesAndAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("foo1-closed").state(IndexMetadata.State.CLOSE)
                     .putAlias(AliasMetadata.builder("foobar1-closed"))
@@ -1535,7 +1556,9 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testDedupConcreteIndices() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("index1").putAlias(AliasMetadata.builder("alias1")));
+        Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
+            .put(indexBuilder("index1").putAlias(AliasMetadata.builder("alias1")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndicesOptions[] indicesOptions = new IndicesOptions[] {
             IndicesOptions.strictExpandOpen(),
@@ -1555,6 +1578,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testFilterClosedIndicesOnAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("alias-0")))
             .put(indexBuilder("test-1").state(IndexMetadata.State.CLOSE).putAlias(AliasMetadata.builder("alias-1")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -1575,6 +1599,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testResolveExpressions() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("alias-0").filter("{ \"term\": \"foo\"}")))
             .put(indexBuilder("test-1").state(State.OPEN).putAlias(AliasMetadata.builder("alias-1")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -1593,6 +1618,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testFilteringAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("alias-0").filter("{ \"term\": \"foo\"}")))
             .put(indexBuilder("test-1").state(State.OPEN).putAlias(AliasMetadata.builder("alias-1")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -1613,6 +1639,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIndexAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-0").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias-0").filter("{ \"term\": \"foo\"}"))
@@ -1643,6 +1670,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata backingIndex1 = createBackingIndex(dataStreamName1, 1).build();
         IndexMetadata backingIndex2 = createBackingIndex(dataStreamName2, 1).build();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(backingIndex1, false)
             .put(backingIndex2, false)
             .put(newInstance(dataStreamName1, List.of(backingIndex1.getIndex())))
@@ -1734,6 +1762,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIndexAliasesSkipIdentity() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-0").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias"))
@@ -1757,6 +1786,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     public void testConcreteWriteIndexSuccessful() {
         boolean testZeroWriteIndex = randomBoolean();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-0").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias").writeIndex(testZeroWriteIndex ? true : null))
@@ -1804,6 +1834,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteWriteIndexWithInvalidIndicesRequest() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         Function<String[], IndicesRequest> requestGen = (indices) -> new IndicesRequest() {
@@ -1835,6 +1866,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     public void testConcreteWriteIndexWithWildcardExpansion() {
         boolean testZeroWriteIndex = randomBoolean();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-1").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias").writeIndex(testZeroWriteIndex ? true : null))
@@ -1880,6 +1912,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteWriteIndexWithNoWriteIndexWithSingleIndex() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias").writeIndex(false)));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         String[] strings = indexNameExpressionResolver.indexAliases(
@@ -1913,6 +1946,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testConcreteWriteIndexWithNoWriteIndexWithMultipleIndices() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-0").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias").writeIndex(randomFrom(false, null))))
             .put(
                 indexBuilder("test-1").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias").writeIndex(randomFrom(false, null)))
@@ -1950,6 +1984,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     public void testAliasResolutionNotAllowingMultipleIndices() {
         boolean test0WriteIndex = randomBoolean();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-0").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias").writeIndex(randomFrom(test0WriteIndex, null)))
@@ -1982,6 +2017,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testDeleteIndexIgnoresAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-index").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias")))
             .put(indexBuilder("index").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias2")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -2079,6 +2115,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIndicesAliasesRequestIgnoresAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("test-index").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias")))
             .put(indexBuilder("index").state(State.OPEN).putAlias(AliasMetadata.builder("test-alias2")));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -2182,6 +2219,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata backingIndex = createBackingIndex(dataStreamName, 1).build();
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(backingIndex, false)
             .put(newInstance(dataStreamName, List.of(backingIndex.getIndex())));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
@@ -2214,7 +2252,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testInvalidIndex() {
-        Metadata.Builder mdBuilder = Metadata.builder().put(indexBuilder("test"));
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(indexBuilder("test"));
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
         IndexNameExpressionResolver.Context context = new IndexNameExpressionResolver.Context(
             state,
@@ -2231,6 +2269,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     public void testIgnoreThrottled() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("test-index", Settings.builder().put("index.frozen", true).build()).state(State.OPEN)
                     .putAlias(AliasMetadata.builder("test-alias"))
@@ -2561,6 +2600,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata index2 = createBackingIndex(dataStreamName, 2, epochMillis).build();
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(newInstance(dataStreamName, List.of(index1.getIndex(), index2.getIndex())));
@@ -2581,6 +2621,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata index2 = createBackingIndex(dataStreamName, 2, epochMillis).build();
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(newInstance(dataStreamName, List.of(index1.getIndex(), index2.getIndex())));
@@ -2709,6 +2750,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata otherIndex = indexBuilder("my-other-index", Settings.EMPTY).state(State.OPEN).build();
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(failureIndex1, false)
@@ -2909,6 +2951,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         String dataStreamAlias2 = "my-alias2";
         String dataStreamAlias3 = "my-alias3";
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(index3, false)
@@ -3039,6 +3082,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata index3 = createBackingIndex(dataStream2, 1, epochMillis).build();
         IndexMetadata index4 = createBackingIndex(dataStream2, 2, epochMillis).build();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(index3, false)
@@ -3096,6 +3140,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         IndexMetadata index3 = createBackingIndex(dataStream2, 1, epochMillis).state(State.CLOSE).build();
         IndexMetadata index4 = createBackingIndex(dataStream2, 2, epochMillis).build();
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(index1, false)
             .put(index2, false)
             .put(index3, false)
@@ -3135,6 +3180,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         ClusterState state = ClusterState.builder(new ClusterName("_name"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(index1, false)
                     .put(index2, false)
                     .put(justAnIndex, false)
@@ -3164,6 +3210,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         ClusterState state = ClusterState.builder(new ClusterName("_name"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(index1, false)
                     .put(index2, false)
                     .put(justAnIndex, false)
@@ -3202,6 +3249,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
         ClusterState state = ClusterState.builder(new ClusterName("_name"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(index1, false)
                     .put(index2, false)
                     .put(index3, false)
@@ -3254,7 +3302,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
     }
 
     public void testRemoteIndex() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject();
         ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
 
         {
@@ -3395,6 +3443,7 @@ public class IndexNameExpressionResolverTests extends ESTestCase {
 
     private ClusterState systemIndexTestClusterState() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder(".ml-meta", SystemIndexDescriptor.DEFAULT_SETTINGS).state(State.OPEN).system(true))
             .put(indexBuilder(".watches", SystemIndexDescriptor.DEFAULT_SETTINGS).state(State.OPEN).system(true))
             .put(indexBuilder(".ml-stuff", SystemIndexDescriptor.DEFAULT_SETTINGS).state(State.OPEN).system(true))

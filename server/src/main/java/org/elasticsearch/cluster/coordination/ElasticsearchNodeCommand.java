@@ -23,10 +23,12 @@ import org.elasticsearch.cluster.ClusterModule;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.Diff;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.ComponentTemplateMetadata;
 import org.elasticsearch.cluster.metadata.ComposableIndexTemplateMetadata;
 import org.elasticsearch.cluster.metadata.DataStreamMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.common.cli.EnvironmentAwareCommand;
 import org.elasticsearch.common.collect.Iterators;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -201,7 +203,7 @@ public abstract class ElasticsearchNodeCommand extends EnvironmentAwareCommand {
         return parser;
     }
 
-    public record UnknownMetadataCustom(String name, Map<String, Object> contents) implements Metadata.Custom {
+    public record UnknownClusterMetadataCustom(String name, Map<String, Object> contents) implements ClusterMetadata.ClusterCustom {
 
         @Override
         public EnumSet<Metadata.XContentContext> context() {
@@ -209,7 +211,43 @@ public abstract class ElasticsearchNodeCommand extends EnvironmentAwareCommand {
         }
 
         @Override
-        public Diff<Metadata.Custom> diff(Metadata.Custom previousState) {
+        public Diff<ClusterMetadata.ClusterCustom> diff(ClusterMetadata.ClusterCustom previousState) {
+            assert false;
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String getWriteableName() {
+            return name;
+        }
+
+        @Override
+        public TransportVersion getMinimalSupportedVersion() {
+            assert false;
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            assert false;
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Iterator<? extends ToXContent> toXContentChunked(ToXContent.Params ignored) {
+            return Iterators.single(((builder, params) -> builder.mapContents(contents)));
+        }
+    }
+
+    public record UnknownMetadataCustom(String name, Map<String, Object> contents) implements ProjectMetadata.ProjectCustom {
+
+        @Override
+        public EnumSet<Metadata.XContentContext> context() {
+            return EnumSet.of(Metadata.XContentContext.API, Metadata.XContentContext.GATEWAY);
+        }
+
+        @Override
+        public Diff<ProjectMetadata.ProjectCustom> diff(ProjectMetadata.ProjectCustom previousState) {
             assert false;
             throw new UnsupportedOperationException();
         }

@@ -127,7 +127,7 @@ public class MetadataDeleteIndexService {
         Metadata.Builder metadataBuilder = Metadata.builder(meta);
         ClusterBlocks.Builder clusterBlocksBuilder = ClusterBlocks.builder().blocks(currentState.blocks());
 
-        final IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metadataBuilder.indexGraveyard());
+        final IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metadataBuilder.project().indexGraveyard());
         final int previousGraveyardSize = graveyardBuilder.tombstones().size();
         for (final Index index : indices) {
             String indexName = index.getName();
@@ -142,7 +142,7 @@ public class MetadataDeleteIndexService {
         }
         // add tombstones to the cluster state for each deleted index
         final IndexGraveyard currentGraveyard = graveyardBuilder.addTombstones(indices).build(settings);
-        metadataBuilder.indexGraveyard(currentGraveyard); // the new graveyard set on the metadata
+        metadataBuilder.project().indexGraveyard(currentGraveyard); // the new graveyard set on the metadata
         logger.trace(
             "{} tombstones purged from the cluster state. Previous tombstone size: {}. Current tombstone size: {}.",
             graveyardBuilder.getNumPurged(),

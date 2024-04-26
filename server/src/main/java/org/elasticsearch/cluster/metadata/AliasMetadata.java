@@ -237,6 +237,10 @@ public class AliasMetadata implements SimpleDiffable<AliasMetadata>, ToXContentF
     }
 
     public static AliasMetadata getFirstAliasMetadata(Metadata metadata, IndexAbstraction ia) {
+        return getFirstAliasMetadata(metadata.project(), ia);
+    }
+
+    public static AliasMetadata getFirstAliasMetadata(ProjectMetadata metadata, IndexAbstraction ia) {
         if (ia.getType() != IndexAbstraction.Type.ALIAS) {
             throw new IllegalArgumentException("unexpected type: [" + ia.getType() + "]");
         }

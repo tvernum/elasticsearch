@@ -374,11 +374,12 @@ public class MetadataIndexStateService {
         final ClusterState currentState,
         final APIBlock block
     ) {
+        final ProjectId projectId = currentState.metadata().currentProjectId();
         final Metadata.Builder metadata = Metadata.builder(currentState.metadata());
 
         final Set<Index> indicesToAddBlock = new HashSet<>();
         for (Index index : indices) {
-            metadata.getSafe(index); // to check if index exists
+            metadata.getSafe(projectId, index); // to check if index exists
             if (currentState.blocks().hasIndexBlock(index.getName(), block.block)) {
                 logger.debug("index {} already has block {}, ignoring", index, block.block);
             } else {
@@ -413,11 +414,12 @@ public class MetadataIndexStateService {
             blocks.addIndexBlock(index.getName(), indexBlock);
             blockedIndices.put(index, indexBlock);
             // update index settings as well to match the block
-            final IndexMetadata indexMetadata = metadata.getSafe(index);
+            final IndexMetadata indexMetadata = metadata.getSafe(projectId, index);
             if (block.setting().get(indexMetadata.getSettings()) == false) {
                 final Settings updatedSettings = Settings.builder().put(indexMetadata.getSettings()).put(block.settingName(), true).build();
 
                 metadata.put(
+                    projectId,
                     IndexMetadata.builder(indexMetadata).settings(updatedSettings).settingsVersion(indexMetadata.getSettingsVersion() + 1)
                 );
             }
@@ -812,6 +814,7 @@ public class MetadataIndexStateService {
         final Map<Index, IndexResult> verifyResult,
         ShardRoutingRoleStrategy shardRoutingRoleStrategy
     ) {
+        final ProjectId projectId = currentState.metadata().currentProjectId();
         final Metadata.Builder metadata = Metadata.builder(currentState.metadata());
         final ClusterBlocks.Builder blocks = ClusterBlocks.builder(currentState.blocks());
         final RoutingTable.Builder routingTable = RoutingTable.builder(shardRoutingRoleStrategy, currentState.routingTable());
@@ -826,7 +829,7 @@ public class MetadataIndexStateService {
                     logger.debug("verification of shards before closing {} failed [{}]", index, result);
                     continue;
                 }
-                final IndexMetadata indexMetadata = metadata.getSafe(index);
+                final IndexMetadata indexMetadata = metadata.getSafe(projectId, index);
                 if (indexMetadata.getState() == IndexMetadata.State.CLOSE) {
                     logger.debug("verification of shards before closing {} succeeded but index is already closed", index);
                     assert currentState.blocks().hasIndexBlock(index.getName(), INDEX_CLOSED_BLOCK);
@@ -885,11 +888,12 @@ public class MetadataIndexStateService {
                 blocks.addIndexBlock(index.getName(), INDEX_CLOSED_BLOCK);
                 final IndexMetadata.Builder updatedMetadata = IndexMetadata.builder(indexMetadata).state(IndexMetadata.State.CLOSE);
                 metadata.put(
+                    projectId,
                     updatedMetadata.timestampRange(IndexLongFieldRange.NO_SHARDS)
                         .settingsVersion(indexMetadata.getSettingsVersion() + 1)
                         .settings(Settings.builder().put(indexMetadata.getSettings()).put(VERIFIED_BEFORE_CLOSE_SETTING.getKey(), true))
                 );
-                routingTable.addAsFromOpenToClose(metadata.getSafe(index));
+                routingTable.addAsFromOpenToClose(metadata.getSafe(projectId, index));
 
                 logger.debug("closing index {} succeeded", index);
                 closedIndices.add(index.getName());
@@ -1089,6 +1093,7 @@ public class MetadataIndexStateService {
         }
 
         private ClusterState openIndices(final Index[] indices, final ClusterState currentState) {
+            final ProjectId projectId = currentState.metadata().currentProjectId();
             final List<IndexMetadata> indicesToOpen = new ArrayList<>(indices.length);
             for (Index index : indices) {
                 final IndexMetadata indexMetadata = currentState.metadata().getIndexSafe(index);
@@ -1142,7 +1147,7 @@ public class MetadataIndexStateService {
                     } catch (Exception e) {
                         throw new ElasticsearchException("Failed to verify index " + index, e);
                     }
-                    metadata.put(newIndexMetadata, true);
+                    metadata.put(projectId, newIndexMetadata, true);
                 }
 
                 // Always removes index closed blocks (note: this can fail on-going close index actions)

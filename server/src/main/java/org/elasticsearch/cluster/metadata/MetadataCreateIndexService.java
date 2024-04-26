@@ -1232,7 +1232,11 @@ public class MetadataCreateIndexService {
     ) {
         final Metadata newMetadata;
         if (metadataTransformer != null) {
-            Metadata.Builder builder = Metadata.builder(currentState.metadata()).put(indexMetadata, false);
+            final Metadata.Builder builder = Metadata.builder(currentState.metadata());
+            if (currentState.metadata().projects().isEmpty()) {
+                builder.createDefaultProject();
+            }
+            builder.put(indexMetadata, false);
             metadataTransformer.accept(builder, indexMetadata);
             newMetadata = builder.build();
         } else {

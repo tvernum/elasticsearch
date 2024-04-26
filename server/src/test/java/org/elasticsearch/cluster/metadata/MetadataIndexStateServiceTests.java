@@ -10,7 +10,6 @@ package org.elasticsearch.cluster.metadata;
 
 import org.elasticsearch.action.admin.indices.close.CloseIndexResponse;
 import org.elasticsearch.action.admin.indices.close.CloseIndexResponse.IndexResult;
-import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.RestoreInProgress;
 import org.elasticsearch.cluster.SnapshotsInProgress;
@@ -63,7 +62,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
         final Map<Index, ClusterBlock> blockedIndices = new HashMap<>();
         final Map<Index, IndexResult> results = new HashMap<>();
 
-        ClusterState state = ClusterState.builder(new ClusterName("testCloseRoutingTable")).build();
+        ClusterState state = clusterStateWithSingleEmptyProject("testCloseRoutingTable");
         for (int i = 0; i < randomIntBetween(1, 25); i++) {
             final String indexName = "index-" + i;
 
@@ -106,7 +105,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testCloseRoutingTableWithRestoredIndex() {
-        ClusterState state = ClusterState.builder(new ClusterName("testCloseRoutingTableWithRestoredIndex")).build();
+        ClusterState state = clusterStateWithSingleEmptyProject("testCloseRoutingTableWithRestoredIndex");
 
         String indexName = "restored-index";
         ClusterBlock block = MetadataIndexStateService.createIndexClosingBlock();
@@ -125,7 +124,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testCloseRoutingTableWithSnapshottedIndex() {
-        ClusterState state = ClusterState.builder(new ClusterName("testCloseRoutingTableWithSnapshottedIndex")).build();
+        ClusterState state = clusterStateWithSingleEmptyProject("testCloseRoutingTableWithSnapshottedIndex");
 
         String indexName = "snapshotted-index";
         ClusterBlock block = MetadataIndexStateService.createIndexClosingBlock();
@@ -144,7 +143,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testAddIndexClosedBlocks() {
-        final ClusterState initialState = ClusterState.builder(new ClusterName("testAddIndexClosedBlocks")).build();
+        final ClusterState initialState = clusterStateWithSingleEmptyProject("testAddIndexClosedBlocks");
         {
             final Map<Index, ClusterBlock> blockedIndices = new HashMap<>();
             Index[] indices = new Index[] { new Index("_name", "_uid") };
@@ -237,7 +236,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testAddIndexClosedBlocksReusesBlocks() {
-        ClusterState state = ClusterState.builder(new ClusterName("testAddIndexClosedBlocksReuseBlocks")).build();
+        ClusterState state = clusterStateWithSingleEmptyProject("testAddIndexClosedBlocksReuseBlocks");
         state = addOpenedIndex("test", randomIntBetween(1, 3), randomIntBetween(0, 3), state);
 
         Index test = state.metadata().index("test").getIndex();
@@ -258,7 +257,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testIsIndexVerifiedBeforeClosed() {
-        final ClusterState initialState = ClusterState.builder(new ClusterName("testIsIndexMetadataClosed")).build();
+        final ClusterState initialState = clusterStateWithSingleEmptyProject("testIsIndexMetadataClosed");
         {
             String indexName = "open";
             ClusterState state = addOpenedIndex(indexName, randomIntBetween(1, 3), randomIntBetween(0, 3), initialState);
@@ -281,7 +280,7 @@ public class MetadataIndexStateServiceTests extends ESTestCase {
     }
 
     public void testCloseFailedIfBlockDisappeared() {
-        ClusterState state = ClusterState.builder(new ClusterName("failedIfBlockDisappeared")).build();
+        ClusterState state = clusterStateWithSingleEmptyProject("failedIfBlockDisappeared");
         Map<Index, ClusterBlock> blockedIndices = new HashMap<>();
         int numIndices = between(1, 10);
         Set<Index> disappearedIndices = new HashSet<>();

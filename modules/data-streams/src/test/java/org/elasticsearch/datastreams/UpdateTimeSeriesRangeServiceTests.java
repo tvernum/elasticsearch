@@ -166,7 +166,7 @@ public class UpdateTimeSeriesRangeServiceTests extends ESTestCase {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         Instant start = now.minus(90, ChronoUnit.MINUTES);
-        Metadata.Builder mbBuilder = new Metadata.Builder();
+        Metadata.Builder mbBuilder = Metadata.builder();
         for (String dataStreamName : List.of(dataStreamName1, dataStreamName2, dataStreamName3)) {
             Instant end = start.plus(30, ChronoUnit.MINUTES);
             DataStreamTestHelper.getClusterStateWithDataStream(mbBuilder, dataStreamName, List.of(new Tuple<>(start, end)));

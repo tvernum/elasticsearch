@@ -550,7 +550,7 @@ public class ClusterStateCreationUtils {
             state.putCompatibilityVersions(node.getId(), transportVersion, SystemIndices.SERVER_SYSTEM_MAPPINGS_VERSIONS);
         }
 
-        Metadata.Builder metadataBuilder = Metadata.builder().generateClusterUuidIfNeeded();
+        Metadata.Builder metadataBuilder = Metadata.builder().generateClusterUuidIfNeeded().createDefaultProject();
         if (healthNode != null) {
             addHealthNode(metadataBuilder, healthNode);
         }
@@ -575,6 +575,6 @@ public class ClusterStateCreationUtils {
             randomAlphaOfLength(10)
         );
         tasks.addTask(HealthNode.TASK_NAME, HealthNode.TASK_NAME, HealthNodeTaskParams.INSTANCE, assignment);
-        return metadataBuilder.putCustom(PersistentTasksCustomMetadata.TYPE, tasks.build());
+        return metadataBuilder.putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasks.build());
     }
 }

@@ -18,12 +18,12 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ClusterStateObserver;
 import org.elasticsearch.cluster.NotMasterException;
 import org.elasticsearch.cluster.block.ClusterBlockException;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.DataStream;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.metadata.Metadata;
-import org.elasticsearch.cluster.metadata.Metadata.Custom;
 import org.elasticsearch.cluster.routing.RoutingTable;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.cluster.version.CompatibilityVersions;
@@ -213,9 +213,10 @@ public class TransportClusterStateAction extends TransportMasterNodeReadAction<C
             }
 
             // filter out metadata that shouldn't be returned by the API
-            for (Map.Entry<String, Custom> custom : currentState.metadata().customs().entrySet()) {
+            // @TODO[MultiProject] Handle project and cluster customs
+            for (Map.Entry<String, ClusterMetadata.ClusterCustom> custom : currentState.metadata().customs().entrySet()) {
                 if (custom.getValue().context().contains(Metadata.XContentContext.API) == false) {
-                    mdBuilder.removeCustom(custom.getKey());
+                    mdBuilder.removeClusterCustom(custom.getKey());
                 }
             }
         }

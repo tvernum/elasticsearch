@@ -38,16 +38,12 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.IndexVersion;
 import org.elasticsearch.index.IndexVersions;
-import org.elasticsearch.index.alias.RandomAliasActionsGenerator;
-import org.elasticsearch.index.mapper.MapperService;
-import org.elasticsearch.ingest.IngestMetadata;
 import org.elasticsearch.persistent.PersistentTasksCustomMetadata;
 import org.elasticsearch.plugins.FieldPredicate;
 import org.elasticsearch.plugins.MapperPlugin;
 import org.elasticsearch.test.AbstractChunkedSerializingTestCase;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.index.IndexVersionUtils;
-import org.elasticsearch.upgrades.FeatureMigrationResults;
 import org.elasticsearch.xcontent.ToXContent;
 import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.xcontent.XContentParser;
@@ -70,13 +66,14 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.elasticsearch.cluster.metadata.DataStreamTestHelper.createBackingIndex;
 import static org.elasticsearch.cluster.metadata.DataStreamTestHelper.createFirstBackingIndex;
 import static org.elasticsearch.cluster.metadata.DataStreamTestHelper.newInstance;
-import static org.elasticsearch.cluster.metadata.Metadata.Builder.assertDataStreams;
 import static org.elasticsearch.cluster.metadata.Metadata.CONTEXT_MODE_API;
 import static org.elasticsearch.cluster.metadata.Metadata.CONTEXT_MODE_PARAM;
 import static org.elasticsearch.test.LambdaMatchers.transformedItemsMatch;
@@ -102,6 +99,7 @@ public class MetadataTests extends ESTestCase {
 
     public void testFindAliases() {
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(
                 IndexMetadata.builder("index")
                     .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -158,7 +156,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testFindDataStreamAliases() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
 
         addDataStream("d1", builder);
         addDataStream("d2", builder);
@@ -220,7 +218,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamAliasesByDataStream() {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
 
         addDataStream("d1", builder);
         addDataStream("d2", builder);
@@ -248,6 +246,7 @@ public class MetadataTests extends ESTestCase {
 
     public void testFindAliasWithExclusion() {
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(
                 IndexMetadata.builder("index")
                     .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -281,6 +280,7 @@ public class MetadataTests extends ESTestCase {
 
     public void testFindAliasWithExclusionAndOverride() {
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(
                 IndexMetadata.builder("index")
                     .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -315,7 +315,7 @@ public class MetadataTests extends ESTestCase {
         for (int i = 0; i < properAliases; i++) {
             aliasToIndices.put(randomAlphaOfLength(5), new HashSet<>(randomSubsetOf(randomIntBetween(1, 3), indices)));
         }
-        Metadata.Builder metadataBuilder = Metadata.builder();
+        Metadata.Builder metadataBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         for (String index : indices) {
             IndexMetadata.Builder indexBuilder = IndexMetadata.builder(index)
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -345,7 +345,10 @@ public class MetadataTests extends ESTestCase {
             bWriteIndex = randomFrom(Boolean.TRUE, Boolean.FALSE, null);
         }
         // when only one index/alias pair exist
-        Metadata metadata = Metadata.builder().put(buildIndexMetadata(indexA, alias, aWriteIndex)).build();
+        Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
+            .put(buildIndexMetadata(indexA, alias, aWriteIndex))
+            .build();
 
         // when alias points to two indices, but valid
         // one of the following combinations: [(null, null), (null, true), (null, false), (false, false)]
@@ -355,7 +358,7 @@ public class MetadataTests extends ESTestCase {
         Exception exception = expectThrows(IllegalStateException.class, () -> {
             IndexMetadata.Builder metaA = buildIndexMetadata(indexA, alias, true);
             IndexMetadata.Builder metaB = buildIndexMetadata(indexB, alias, true);
-            Metadata.builder().put(metaA).put(metaB).build();
+            Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).put(metaA).put(metaB).build();
         });
         assertThat(exception.getMessage(), startsWith("alias [" + alias + "] has more than one write index ["));
     }
@@ -399,7 +402,7 @@ public class MetadataTests extends ESTestCase {
             .numberOfShards(1)
             .numberOfReplicas(0)
             .putAlias(AliasMetadata.builder(aliasName).isHidden(indexBHidden).build());
-        return Metadata.builder().put(indexAMeta).put(indexBMeta);
+        return Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).put(indexAMeta).put(indexBMeta);
     }
 
     public void testResolveIndexRouting() {
@@ -410,7 +413,7 @@ public class MetadataTests extends ESTestCase {
             .putAlias(AliasMetadata.builder("alias0").build())
             .putAlias(AliasMetadata.builder("alias1").routing("1").build())
             .putAlias(AliasMetadata.builder("alias2").routing("1,2").build());
-        Metadata metadata = Metadata.builder().put(builder).build();
+        Metadata metadata = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).put(builder).build();
 
         // no alias, no index
         assertNull(metadata.resolveIndexRouting(null, null));
@@ -474,7 +477,7 @@ public class MetadataTests extends ESTestCase {
             .putAlias(AliasMetadata.builder("alias2").routing("1,2").build())
             .putAlias(AliasMetadata.builder("alias3").writeIndex(false).build())
             .putAlias(AliasMetadata.builder("alias4").routing("1,2").writeIndex(true).build());
-        Metadata metadata = Metadata.builder().put(builder).build();
+        Metadata metadata = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).put(builder).build();
 
         // no alias, no index
         assertNull(metadata.resolveWriteIndexRouting(null, null));
@@ -556,20 +559,28 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testMetadataGlobalStateChangesOnIndexDeletions() {
-        IndexGraveyard.Builder builder = IndexGraveyard.builder();
-        builder.addTombstone(new Index("idx1", UUIDs.randomBase64UUID()));
-        final Metadata metadata1 = Metadata.builder().indexGraveyard(builder.build()).build();
-        builder = IndexGraveyard.builder(metadata1.indexGraveyard());
-        builder.addTombstone(new Index("idx2", UUIDs.randomBase64UUID()));
-        final Metadata metadata2 = Metadata.builder(metadata1).indexGraveyard(builder.build()).build();
-        assertFalse("metadata not equal after adding index deletions", Metadata.isGlobalStateEquals(metadata1, metadata2));
+        IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder();
+        graveyardBuilder.addTombstone(new Index("idx1", UUIDs.randomBase64UUID()));
+
+        final ProjectId projectId = new ProjectId(randomUUID());
+        final ProjectMetadata.Builder project1 = ProjectMetadata.builder().id(projectId).indexGraveyard(graveyardBuilder.build());
+
+        final Metadata metadata1 = Metadata.builder().put(project1).build();
+        graveyardBuilder = IndexGraveyard.builder(metadata1.indexGraveyard());
+        graveyardBuilder.addTombstone(new Index("idx2", UUIDs.randomBase64UUID()));
+
+        final Metadata.Builder mb2 = Metadata.builder(metadata1);
+        mb2.project(projectId).indexGraveyard(graveyardBuilder.build());
+        final Metadata metadata2 = mb2.build();
+
+        assertFalse("metadata should not be equal after adding index deletions", Metadata.isGlobalStateEquals(metadata1, metadata2));
         final Metadata metadata3 = Metadata.builder(metadata2).build();
-        assertTrue("metadata equal when not adding index deletions", Metadata.isGlobalStateEquals(metadata2, metadata3));
+        assertTrue("metadata should be equal when not adding index deletions", Metadata.isGlobalStateEquals(metadata2, metadata3));
     }
 
     public void testXContentWithIndexGraveyard() throws IOException {
         final IndexGraveyard graveyard = IndexGraveyardTests.createRandom();
-        final Metadata originalMeta = Metadata.builder().indexGraveyard(graveyard).build();
+        final Metadata originalMeta = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).indexGraveyard(graveyard).build();
         final XContentBuilder builder = JsonXContent.contentBuilder();
         builder.startObject();
         Metadata.FORMAT.toXContent(builder, originalMeta);
@@ -677,7 +688,7 @@ public class MetadataTests extends ESTestCase {
 
     public void testSerializationWithIndexGraveyard() throws IOException {
         final IndexGraveyard graveyard = IndexGraveyardTests.createRandom();
-        final Metadata originalMeta = Metadata.builder().indexGraveyard(graveyard).build();
+        final Metadata originalMeta = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID())).indexGraveyard(graveyard).build();
         final BytesStreamOutput out = new BytesStreamOutput();
         originalMeta.writeTo(out);
         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(ClusterModule.getNamedWriteables());
@@ -689,6 +700,7 @@ public class MetadataTests extends ESTestCase {
 
     public void testFindMappings() throws IOException {
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(IndexMetadata.builder("index1").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(FIND_MAPPINGS_TEST_ITEM))
             .put(IndexMetadata.builder("index2").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(FIND_MAPPINGS_TEST_ITEM))
             .build();
@@ -735,6 +747,7 @@ public class MetadataTests extends ESTestCase {
         );
 
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(IndexMetadata.builder("index1").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(originalMappingMetadata))
             .build();
 
@@ -771,6 +784,7 @@ public class MetadataTests extends ESTestCase {
         }
 
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(IndexMetadata.builder("index1").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(mapping))
             .put(IndexMetadata.builder("index2").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(mapping))
             .put(IndexMetadata.builder("index3").settings(indexSettings(IndexVersion.current(), 1, 0)).putMapping(mapping))
@@ -862,43 +876,6 @@ public class MetadataTests extends ESTestCase {
             assertIndexMappingsNoFields(mappings, "index3");
             assertIndexMappingsNotFiltered(mappings, "index2");
         }
-    }
-
-    public void testOldestIndexComputation() {
-        Metadata metadata = buildIndicesWithVersions(
-            IndexVersions.V_7_0_0,
-            IndexVersion.current(),
-            IndexVersion.fromId(IndexVersion.current().id() + 1)
-        ).build();
-
-        assertEquals(IndexVersions.V_7_0_0, metadata.oldestIndexVersion());
-
-        Metadata.Builder b = Metadata.builder();
-        assertEquals(IndexVersion.current(), b.build().oldestIndexVersion());
-
-        Throwable ex = expectThrows(
-            IllegalArgumentException.class,
-            () -> buildIndicesWithVersions(IndexVersions.V_7_0_0, IndexVersions.ZERO, IndexVersion.fromId(IndexVersion.current().id() + 1))
-                .build()
-        );
-
-        assertEquals("[index.version.created] is not present in the index settings for index with UUID [null]", ex.getMessage());
-    }
-
-    private Metadata.Builder buildIndicesWithVersions(IndexVersion... indexVersions) {
-        int lastIndexNum = randomIntBetween(9, 50);
-        Metadata.Builder b = Metadata.builder();
-        for (IndexVersion indexVersion : indexVersions) {
-            IndexMetadata im = IndexMetadata.builder(DataStream.getDefaultBackingIndexName("index", lastIndexNum))
-                .settings(settings(indexVersion))
-                .numberOfShards(1)
-                .numberOfReplicas(1)
-                .build();
-            b.put(im, false);
-            lastIndexNum = randomIntBetween(lastIndexNum + 1, lastIndexNum + 50);
-        }
-
-        return b;
     }
 
     private static IndexMetadata.Builder buildIndexMetadata(String name, String alias, Boolean writeIndex) {
@@ -1055,15 +1032,15 @@ public class MetadataTests extends ESTestCase {
     public void testBuilderRejectsNullCustom() {
         final Metadata.Builder builder = Metadata.builder();
         final String key = randomAlphaOfLength(10);
-        assertThat(expectThrows(NullPointerException.class, () -> builder.putCustom(key, null)).getMessage(), containsString(key));
+        assertThat(expectThrows(NullPointerException.class, () -> builder.putClusterCustom(key, null)).getMessage(), containsString(key));
     }
 
     public void testBuilderRejectsNullInCustoms() {
         final Metadata.Builder builder = Metadata.builder();
         final String key = randomAlphaOfLength(10);
-        final Map<String, Metadata.Custom> map = new HashMap<>();
+        final Map<String, ClusterMetadata.ClusterCustom> map = new HashMap<>();
         map.put(key, null);
-        assertThat(expectThrows(NullPointerException.class, () -> builder.customs(map)).getMessage(), containsString(key));
+        assertThat(expectThrows(NullPointerException.class, () -> builder.clusterCustoms(map)).getMessage(), containsString(key));
     }
 
     public void testCopyAndUpdate() throws IOException {
@@ -1080,20 +1057,21 @@ public class MetadataTests extends ESTestCase {
         var custom1 = new TestCustomMetadata();
         var custom2 = new TestCustomMetadata();
         var builder = Metadata.builder();
-        builder.putCustom("custom1", custom1);
-        builder.putCustom("custom2", custom2);
+        builder.putClusterCustom("custom1", custom1);
+        builder.putClusterCustom("custom2", custom2);
 
-        builder.removeCustomIf((key, value) -> Objects.equals(key, "custom1"));
+        builder.removeClusterCustomIf((key, value) -> Objects.equals(key, "custom1"));
 
         var metadata = builder.build();
-        assertThat(metadata.custom("custom1"), nullValue());
-        assertThat(metadata.custom("custom2"), sameInstance(custom2));
+        assertThat(metadata.clusterCustom("custom1"), nullValue());
+        assertThat(metadata.clusterCustom("custom2"), sameInstance(custom2));
     }
 
     public void testBuilderRejectsDataStreamThatConflictsWithIndex() {
         final String dataStreamName = "my-data-stream";
         IndexMetadata idx = createFirstBackingIndex(dataStreamName).build();
         Metadata.Builder b = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(idx, false)
             .put(
                 IndexMetadata.builder(dataStreamName)
@@ -1120,7 +1098,10 @@ public class MetadataTests extends ESTestCase {
     public void testBuilderRejectsDataStreamThatConflictsWithAlias() {
         final String dataStreamName = "my-data-stream";
         IndexMetadata idx = createFirstBackingIndex(dataStreamName).putAlias(AliasMetadata.builder(dataStreamName).build()).build();
-        Metadata.Builder b = Metadata.builder().put(idx, false).put(newInstance(dataStreamName, List.of(idx.getIndex())));
+        Metadata.Builder b = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
+            .put(idx, false)
+            .put(newInstance(dataStreamName, List.of(idx.getIndex())));
 
         IllegalStateException e = expectThrows(IllegalStateException.class, b::build);
         assertThat(
@@ -1139,7 +1120,10 @@ public class MetadataTests extends ESTestCase {
         final String dataStreamName = "my-data-stream";
         final String conflictingName = DataStream.getDefaultBackingIndexName(dataStreamName, 2);
         IndexMetadata idx = createFirstBackingIndex(dataStreamName).putAlias(new AliasMetadata.Builder(conflictingName)).build();
-        Metadata.Builder b = Metadata.builder().put(idx, false).put(newInstance(dataStreamName, List.of(idx.getIndex())));
+        Metadata.Builder b = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
+            .put(idx, false)
+            .put(newInstance(dataStreamName, List.of(idx.getIndex())));
 
         AssertionError e = expectThrows(AssertionError.class, b::build);
         assertThat(e.getMessage(), containsString("aliases [" + conflictingName + "] cannot refer to backing indices of data streams"));
@@ -1150,7 +1134,7 @@ public class MetadataTests extends ESTestCase {
         final List<Index> backingIndices = new ArrayList<>();
         final int numBackingIndices = randomIntBetween(2, 5);
         int lastBackingIndexNum = 0;
-        Metadata.Builder b = Metadata.builder();
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         for (int k = 1; k <= numBackingIndices; k++) {
             lastBackingIndexNum = randomIntBetween(lastBackingIndexNum + 1, lastBackingIndexNum + 50);
             IndexMetadata im = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, lastBackingIndexNum))
@@ -1169,7 +1153,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testBuildIndicesLookupForDataStreams() {
-        Metadata.Builder b = Metadata.builder();
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         int numDataStreams = randomIntBetween(2, 8);
         for (int i = 0; i < numDataStreams; i++) {
             String name = "data-stream-" + i;
@@ -1193,7 +1177,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testBuildIndicesLookupForDataStreamAliases() {
-        Metadata.Builder b = Metadata.builder();
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
 
         addDataStream("d1", b);
         addDataStream("d2", b);
@@ -1237,20 +1221,21 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamAliasValidation() {
-        Metadata.Builder b = Metadata.builder();
+        final ProjectId projectId = new ProjectId(randomUUID());
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(projectId);
         addDataStream("my-alias", b);
         b.put("my-alias", "my-alias", null, null);
         var e = expectThrows(IllegalStateException.class, b::build);
         assertThat(e.getMessage(), containsString("data stream alias and data stream have the same name (my-alias)"));
 
-        b = Metadata.builder();
+        b = Metadata.builder().usingDefaultProject(projectId);
         addDataStream("d1", b);
         addDataStream("my-alias", b);
         b.put("my-alias", "d1", null, null);
         e = expectThrows(IllegalStateException.class, b::build);
         assertThat(e.getMessage(), containsString("data stream alias and data stream have the same name (my-alias)"));
 
-        b = Metadata.builder();
+        b = Metadata.builder().usingDefaultProject(projectId);
         b.put(
             IndexMetadata.builder("index1")
                 .settings(indexSettings(IndexVersion.current(), 1, 0))
@@ -1264,7 +1249,8 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamAliasValidationRestoreScenario() {
-        Metadata.Builder b = Metadata.builder();
+        final ProjectId projectId = new ProjectId(randomUUID());
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(projectId);
         b.dataStreams(
             Map.of("my-alias", createDataStream("my-alias")),
             Map.of("my-alias", new DataStreamAlias("my-alias", List.of("my-alias"), null, null))
@@ -1272,7 +1258,7 @@ public class MetadataTests extends ESTestCase {
         var e = expectThrows(IllegalStateException.class, b::build);
         assertThat(e.getMessage(), containsString("data stream alias and data stream have the same name (my-alias)"));
 
-        b = Metadata.builder();
+        b = Metadata.builder().usingDefaultProject(projectId);
         b.dataStreams(
             Map.of("d1", createDataStream("d1"), "my-alias", createDataStream("my-alias")),
             Map.of("my-alias", new DataStreamAlias("my-alias", List.of("d1"), null, null))
@@ -1280,7 +1266,7 @@ public class MetadataTests extends ESTestCase {
         e = expectThrows(IllegalStateException.class, b::build);
         assertThat(e.getMessage(), containsString("data stream alias and data stream have the same name (my-alias)"));
 
-        b = Metadata.builder();
+        b = Metadata.builder().usingDefaultProject(projectId);
         b.put(
             IndexMetadata.builder("index1")
                 .settings(indexSettings(IndexVersion.current(), 1, 0))
@@ -1345,7 +1331,10 @@ public class MetadataTests extends ESTestCase {
     public void testValidateDataStreamsNoConflicts() {
         Metadata metadata = createIndices(5, 10, "foo-datastream").metadata;
         // don't expect any exception when validating a system without indices that would conflict with future backing indices
-        assertDataStreams(metadata.getIndices(), (DataStreamMetadata) metadata.customs().get(DataStreamMetadata.TYPE));
+        ProjectMetadata.Builder.assertDataStreams(
+            metadata.getIndices(),
+            (DataStreamMetadata) metadata.project().customs().get(DataStreamMetadata.TYPE)
+        );
     }
 
     public void testValidateDataStreamsIgnoresIndicesWithoutCounter() {
@@ -1371,7 +1360,10 @@ public class MetadataTests extends ESTestCase {
             .build();
         // don't expect any exception when validating against non-backing indices that don't conform to the backing indices naming
         // convention
-        assertDataStreams(metadata.getIndices(), (DataStreamMetadata) metadata.customs().get(DataStreamMetadata.TYPE));
+        ProjectMetadata.Builder.assertDataStreams(
+            metadata.getIndices(),
+            (DataStreamMetadata) metadata.project().customs().get(DataStreamMetadata.TYPE)
+        );
     }
 
     public void testValidateDataStreamsAllowsNamesThatStartsWithPrefix() {
@@ -1385,23 +1377,27 @@ public class MetadataTests extends ESTestCase {
             .build();
         // don't expect any exception when validating against (potentially backing) indices that can't create conflict because of
         // additional text before number
-        assertDataStreams(metadata.getIndices(), (DataStreamMetadata) metadata.customs().get(DataStreamMetadata.TYPE));
+        ProjectMetadata.Builder.assertDataStreams(
+            metadata.getIndices(),
+            (DataStreamMetadata) metadata.project().customs().get(DataStreamMetadata.TYPE)
+        );
     }
 
     public void testValidateDataStreamsForNullDataStreamMetadata() {
         Metadata metadata = Metadata.builder()
+            .usingDefaultProject(new ProjectId(randomUUID()))
             .put(IndexMetadata.builder("foo-index").settings(settings(IndexVersion.current())).numberOfShards(1).numberOfReplicas(1))
             .build();
 
         try {
-            assertDataStreams(metadata.getIndices(), DataStreamMetadata.EMPTY);
+            ProjectMetadata.Builder.assertDataStreams(metadata.getIndices(), DataStreamMetadata.EMPTY);
         } catch (Exception e) {
             fail("did not expect exception when validating a system without any data streams but got " + e.getMessage());
         }
     }
 
     public void testDataStreamAliases() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
 
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-eu"));
         assertThat(mdBuilder.put("logs-postgres", "logs-postgres-eu", null, null), is(true));
@@ -1420,7 +1416,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamReferToNonExistingDataStream() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
 
         Exception e = expectThrows(IllegalArgumentException.class, () -> mdBuilder.put("logs-postgres", "logs-postgres-eu", null, null));
         assertThat(e.getMessage(), equalTo("alias [logs-postgres] refers to a non existing data stream [logs-postgres-eu]"));
@@ -1433,7 +1429,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDeleteDataStreamShouldUpdateAlias() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-eu"));
         mdBuilder.put("logs-postgres", "logs-postgres-eu", null, null);
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-us"));
@@ -1469,7 +1465,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDeleteDataStreamAlias() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-eu"));
         mdBuilder.put("logs-postgres", "logs-postgres-eu", null, null);
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-us"));
@@ -1505,7 +1501,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDeleteDataStreamAliasMustExists() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-eu"));
         mdBuilder.put("logs-postgres", "logs-postgres-eu", null, null);
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-us"));
@@ -1525,7 +1521,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamWriteAlias() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-replicated"));
         mdBuilder.put("logs-postgres", "logs-postgres-replicated", null, null);
 
@@ -1544,7 +1540,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamMultipleWriteAlias() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-foobar"));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-barbaz"));
         mdBuilder.put("logs", "logs-foobar", true, null);
@@ -1557,7 +1553,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamWriteAliasUnset() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-replicated"));
         mdBuilder.put("logs-postgres", "logs-postgres-replicated", true, null);
 
@@ -1578,7 +1574,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamWriteAliasChange() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-primary"));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-replicated"));
         assertThat(mdBuilder.put("logs-postgres", "logs-postgres-primary", true, null), is(true));
@@ -1606,7 +1602,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamWriteRemoveAlias() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-primary"));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-replicated"));
         assertThat(mdBuilder.put("logs-postgres", "logs-postgres-primary", true, null), is(true));
@@ -1629,7 +1625,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     public void testDataStreamWriteRemoveDataStream() {
-        Metadata.Builder mdBuilder = Metadata.builder();
+        Metadata.Builder mdBuilder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-primary"));
         mdBuilder.put(DataStreamTestHelper.randomInstance("logs-postgres-replicated"));
         assertThat(mdBuilder.put("logs-postgres", "logs-postgres-primary", true, null), is(true));
@@ -1657,11 +1653,18 @@ public class MetadataTests extends ESTestCase {
         String aliasName = "my-alias";
         String dataStreamName = "logs-mysql-prod";
         String dataStreamAliasName = "logs-mysql";
-        Metadata previous = Metadata.builder().build();
+        final ProjectId projectId = new ProjectId(randomUUID());
+        Metadata previous;
+        {
+            var builder = Metadata.builder();
+            // Force the creation of a project
+            builder.project(projectId);
+            previous = builder.build();
+        }
 
         // Things that should change indices lookup
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata idx = DataStreamTestHelper.createFirstBackingIndex(dataStreamName).build();
             builder.put(idx, true);
             DataStream dataStream = newInstance(dataStreamName, List.of(idx.getIndex()));
@@ -1671,21 +1674,21 @@ public class MetadataTests extends ESTestCase {
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             builder.put(dataStreamAliasName, dataStreamName, false, null);
             Metadata metadata = builder.build();
             assertThat(previous.getIndicesLookup(), not(sameInstance(metadata.getIndicesLookup())));
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             builder.put(dataStreamAliasName, dataStreamName, true, null);
             Metadata metadata = builder.build();
             assertThat(previous.getIndicesLookup(), not(sameInstance(metadata.getIndicesLookup())));
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             builder.put(
                 IndexMetadata.builder(indexName)
                     .settings(settings(IndexVersion.current()))
@@ -1698,7 +1701,7 @@ public class MetadataTests extends ESTestCase {
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata.Builder imBuilder = IndexMetadata.builder(builder.get(indexName));
             imBuilder.putAlias(AliasMetadata.builder(aliasName).build());
             builder.put(imBuilder);
@@ -1707,7 +1710,7 @@ public class MetadataTests extends ESTestCase {
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata.Builder imBuilder = IndexMetadata.builder(builder.get(indexName));
             imBuilder.putAlias(AliasMetadata.builder(aliasName).writeIndex(true).build());
             builder.put(imBuilder);
@@ -1716,7 +1719,7 @@ public class MetadataTests extends ESTestCase {
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata.Builder imBuilder = IndexMetadata.builder(builder.get(indexName));
             Settings.Builder sBuilder = Settings.builder()
                 .put(builder.get(indexName).getSettings())
@@ -1730,7 +1733,7 @@ public class MetadataTests extends ESTestCase {
 
         // Things that shouldn't change indices lookup
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata.Builder imBuilder = IndexMetadata.builder(builder.get(indexName));
             imBuilder.numberOfReplicas(2);
             builder.put(imBuilder);
@@ -1739,7 +1742,7 @@ public class MetadataTests extends ESTestCase {
             previous = metadata;
         }
         {
-            Metadata.Builder builder = Metadata.builder(previous);
+            Metadata.Builder builder = Metadata.builder(previous).usingDefaultProject(projectId);
             IndexMetadata.Builder imBuilder = IndexMetadata.builder(builder.get(indexName));
             Settings.Builder sBuilder = Settings.builder()
                 .put(builder.get(indexName).getSettings())
@@ -1756,7 +1759,8 @@ public class MetadataTests extends ESTestCase {
         int numAliases = randomIntBetween(32, 64);
         int numIndicesPerAlias = randomIntBetween(8, 16);
 
-        Metadata.Builder builder = Metadata.builder();
+        final ProjectId projectId = new ProjectId(randomUUID());
+        Metadata.Builder builder = Metadata.builder().usingDefaultProject(projectId);
         for (int i = 0; i < numAliases; i++) {
             String aliasName = "alias-" + i;
             for (int j = 0; j < numIndicesPerAlias; j++) {
@@ -1789,7 +1793,7 @@ public class MetadataTests extends ESTestCase {
         }
 
         // Add a new alias and index
-        builder = Metadata.builder(metadata);
+        builder = Metadata.builder(metadata).usingDefaultProject(projectId);
         String newAliasName = "alias-new";
         {
             builder.put(
@@ -1815,7 +1819,7 @@ public class MetadataTests extends ESTestCase {
         assertThat(metadata.aliasedIndices(newAliasName), empty());
 
         // Add a new alias that points to existing indices
-        builder = Metadata.builder(metadata);
+        builder = Metadata.builder(metadata).usingDefaultProject(projectId);
         {
             IndexMetadata.Builder imBuilder = new IndexMetadata.Builder(metadata.index("alias-1-0"));
             imBuilder.putAlias(new AliasMetadata.Builder(newAliasName));
@@ -2062,7 +2066,7 @@ public class MetadataTests extends ESTestCase {
     }
 
     private void metadataWithIndices(IndexMetadata... indices) {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         for (var cursor : indices) {
             builder.put(cursor, false);
         }
@@ -2088,116 +2092,6 @@ public class MetadataTests extends ESTestCase {
             .build();
     }
 
-    public void testMappingDuplication() {
-        final Set<String> randomMappingDefinitions;
-        {
-            int numEntries = randomIntBetween(4, 8);
-            randomMappingDefinitions = Sets.newHashSetWithExpectedSize(numEntries);
-            for (int i = 0; i < numEntries; i++) {
-                Map<String, Object> mapping = RandomAliasActionsGenerator.randomMap(2);
-                String mappingAsString = Strings.toString((builder, params) -> builder.mapContents(mapping));
-                randomMappingDefinitions.add(mappingAsString);
-            }
-        }
-
-        Metadata metadata;
-        int numIndices = randomIntBetween(16, 32);
-        {
-            String[] definitions = randomMappingDefinitions.toArray(String[]::new);
-            Metadata.Builder mb = new Metadata.Builder();
-            for (int i = 0; i < numIndices; i++) {
-                IndexMetadata.Builder indexBuilder = IndexMetadata.builder("index-" + i)
-                    .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
-                    .putMapping(definitions[i % randomMappingDefinitions.size()])
-                    .numberOfShards(1)
-                    .numberOfReplicas(0);
-                if (randomBoolean()) {
-                    mb.put(indexBuilder);
-                } else {
-                    mb.put(indexBuilder.build(), true);
-                }
-            }
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size()));
-        assertThat(
-            metadata.indices().values().stream().map(IndexMetadata::mapping).collect(Collectors.toSet()),
-            hasSize(metadata.getMappingsByHash().size())
-        );
-
-        // Add a new index with a new index with known mapping:
-        MappingMetadata mapping = metadata.indices().get("index-" + randomInt(numIndices - 1)).mapping();
-        MappingMetadata entry = metadata.getMappingsByHash().get(mapping.getSha256());
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.put(
-                IndexMetadata.builder("index-" + numIndices)
-                    .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
-                    .putMapping(mapping)
-                    .numberOfShards(1)
-                    .numberOfReplicas(0)
-            );
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size()));
-        assertThat(metadata.getMappingsByHash().get(mapping.getSha256()), equalTo(entry));
-
-        // Remove index and ensure mapping cache stays the same
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.remove("index-" + numIndices);
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size()));
-        assertThat(metadata.getMappingsByHash().get(mapping.getSha256()), equalTo(entry));
-
-        // Update a mapping of an index:
-        IndexMetadata luckyIndex = metadata.index("index-" + randomInt(numIndices - 1));
-        entry = metadata.getMappingsByHash().get(luckyIndex.mapping().getSha256());
-        MappingMetadata updatedMapping = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, Map.of("mapping", "updated"));
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.put(IndexMetadata.builder(luckyIndex).putMapping(updatedMapping));
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size() + 1));
-        assertThat(metadata.getMappingsByHash().get(luckyIndex.mapping().getSha256()), equalTo(entry));
-        assertThat(metadata.getMappingsByHash().get(updatedMapping.getSha256()), equalTo(updatedMapping));
-
-        // Remove the index with updated mapping
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.remove(luckyIndex.getIndex().getName());
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size()));
-        assertThat(metadata.getMappingsByHash().get(updatedMapping.getSha256()), nullValue());
-
-        // Add an index with new mapping and then later remove it:
-        MappingMetadata newMapping = new MappingMetadata(MapperService.SINGLE_MAPPING_NAME, Map.of("new", "mapping"));
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.put(
-                IndexMetadata.builder("index-" + numIndices)
-                    .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
-                    .putMapping(newMapping)
-                    .numberOfShards(1)
-                    .numberOfReplicas(0)
-            );
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size() + 1));
-        assertThat(metadata.getMappingsByHash().get(newMapping.getSha256()), equalTo(newMapping));
-
-        {
-            Metadata.Builder mb = new Metadata.Builder(metadata);
-            mb.remove("index-" + numIndices);
-            metadata = mb.build();
-        }
-        assertThat(metadata.getMappingsByHash(), aMapWithSize(randomMappingDefinitions.size()));
-        assertThat(metadata.getMappingsByHash().get(newMapping.getSha256()), nullValue());
-    }
-
     public void testWithLifecycleState() {
         String indexName = "my-index";
         String indexUUID = randomAlphaOfLength(10);
@@ -2212,6 +2106,11 @@ public class MetadataTests extends ESTestCase {
             .build();
         IndexMetadata index1 = metadata1.index(indexName);
         assertThat(metadata1.getIndicesLookup(), notNullValue());
+        if (index1 == null) {
+            // This fails sometimes, but doesn't reproduce reliably
+            logger.warn("This metadata is producing incorrect results: {}", Strings.toString(metadata1));
+        }
+        assertThat("Index [" + indexName + "] should exist", index1, notNullValue());
         assertThat(index1.getLifecycleExecutionState(), sameInstance(LifecycleExecutionState.EMPTY_STATE));
 
         LifecycleExecutionState state = LifecycleExecutionState.builder().setPhase("phase").setAction("action").setStep("step").build();
@@ -2250,8 +2149,15 @@ public class MetadataTests extends ESTestCase {
         assertSame(instance, deserializedDiff.apply(instance));
     }
 
-    public void testChunkedToXContent() {
+    public void testChunkedToXContentWithSingleProject() {
         AbstractChunkedSerializingTestCase.assertChunkCount(randomMetadata(randomInt(10)), MetadataTests::expectedChunkCount);
+    }
+
+    public void testChunkedToXContentWthMultipleProjects() {
+        AbstractChunkedSerializingTestCase.assertChunkCount(
+            randomMetadata(randomIntBetween(2, 8), () -> randomInt(10)),
+            MetadataTests::expectedChunkCount
+        );
     }
 
     private static int expectedChunkCount(Metadata metadata) {
@@ -2267,28 +2173,11 @@ public class MetadataTests extends ESTestCase {
         if (context != Metadata.XContentContext.API && metadata.persistentSettings().isEmpty() == false) {
             chunkCount += 1;
         }
-        // 2 chunks wrapping templates and one chunk per template
-        chunkCount += 2 + metadata.templates().size();
-        // 1 chunk for each index + 2 to wrap the indices field
-        chunkCount += 2 + metadata.indices().size();
-
-        for (Metadata.Custom custom : metadata.customs().values()) {
+        for (ClusterMetadata.ClusterCustom custom : metadata.customs().values()) {
             chunkCount += 2;
 
-            if (custom instanceof ComponentTemplateMetadata componentTemplateMetadata) {
-                chunkCount += 2 + componentTemplateMetadata.componentTemplates().size();
-            } else if (custom instanceof ComposableIndexTemplateMetadata composableIndexTemplateMetadata) {
-                chunkCount += 2 + composableIndexTemplateMetadata.indexTemplates().size();
-            } else if (custom instanceof DataStreamMetadata dataStreamMetadata) {
-                chunkCount += 4 + dataStreamMetadata.dataStreams().size() + dataStreamMetadata.getDataStreamAliases().size();
-            } else if (custom instanceof DesiredNodesMetadata) {
+            if (custom instanceof DesiredNodesMetadata) {
                 chunkCount += 1;
-            } else if (custom instanceof FeatureMigrationResults featureMigrationResults) {
-                chunkCount += 2 + featureMigrationResults.getFeatureStatuses().size();
-            } else if (custom instanceof IndexGraveyard indexGraveyard) {
-                chunkCount += 2 + indexGraveyard.getTombstones().size();
-            } else if (custom instanceof IngestMetadata ingestMetadata) {
-                chunkCount += 2 + ingestMetadata.getPipelines().size();
             } else if (custom instanceof NodesShutdownMetadata nodesShutdownMetadata) {
                 chunkCount += 2 + nodesShutdownMetadata.getAll().size();
             } else if (custom instanceof PersistentTasksCustomMetadata persistentTasksCustomMetadata) {
@@ -2302,6 +2191,9 @@ public class MetadataTests extends ESTestCase {
                 );
             }
         }
+
+        // 2 chunks for wrapping projects + 1 field-name per project + size of project chunks
+        chunkCount += 2 + metadata.projects().stream().mapToLong(p -> 1 + ProjectMetadataTests.expectedChunkCount(p)).sum();
 
         // 2 chunks for wrapping reserved state + 1 chunk for each item
         chunkCount += 2 + metadata.reservedStateMetadata().size();
@@ -2321,33 +2213,45 @@ public class MetadataTests extends ESTestCase {
     @SuppressForbidden(reason = "need access to all fields, they are mostly private")
     public void testEnsureMetadataFieldCheckedForGlobalStateChanges() {
         Set<String> checkedForGlobalStateChanges = Set.of(
-            "coordinationMetadata",
-            "persistentSettings",
-            "hashesOfConsistentSettings",
-            "templates",
-            "clusterUUID",
-            "clusterUUIDCommitted",
-            "customs",
+            "clusterMetadata.coordinationMetadata",
+            "clusterMetadata.persistentSettings",
+            "clusterMetadata.hashesOfConsistentSettings",
+            "clusterMetadata.clusterUUID",
+            "clusterMetadata.clusterUUIDCommitted",
+            "clusterMetadata.customs",
+            "projects.templates",
+            "projects.customs",
             "reservedStateMetadata"
         );
         Set<String> excludedFromGlobalStateCheck = Set.of(
             "version",
-            "transientSettings",
-            "settings",
-            "indices",
-            "aliasedIndices",
-            "totalNumberOfShards",
-            "totalOpenIndexShards",
-            "allIndices",
-            "visibleIndices",
-            "allOpenIndices",
-            "visibleOpenIndices",
-            "allClosedIndices",
-            "visibleClosedIndices",
-            "indicesLookup",
-            "mappingsByHash",
-            "oldestIndexVersion"
+            "clusterMetadata.transientSettings",
+            "clusterMetadata.settings",
+            "projects.id",
+            "projects.indices",
+            "projects.aliasedIndices",
+            "projects.totalNumberOfShards",
+            "projects.totalOpenIndexShards",
+            "projects.allIndices",
+            "projects.visibleIndices",
+            "projects.allOpenIndices",
+            "projects.visibleOpenIndices",
+            "projects.allClosedIndices",
+            "projects.visibleClosedIndices",
+            "projects.indicesLookup",
+            "projects.mappingsByHash",
+            "projects.oldestIndexVersion"
         );
+        // Maps from a top-level field-name, to the type that should be introspected for that field
+        Map<String, Class<?>> nestedObjects = Map.ofEntries(
+            Map.entry("clusterMetadata", ClusterMetadata.class),
+            Map.entry("projects", ProjectMetadata.class)
+        );
+
+        // Get all field names for a class
+        Function<Class<?>, Stream<String>> classFields = cls -> Arrays.stream(cls.getDeclaredFields())
+            .filter(f -> Modifier.isStatic(f.getModifiers()) == false)
+            .map(Field::getName);
 
         var diff = new HashSet<>(checkedForGlobalStateChanges);
         diff.removeAll(excludedFromGlobalStateCheck);
@@ -2355,17 +2259,25 @@ public class MetadataTests extends ESTestCase {
         // sanity check that the two field sets are mutually exclusive
         assertEquals(checkedForGlobalStateChanges, diff);
 
+        var allFields = classFields.apply(Metadata.class).flatMap(f -> {
+            var nestedClass = nestedObjects.get(f);
+            if (nestedClass != null) {
+                return classFields.apply(nestedClass).map(child -> f + "." + child);
+            } else {
+                return Stream.of(f);
+            }
+        });
+        var unclassifiedFields = allFields.filter(
+            n -> (checkedForGlobalStateChanges.contains(n) || excludedFromGlobalStateCheck.contains(n)) == false
+        ).collect(Collectors.toSet());
+
         // any declared non-static field in metadata must be either in the list of fields
         // we check for global state changes, or in the fields excluded from the global state check.
-        var unclassifiedFields = Arrays.stream(Metadata.class.getDeclaredFields())
-            .filter(f -> Modifier.isStatic(f.getModifiers()) == false)
-            .map(Field::getName)
-            .filter(n -> (checkedForGlobalStateChanges.contains(n) || excludedFromGlobalStateCheck.contains(n)) == false)
-            .collect(Collectors.toSet());
         assertThat(unclassifiedFields, empty());
     }
 
     public void testIsTimeSeriesTemplate() throws IOException {
+        final ProjectId projectId = new ProjectId(randomUUID());
         var template = new Template(Settings.builder().put("index.mode", "time_series").build(), new CompressedXContent("{}"), null);
         // Settings in component template:
         {
@@ -2375,7 +2287,11 @@ public class MetadataTests extends ESTestCase {
                 .componentTemplates(List.of("component_template_1"))
                 .dataStreamTemplate(new ComposableIndexTemplate.DataStreamTemplate())
                 .build();
-            Metadata m = Metadata.builder().put("component_template_1", componentTemplate).put("index_template_1", indexTemplate).build();
+            Metadata m = Metadata.builder()
+                .usingDefaultProject(projectId)
+                .put("component_template_1", componentTemplate)
+                .put("index_template_1", indexTemplate)
+                .build();
             assertThat(m.isTimeSeriesTemplate(indexTemplate), is(true));
         }
         // Settings in composable index template:
@@ -2387,7 +2303,11 @@ public class MetadataTests extends ESTestCase {
                 .componentTemplates(List.of("component_template_1"))
                 .dataStreamTemplate(new ComposableIndexTemplate.DataStreamTemplate())
                 .build();
-            Metadata m = Metadata.builder().put("component_template_1", componentTemplate).put("index_template_1", indexTemplate).build();
+            Metadata m = Metadata.builder()
+                .usingDefaultProject(projectId)
+                .put("component_template_1", componentTemplate)
+                .put("index_template_1", indexTemplate)
+                .build();
             assertThat(m.isTimeSeriesTemplate(indexTemplate), is(true));
         }
     }
@@ -2397,31 +2317,19 @@ public class MetadataTests extends ESTestCase {
     }
 
     public static Metadata randomMetadata(int numDataStreams) {
-        Metadata.Builder md = Metadata.builder()
-            .put(buildIndexMetadata("index", "alias", randomBoolean() ? null : randomBoolean()).build(), randomBoolean())
-            .put(
-                IndexTemplateMetadata.builder("template" + randomAlphaOfLength(3))
-                    .patterns(Arrays.asList("bar-*", "foo-*"))
-                    .settings(Settings.builder().put("random_index_setting_" + randomAlphaOfLength(3), randomAlphaOfLength(5)).build())
-                    .build()
-            )
+        return randomMetadata(1, () -> numDataStreams);
+    }
+
+    public static Metadata randomMetadata(int projectCount, IntSupplier numberOfDataStreams) {
+        final Metadata.Builder md = Metadata.builder()
             .persistentSettings(Settings.builder().put("setting" + randomAlphaOfLength(3), randomAlphaOfLength(4)).build())
             .transientSettings(Settings.builder().put("other_setting" + randomAlphaOfLength(3), randomAlphaOfLength(4)).build())
             .clusterUUID("uuid" + randomAlphaOfLength(3))
             .clusterUUIDCommitted(randomBoolean())
-            .indexGraveyard(IndexGraveyardTests.createRandom())
-            .version(randomNonNegativeLong())
-            .put("component_template_" + randomAlphaOfLength(3), ComponentTemplateTests.randomInstance())
-            .put("index_template_v2_" + randomAlphaOfLength(3), ComposableIndexTemplateTests.randomInstance());
-
-        for (int k = 0; k < numDataStreams; k++) {
-            DataStream randomDataStream = DataStreamTestHelper.randomInstance();
-            for (Index index : randomDataStream.getIndices()) {
-                md.put(DataStreamTestHelper.getIndexMetadataBuilderForIndex(index));
-            }
-            md.put(randomDataStream);
+            .version(randomNonNegativeLong());
+        for (int p = 0; p < projectCount; p++) {
+            md.put(ProjectMetadataTests.randomMetadata(numberOfDataStreams.getAsInt()));
         }
-
         return md.build();
     }
 
@@ -2429,7 +2337,7 @@ public class MetadataTests extends ESTestCase {
         // create some indices that do not back a data stream
         final List<Index> indices = new ArrayList<>();
         int lastIndexNum = randomIntBetween(9, 50);
-        Metadata.Builder b = Metadata.builder();
+        Metadata.Builder b = Metadata.builder().usingDefaultProject(new ProjectId(randomUUID()));
         for (int k = 1; k <= numIndices; k++) {
             IndexMetadata im = IndexMetadata.builder(DataStream.getDefaultBackingIndexName("index", lastIndexNum))
                 .settings(settings(IndexVersion.current()))
@@ -2470,7 +2378,7 @@ public class MetadataTests extends ESTestCase {
         }
     }
 
-    private static class TestCustomMetadata implements Metadata.Custom {
+    private static class TestCustomMetadata implements ClusterMetadata.ClusterCustom {
 
         @Override
         public Iterator<? extends ToXContent> toXContentChunked(ToXContent.Params params) {
@@ -2478,7 +2386,7 @@ public class MetadataTests extends ESTestCase {
         }
 
         @Override
-        public Diff<Metadata.Custom> diff(Metadata.Custom previousState) {
+        public Diff<ClusterMetadata.ClusterCustom> diff(ClusterMetadata.ClusterCustom previousState) {
             return null;
         }
 

@@ -151,10 +151,10 @@ public class TransportDeleteDanglingIndexAction extends AcknowledgedTransportMas
 
         Metadata.Builder metaDataBuilder = Metadata.builder(metaData);
 
-        final IndexGraveyard newGraveyard = IndexGraveyard.builder(metaDataBuilder.indexGraveyard())
+        final IndexGraveyard newGraveyard = IndexGraveyard.builder(metaDataBuilder.project().indexGraveyard())
             .addTombstone(indexToDelete)
             .build(settings);
-        metaDataBuilder.indexGraveyard(newGraveyard);
+        metaDataBuilder.project().indexGraveyard(newGraveyard);
 
         return ClusterState.builder(currentState).metadata(metaDataBuilder.build()).build();
     }

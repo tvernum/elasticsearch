@@ -408,7 +408,7 @@ public class TemplateUpgradeServiceTests extends ESTestCase {
     }
 
     public static Metadata randomMetadata(IndexTemplateMetadata... templates) {
-        Metadata.Builder builder = Metadata.builder();
+        Metadata.Builder builder = Metadata.builder().createDefaultProject();
         for (IndexTemplateMetadata template : templates) {
             builder.put(template);
         }

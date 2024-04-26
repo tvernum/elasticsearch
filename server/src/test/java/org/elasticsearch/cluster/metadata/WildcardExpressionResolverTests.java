@@ -36,6 +36,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testConvertWildcardsJustIndicesTests() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX"))
             .put(indexBuilder("testXYY"))
             .put(indexBuilder("testYYY"))
@@ -109,6 +110,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testConvertWildcardsTests() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX").putAlias(AliasMetadata.builder("alias1")).putAlias(AliasMetadata.builder("alias2")))
             .put(indexBuilder("testXYY").putAlias(AliasMetadata.builder("alias2")))
             .put(indexBuilder("testYYY").putAlias(AliasMetadata.builder("alias3")))
@@ -144,6 +146,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testConvertWildcardsOpenClosedIndicesTests() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX").state(IndexMetadata.State.OPEN))
             .put(indexBuilder("testXXY").state(IndexMetadata.State.OPEN))
             .put(indexBuilder("testXYY").state(IndexMetadata.State.CLOSE))
@@ -201,6 +204,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
     // issue #13334
     public void testMultipleWildcards() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX"))
             .put(indexBuilder("testXXY"))
             .put(indexBuilder("testXYY"))
@@ -244,6 +248,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testAll() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("testXXX"))
             .put(indexBuilder("testXYY"))
             .put(indexBuilder("testYYY"));
@@ -284,6 +289,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
         {
             // hidden index with hidden alias should not be returned
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(
                     indexBuilder("index-hidden-alias", true) // index hidden
                         .state(State.OPEN)
@@ -303,6 +309,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
         {
             // hidden index with visible alias should be returned
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(
                     indexBuilder("index-visible-alias", true) // index hidden
                         .state(State.OPEN)
@@ -343,6 +350,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
         {
             // visible data streams should be returned by _all even show backing indices are hidden
             Metadata.Builder mdBuilder = Metadata.builder()
+                .createDefaultProject()
                 .put(firstBackingIndexMetadata, true)
                 .put(DataStreamTestHelper.newInstance(dataStreamName, List.of(firstBackingIndexMetadata.getIndex())));
 
@@ -369,7 +377,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
             // if data stream itself is hidden, backing indices should not be returned
             var dataStream = DataStream.builder(dataStreamName, List.of(firstBackingIndexMetadata.getIndex())).setHidden(true).build();
 
-            Metadata.Builder mdBuilder = Metadata.builder().put(firstBackingIndexMetadata, true).put(dataStream);
+            Metadata.Builder mdBuilder = Metadata.builder().createDefaultProject().put(firstBackingIndexMetadata, true).put(dataStream);
 
             ClusterState state = ClusterState.builder(new ClusterName("_name")).metadata(mdBuilder).build();
 
@@ -390,6 +398,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testResolveEmpty() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(
                 indexBuilder("index_open").state(State.OPEN)
                     .putAlias(AliasMetadata.builder("alias_open"))
@@ -467,6 +476,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testResolveAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo_foo").state(State.OPEN))
             .put(indexBuilder("bar_bar").state(State.OPEN))
             .put(indexBuilder("foo_index").state(State.OPEN).putAlias(AliasMetadata.builder("foo_alias")))
@@ -620,6 +630,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
         IndexMetadata secondBackingIndexMetadata = createBackingIndex(dataStreamName, 2, epochMillis).build();
 
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo_foo").state(State.OPEN))
             .put(indexBuilder("bar_bar").state(State.OPEN))
             .put(indexBuilder("foo_index").state(State.OPEN).putAlias(AliasMetadata.builder("foo_alias")))
@@ -783,6 +794,7 @@ public class WildcardExpressionResolverTests extends ESTestCase {
 
     public void testMatchesConcreteIndicesWildcardAndAliases() {
         Metadata.Builder mdBuilder = Metadata.builder()
+            .createDefaultProject()
             .put(indexBuilder("foo_foo").state(State.OPEN))
             .put(indexBuilder("bar_bar").state(State.OPEN))
             .put(indexBuilder("foo_index").state(State.OPEN).putAlias(AliasMetadata.builder("foo_alias")))

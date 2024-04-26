@@ -138,6 +138,7 @@ public class MetadataUpdateSettingsServiceTests extends ESTestCase {
 
     private Metadata mockMetadata(Index index, Settings indexSettings) {
         return Metadata.builder()
+            .createDefaultProject()
             .put(IndexMetadata.builder(index.getName()).settings(Settings.builder().put(indexSettings)).build(), true)
             .build();
     }

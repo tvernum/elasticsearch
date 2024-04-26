@@ -447,7 +447,7 @@ public class ScriptServiceTests extends ESTestCase {
         ClusterState cs = ClusterState.builder(new ClusterName("_name"))
             .metadata(
                 Metadata.builder()
-                    .putCustom(
+                    .putProjectCustom(
                         ScriptMetadata.TYPE,
                         new ScriptMetadata.Builder(null).storeScript("_id", StoredScriptSource.parse(new BytesArray("""
                             {"script": {"lang": "_lang", "source": "abc"} }"""), XContentType.JSON)).build()

@@ -35,7 +35,7 @@ import static org.mockito.Mockito.when;
 public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCase {
 
     public void testValidateRequestWithNonexistentAlias() {
-        ClusterState cs = ClusterState.EMPTY_STATE;
+        ClusterState cs = clusterStateWithSingleEmptyProject();
         String nonExistentAlias = "nonexistent_alias";
         IllegalArgumentException e = expectThrows(
             IllegalArgumentException.class,
@@ -59,6 +59,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("foo")
                             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -88,6 +89,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("foo")
                             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -117,6 +119,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("foo1")
                             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -168,6 +171,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("foo1")
                             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -211,6 +215,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(
                         IndexMetadata.builder("foo1")
                             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -275,6 +280,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(foo1, false)
                     .put(foo2, false)
                     .put(
@@ -334,6 +340,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(foo1, false)
                     .put(foo2, false)
                     .put(
@@ -393,6 +400,7 @@ public class MetadataMigrateToDataStreamServiceTests extends MapperServiceTestCa
         ClusterState cs = ClusterState.builder(new ClusterName("dummy"))
             .metadata(
                 Metadata.builder()
+                    .createDefaultProject()
                     .put(foo1, false)
                     .put(foo2, false)
                     .put(

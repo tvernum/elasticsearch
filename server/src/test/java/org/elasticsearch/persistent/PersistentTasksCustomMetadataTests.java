@@ -13,8 +13,8 @@ import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.Diff;
 import org.elasticsearch.cluster.NamedDiff;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
-import org.elasticsearch.cluster.metadata.Metadata.Custom;
 import org.elasticsearch.cluster.node.DiscoveryNodeUtils;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.UUIDs;
@@ -58,7 +58,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 
-public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffableSerializationTestCase<Custom> {
+public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffableSerializationTestCase<ClusterMetadata.ClusterCustom> {
 
     @Override
     protected PersistentTasksCustomMetadata createTestInstance() {
@@ -76,12 +76,12 @@ public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffabl
     }
 
     @Override
-    protected Custom mutateInstance(Custom instance) {
+    protected ClusterMetadata.ClusterCustom mutateInstance(ClusterMetadata.ClusterCustom instance) {
         return null;// TODO implement https://github.com/elastic/elasticsearch/issues/25929
     }
 
     @Override
-    protected Writeable.Reader<Custom> instanceReader() {
+    protected Writeable.Reader<ClusterMetadata.ClusterCustom> instanceReader() {
         return PersistentTasksCustomMetadata::new;
     }
 
@@ -98,7 +98,7 @@ public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffabl
     }
 
     @Override
-    protected Custom makeTestChanges(Custom testInstance) {
+    protected ClusterMetadata.ClusterCustom makeTestChanges(ClusterMetadata.ClusterCustom testInstance) {
         Builder builder = PersistentTasksCustomMetadata.builder((PersistentTasksCustomMetadata) testInstance);
         switch (randomInt(3)) {
             case 0:
@@ -130,7 +130,7 @@ public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffabl
     }
 
     @Override
-    protected Writeable.Reader<Diff<Custom>> diffReader() {
+    protected Writeable.Reader<Diff<ClusterMetadata.ClusterCustom>> diffReader() {
         return PersistentTasksCustomMetadata::readDiffFrom;
     }
 
@@ -318,7 +318,7 @@ public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffabl
 
         ClusterState originalState = ClusterState.builder(new ClusterName("persistent-tasks-tests"))
             .nodes(nodes)
-            .metadata(Metadata.builder().putCustom(PersistentTasksCustomMetadata.TYPE, tasksBuilder.build()))
+            .metadata(Metadata.builder().putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasksBuilder.build()))
             .build();
         ClusterState returnedState = PersistentTasksCustomMetadata.disassociateDeadNodes(originalState);
         assertThat(originalState, sameInstance(returnedState));
@@ -352,7 +352,7 @@ public class PersistentTasksCustomMetadataTests extends ChunkedToXContentDiffabl
 
         ClusterState originalState = ClusterState.builder(new ClusterName("persistent-tasks-tests"))
             .nodes(nodes)
-            .metadata(Metadata.builder().putCustom(PersistentTasksCustomMetadata.TYPE, tasksBuilder.build()))
+            .metadata(Metadata.builder().putClusterCustom(PersistentTasksCustomMetadata.TYPE, tasksBuilder.build()))
             .build();
         ClusterState returnedState = PersistentTasksCustomMetadata.disassociateDeadNodes(originalState);
         assertThat(originalState, not(sameInstance(returnedState)));

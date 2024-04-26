@@ -14,6 +14,7 @@ import org.elasticsearch.TransportVersions;
 import org.elasticsearch.cluster.AbstractNamedDiffable;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.NamedDiff;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Iterators;
@@ -51,8 +52,11 @@ import static org.elasticsearch.xcontent.ConstructingObjectParser.constructorArg
 
 /**
  * A cluster state record that contains a list of all running persistent tasks
+ * @TODO[MultiProject] Should tasks be proejct or cluster scoped?
  */
-public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<Metadata.Custom> implements Metadata.Custom {
+public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<ClusterMetadata.ClusterCustom>
+    implements
+        ClusterMetadata.ClusterCustom {
 
     public static final String TYPE = "persistent_tasks";
     private static final String API_CONTEXT = Metadata.XContentContext.API.toString();
@@ -130,7 +134,7 @@ public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<M
     }
 
     public static PersistentTasksCustomMetadata getPersistentTasksCustomMetadata(ClusterState clusterState) {
-        return clusterState.getMetadata().custom(PersistentTasksCustomMetadata.TYPE);
+        return clusterState.getMetadata().clusterCustom(PersistentTasksCustomMetadata.TYPE);
     }
 
     /**
@@ -214,7 +218,7 @@ public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<M
 
     @SuppressWarnings("unchecked")
     public static <Params extends PersistentTaskParams> PersistentTask<Params> getTaskWithId(ClusterState clusterState, String taskId) {
-        PersistentTasksCustomMetadata tasks = clusterState.metadata().custom(PersistentTasksCustomMetadata.TYPE);
+        PersistentTasksCustomMetadata tasks = clusterState.metadata().clusterCustom(PersistentTasksCustomMetadata.TYPE);
         if (tasks != null) {
             return (PersistentTask<Params>) tasks.getTask(taskId);
         }
@@ -250,7 +254,7 @@ public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<M
         }
 
         Metadata.Builder metadataBuilder = Metadata.builder(clusterState.metadata());
-        metadataBuilder.putCustom(TYPE, taskBuilder.build());
+        metadataBuilder.putClusterCustom(TYPE, taskBuilder.build());
         return ClusterState.builder(clusterState).metadata(metadataBuilder).build();
     }
 
@@ -546,8 +550,8 @@ public final class PersistentTasksCustomMetadata extends AbstractNamedDiffable<M
         out.writeMap(filteredTasks, StreamOutput::writeWriteable);
     }
 
-    public static NamedDiff<Metadata.Custom> readDiffFrom(StreamInput in) throws IOException {
-        return readDiffFrom(Metadata.Custom.class, TYPE, in);
+    public static NamedDiff<ClusterMetadata.ClusterCustom> readDiffFrom(StreamInput in) throws IOException {
+        return readDiffFrom(ClusterMetadata.ClusterCustom.class, TYPE, in);
     }
 
     @Override

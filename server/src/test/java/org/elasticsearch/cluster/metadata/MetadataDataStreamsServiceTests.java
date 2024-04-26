@@ -38,7 +38,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(1, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -89,7 +89,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(2, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -133,7 +133,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(1, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -177,7 +177,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(1, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -232,7 +232,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(1, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
@@ -291,7 +291,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
     }
 
     public void testMissingDataStream() {
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         final IndexMetadata indexToAdd = IndexMetadata.builder(randomAlphaOfLength(5))
             .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))
             .numberOfShards(1)
@@ -321,7 +321,7 @@ public class MetadataDataStreamsServiceTests extends MapperServiceTestCase {
         final int numBackingIndices = randomIntBetween(1, 4);
         final String dataStreamName = randomAlphaOfLength(5);
         IndexMetadata[] backingIndices = new IndexMetadata[numBackingIndices];
-        Metadata.Builder mb = Metadata.builder();
+        Metadata.Builder mb = Metadata.builder().createDefaultProject();
         for (int k = 0; k < numBackingIndices; k++) {
             backingIndices[k] = IndexMetadata.builder(DataStream.getDefaultBackingIndexName(dataStreamName, k + 1, epochMillis))
                 .settings(Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()))

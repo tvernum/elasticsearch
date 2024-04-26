@@ -125,7 +125,8 @@ public class MetaStateService {
         final IndexGraveyard indexGraveyard;
         if (globalMetadata != null) {
             metadataBuilder = Metadata.builder(globalMetadata);
-            indexGraveyard = globalMetadata.custom(IndexGraveyard.TYPE);
+            // @TODO[MultiProject] This should really be loading multiple projects
+            indexGraveyard = globalMetadata.projectCustom(IndexGraveyard.TYPE);
         } else {
             metadataBuilder = Metadata.builder();
             indexGraveyard = IndexGraveyard.builder().build();

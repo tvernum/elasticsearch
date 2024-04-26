@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -359,13 +358,13 @@ public class ClusterChangedEventTests extends ESTestCase {
         final ClusterState.Builder builder = ClusterState.builder(previousState);
         builder.stateUUID(UUIDs.randomBase64UUID());
         Metadata.Builder metadataBuilder = Metadata.builder(previousState.metadata());
-        for (Map.Entry<String, Metadata.Custom> customMetadata : previousState.metadata().customs().entrySet()) {
+        for (var customMetadata : previousState.metadata().customs().entrySet()) {
             if (customMetadata.getValue() instanceof TestCustomMetadata) {
-                metadataBuilder.removeCustom(customMetadata.getKey());
+                metadataBuilder.removeClusterCustom(customMetadata.getKey());
             }
         }
         for (TestCustomMetadata testCustomMetadata : customMetadataList) {
-            metadataBuilder.putCustom(testCustomMetadata.getWriteableName(), testCustomMetadata);
+            metadataBuilder.putClusterCustom(testCustomMetadata.getWriteableName(), testCustomMetadata);
         }
         builder.metadata(metadataBuilder);
         return builder.build();

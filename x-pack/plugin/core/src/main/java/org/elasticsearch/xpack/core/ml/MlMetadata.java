@@ -13,6 +13,7 @@ import org.elasticsearch.cluster.Diff;
 import org.elasticsearch.cluster.DiffableUtils;
 import org.elasticsearch.cluster.NamedDiff;
 import org.elasticsearch.cluster.SimpleDiffable;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Iterators;
@@ -34,7 +35,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 
-public class MlMetadata implements Metadata.Custom {
+// @TODO[MultiProject] Should this be cluster or project scoped?
+public class MlMetadata implements ClusterMetadata.ClusterCustom {
 
     public static final String TYPE = "ml";
     public static final ParseField UPGRADE_MODE = new ParseField("upgrade_mode");
@@ -81,7 +83,7 @@ public class MlMetadata implements Metadata.Custom {
     }
 
     @Override
-    public Diff<Metadata.Custom> diff(Metadata.Custom previousState) {
+    public Diff<ClusterMetadata.ClusterCustom> diff(ClusterMetadata.ClusterCustom previousState) {
         return new MlMetadataDiff((MlMetadata) previousState, this);
     }
 
@@ -128,7 +130,7 @@ public class MlMetadata implements Metadata.Custom {
         );
     }
 
-    public static class MlMetadataDiff implements NamedDiff<Metadata.Custom> {
+    public static class MlMetadataDiff implements NamedDiff<ClusterMetadata.ClusterCustom> {
 
         final boolean upgradeMode;
         final boolean resetMode;
@@ -158,7 +160,7 @@ public class MlMetadata implements Metadata.Custom {
          * @return The new ML metadata.
          */
         @Override
-        public Metadata.Custom apply(Metadata.Custom part) {
+        public ClusterMetadata.ClusterCustom apply(ClusterMetadata.ClusterCustom part) {
             return new MlMetadata(upgradeMode, resetMode);
         }
 
@@ -245,7 +247,7 @@ public class MlMetadata implements Metadata.Custom {
     }
 
     public static MlMetadata getMlMetadata(ClusterState state) {
-        MlMetadata mlMetadata = (state == null) ? null : state.getMetadata().custom(TYPE);
+        MlMetadata mlMetadata = (state == null) ? null : state.getMetadata().clusterCustom(TYPE);
         if (mlMetadata == null) {
             return EMPTY_METADATA;
         }

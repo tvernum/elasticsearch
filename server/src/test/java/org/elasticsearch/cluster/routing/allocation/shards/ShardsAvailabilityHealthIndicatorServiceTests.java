@@ -2000,7 +2000,7 @@ public class ShardsAvailabilityHealthIndicatorServiceTests extends ESTestCase {
             indexMetadataMap.put(indexMetadata.getIndex().getName(), indexMetadata);
         }
         metadataBuilder.indices(indexMetadataMap);
-        metadataBuilder.putCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata);
+        metadataBuilder.putClusterCustom(NodesShutdownMetadata.TYPE, nodesShutdownMetadata);
 
         DiscoveryNodes.Builder discoveryNodesBuilder = DiscoveryNodes.builder();
         nodes.forEach(discoveryNodesBuilder::add);

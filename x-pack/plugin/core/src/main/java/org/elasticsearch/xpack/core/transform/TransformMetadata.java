@@ -12,6 +12,7 @@ import org.elasticsearch.TransportVersions;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.Diff;
 import org.elasticsearch.cluster.NamedDiff;
+import org.elasticsearch.cluster.metadata.ClusterMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -27,7 +28,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
 
-public class TransformMetadata implements Metadata.Custom {
+// @TODO[MultiProject] Should this be project or cluster scoped?
+public class TransformMetadata implements ClusterMetadata.ClusterCustom {
     public static final String TYPE = "transform";
     public static final ParseField RESET_MODE = new ParseField("reset_mode");
 
@@ -69,7 +71,7 @@ public class TransformMetadata implements Metadata.Custom {
     }
 
     @Override
-    public Diff<Metadata.Custom> diff(Metadata.Custom previousState) {
+    public Diff<ClusterMetadata.ClusterCustom> diff(ClusterMetadata.ClusterCustom previousState) {
         return new TransformMetadata.TransformMetadataDiff((TransformMetadata) previousState, this);
     }
 
@@ -87,7 +89,7 @@ public class TransformMetadata implements Metadata.Custom {
         return ChunkedToXContentHelper.field(RESET_MODE.getPreferredName(), resetMode);
     }
 
-    public static class TransformMetadataDiff implements NamedDiff<Metadata.Custom> {
+    public static class TransformMetadataDiff implements NamedDiff<ClusterMetadata.ClusterCustom> {
 
         final boolean resetMode;
 
@@ -105,7 +107,7 @@ public class TransformMetadata implements Metadata.Custom {
          * @return The new transform metadata.
          */
         @Override
-        public Metadata.Custom apply(Metadata.Custom part) {
+        public ClusterMetadata.ClusterCustom apply(ClusterMetadata.ClusterCustom part) {
             return new TransformMetadata(resetMode);
         }
 
@@ -170,7 +172,7 @@ public class TransformMetadata implements Metadata.Custom {
     }
 
     public static TransformMetadata getTransformMetadata(ClusterState state) {
-        TransformMetadata TransformMetadata = (state == null) ? null : state.getMetadata().custom(TYPE);
+        TransformMetadata TransformMetadata = (state == null) ? null : state.getMetadata().clusterCustom(TYPE);
         if (TransformMetadata == null) {
             return EMPTY_METADATA;
         }

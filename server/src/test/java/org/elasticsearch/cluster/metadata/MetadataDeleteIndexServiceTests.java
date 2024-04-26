@@ -72,7 +72,7 @@ public class MetadataDeleteIndexServiceTests extends ESTestCase {
 
     public void testDeleteMissing() {
         Index index = new Index("missing", "doesn't matter");
-        ClusterState state = ClusterState.builder(ClusterName.DEFAULT).build();
+        ClusterState state = clusterStateWithSingleEmptyProject();
         IndexNotFoundException e = expectThrows(
             IndexNotFoundException.class,
             () -> MetadataDeleteIndexService.deleteIndices(state, Set.of(index), Settings.EMPTY)
@@ -157,7 +157,7 @@ public class MetadataDeleteIndexServiceTests extends ESTestCase {
             .numberOfReplicas(1)
             .build();
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(idxMetadata, false))
+            .metadata(Metadata.builder().createDefaultProject().put(idxMetadata, false))
             .routingTable(RoutingTable.builder(TestShardRoutingRoleStrategies.DEFAULT_ROLE_ONLY).addAsNew(idxMetadata).build())
             .blocks(ClusterBlocks.builder().addBlocks(idxMetadata))
             .build();
@@ -252,7 +252,7 @@ public class MetadataDeleteIndexServiceTests extends ESTestCase {
             .numberOfReplicas(1)
             .build();
         return ClusterState.builder(ClusterName.DEFAULT)
-            .metadata(Metadata.builder().put(indexMetadata, false))
+            .metadata(Metadata.builder().createDefaultProject().put(indexMetadata, false))
             .routingTable(RoutingTable.builder(TestShardRoutingRoleStrategies.DEFAULT_ROLE_ONLY).addAsNew(indexMetadata).build())
             .blocks(ClusterBlocks.builder().addBlocks(indexMetadata))
             .build();
