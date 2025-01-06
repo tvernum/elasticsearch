@@ -144,7 +144,7 @@ public class SegmentedCache<S, K, V> {
                 unlock.add(segment.lockForWrites());
             }
             for (Segment segment : segments.values()) {
-                segment.clear();
+                segment.invalidateAll();
             }
             head = entries.clear();
         } finally {
@@ -156,6 +156,21 @@ public class SegmentedCache<S, K, V> {
         while (head != null) {
             final Segment segment = this.segments.get(head.segmentId);
             removed(head, segment, RemovalNotification.RemovalReason.INVALIDATED);
+            head = head.next;
+        }
+    }
+
+    public void clear() {
+        this.entries.entriesLock.lock();
+        Entry<S, K, V> head = null;
+        try {
+            segments.clear();
+            head = entries.clear();
+        } finally {
+            this.entries.entriesLock.unlock();
+        }
+        while (head != null) {
+            removed(head, null, RemovalNotification.RemovalReason.INVALIDATED);
             head = head.next;
         }
     }
@@ -195,7 +210,9 @@ public class SegmentedCache<S, K, V> {
     }
 
     private void removed(Entry<S, K, V> entry, Segment segment, RemovalNotification.RemovalReason reason) {
-        segment.segmentStats.removal(reason);
+        if (segment != null) {
+            segment.segmentStats.removal(reason);
+        }
         cacheStats.removal(reason);
         notifyRemoved(entry, reason);
     }
@@ -577,7 +594,7 @@ public class SegmentedCache<S, K, V> {
             return blocks[idx];
         }
 
-        public void clear() {
+        public void invalidateAll() {
             this.blocks = allocateBlocks();
         }
 

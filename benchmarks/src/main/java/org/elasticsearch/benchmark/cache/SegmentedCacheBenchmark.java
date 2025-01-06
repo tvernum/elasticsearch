@@ -69,7 +69,7 @@ public class SegmentedCacheBenchmark {
 
         @Override
         public void clear() {
-            this.impl.invalidateAll();
+            this.impl.clear();
         }
     }
 
