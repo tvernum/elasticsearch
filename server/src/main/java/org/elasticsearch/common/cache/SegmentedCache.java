@@ -625,7 +625,7 @@ public class SegmentedCache<S, K, V> {
             if (entry == null) {
                 return null;
             }
-            if (checkExpired(key, entry, timestamp, segment)) {
+            if (isExpired(entry, timestamp)) {
                 return null;
             }
             return entry;
@@ -665,9 +665,14 @@ public class SegmentedCache<S, K, V> {
         }
 
         public Entry<S, K, V> computeIfAbsent(Segment segment, K key, CacheLoader<Tuple<S, K>, V> loader, long timestamp) {
-            final var existing = this.get(key, timestamp, segment);
+            Entry<S, K, V> existing = findEntry(key);
             if (existing != null) {
-                return existing;
+                if (isExpired(existing, timestamp)) {
+                    // Need to clear this entry so that it doesn't prevent storing the future
+                    clearExpiredEntry(key, existing, segment);
+                } else {
+                    return existing;
+                }
             }
 
             final CompletableFuture<Entry<S, K, V>> completableFuture = new CompletableFuture<>();
@@ -738,10 +743,7 @@ public class SegmentedCache<S, K, V> {
             return removed;
         }
 
-        private boolean checkExpired(K key, Entry<S, K, V> entry, long timestamp, Segment segment) {
-            if (isExpired(entry, timestamp) == false) {
-                return false;
-            }
+        private void clearExpiredEntry(K key, Entry<S, K, V> entry, Segment segment) {
             final Lock lock = blockLock.writeLock();
             lock.lock();
             boolean removed = false;
@@ -774,7 +776,6 @@ public class SegmentedCache<S, K, V> {
                 removed(entry, segment, RemovalNotification.RemovalReason.EVICTED);
                 entries.remove(entry);
             }
-            return true;
         }
 
         private Entry<S, K, V> findEntry(K key) {
