@@ -121,18 +121,13 @@ public class SegmentedCache<S, K, V> {
         return computeIfAbsent(segment, key, loader, timestamp.getAsLong());
     }
 
-    private V get(S segmentId, K key, long timestamp) {
-        final Segment segment = this.segments.get(segmentId);
-        if (segment == null) {
-            return null;
+    public void compact() {
+        entries.entriesLock.lock();
+        try {
+            entries.prune();
+        } finally {
+            entries.entriesLock.unlock();
         }
-        final Entry<S, K, V> entry = segment.get(key, timestamp);
-        if (entry == null) {
-            return null;
-        }
-        entry.accessTime = timestamp;
-        entries.storeAtHead(entry);
-        return entry.value;
     }
 
     public void invalidateAll() {
@@ -173,6 +168,20 @@ public class SegmentedCache<S, K, V> {
             removed(head, null, RemovalNotification.RemovalReason.INVALIDATED);
             head = head.next;
         }
+    }
+
+    private V get(S segmentId, K key, long timestamp) {
+        final Segment segment = this.segments.get(segmentId);
+        if (segment == null) {
+            return null;
+        }
+        final Entry<S, K, V> entry = segment.get(key, timestamp);
+        if (entry == null) {
+            return null;
+        }
+        entry.accessTime = timestamp;
+        entries.storeAtHead(entry);
+        return entry.value;
     }
 
     private void put(S segmentId, K key, V value, long timestamp) {
@@ -549,7 +558,7 @@ public class SegmentedCache<S, K, V> {
 
         public Entry<S, K, V> get(K key, long timestamp) {
             final Block block = getBlock(key);
-            final Entry<S, K, V> entry = block.get(key, timestamp, this);
+            final Entry<S, K, V> entry = block.get(key, timestamp);
             if (entry == null) {
                 segmentStats.miss();
                 cacheStats.miss();
@@ -629,15 +638,13 @@ public class SegmentedCache<S, K, V> {
     private final class Block {
         private final ReadWriteLock blockLock = new ReentrantReadWriteLock();
 
-        private Map<K, Entry<S, K, V>> values;
-        private Map<K, CompletableFuture<Entry<S, K, V>>> inFlight;
+        private Map<K, CompletableFuture<Entry<S, K, V>>> values;
 
         Block() {
             this.values = null;
-            this.inFlight = null;
         }
 
-        public Entry<S, K, V> get(K key, long timestamp, Segment segment) {
+        public Entry<S, K, V> get(K key, long timestamp) {
             Entry<S, K, V> entry = findEntry(key);
             if (entry == null) {
                 return null;
@@ -659,21 +666,18 @@ public class SegmentedCache<S, K, V> {
                 if (values == null) {
                     values = new HashMap<>();
                 }
-                previous = values.put(key, entry);
-                future = inFlight == null ? null : inFlight.remove(key);
+                future = values.put(key, CompletableFuture.completedFuture(entry));
             } finally {
                 lock.unlock();
             }
-            if (previous == null) {
-                if (future != null) {
-                    if (future.isDone()) {
-                        try {
-                            previous = future.get();
-                        } catch (ExecutionException | InterruptedException e) {
-                            throw new IllegalStateException(e);
-                        }
-                    }
-                }
+            if (future == null) {
+                return new Tuple<>(entry, null);
+            }
+
+            try {
+                previous = future.get();
+            } catch (ExecutionException | InterruptedException e) {
+                throw new IllegalStateException(e);
             }
             if (previous != null) {
                 notifyRemoved(previous, RemovalNotification.RemovalReason.REPLACED);
@@ -686,7 +690,7 @@ public class SegmentedCache<S, K, V> {
             if (existing != null) {
                 if (isExpired(existing, timestamp)) {
                     // Need to clear this entry so that it doesn't prevent storing the future
-                    clearExpiredEntry(key, existing, segment);
+                    clearExpiredEntry(existing, segment);
                 } else {
                     return existing;
                 }
@@ -698,10 +702,10 @@ public class SegmentedCache<S, K, V> {
             final Lock lock = blockLock.writeLock();
             lock.lock();
             try {
-                if (inFlight == null) {
-                    inFlight = new HashMap<>();
+                if (values == null) {
+                    values = new HashMap<>();
                 }
-                resultFuture = inFlight.putIfAbsent(key, completableFuture);
+                resultFuture = values.putIfAbsent(key, completableFuture);
             } finally {
                 lock.unlock();
             }
@@ -732,26 +736,16 @@ public class SegmentedCache<S, K, V> {
             lock.lock();
             boolean removed = false;
             try {
-                if (values != null) {
-                    removed = values.remove(entry.key, entry);
-                    if (values.isEmpty()) {
-                        values = null;
+                final CompletableFuture<Entry<S, K, V>> future = values == null ? null : values.get(entry.key);
+                if (future != null && future.isDone()) {
+                    final Entry<S, K, V> current;
+                    try {
+                        current = future.get();
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new IllegalStateException(e);
                     }
-                }
-                if (inFlight != null) {
-                    final CompletableFuture<Entry<S, K, V>> future = inFlight.get(entry.key);
-                    if (future != null && future.isDone()) {
-                        try {
-                            final Entry<S, K, V> futureEntry = future.get();
-                            if (futureEntry == entry) {
-                                removed = inFlight.remove(entry.key, future) || removed;
-                                if (inFlight.isEmpty()) {
-                                    inFlight = null;
-                                }
-                            }
-                        } catch (ExecutionException | InterruptedException e) {
-                            throw new IllegalStateException(e);
-                        }
+                    if (entry == current) {
+                        removed = this.values.remove(entry.key, future);
                     }
                 }
             } finally {
@@ -760,36 +754,18 @@ public class SegmentedCache<S, K, V> {
             return removed;
         }
 
-        private void clearExpiredEntry(K key, Entry<S, K, V> entry, Segment segment) {
+        private void remove(K key, CompletableFuture<Entry<S, K, V>> future) {
             final Lock lock = blockLock.writeLock();
             lock.lock();
-            boolean removed = false;
             try {
-                Entry<S, K, V> current = this.values == null ? null : this.values.get(key);
-                if (current == null) {
-                    final CompletableFuture<Entry<S, K, V>> future = inFlight == null ? null : inFlight.get(key);
-                    if (future != null && future.isDone()) {
-                        try {
-                            current = future.get();
-                        } catch (ExecutionException | InterruptedException e) {
-                            throw new IllegalStateException(e);
-                        }
-                    }
-                }
-                if (entry == current) {
-                    if (this.values != null) {
-                        this.values.remove(key);
-                    }
-                    if (this.inFlight != null) {
-                        this.inFlight.remove(key);
-                    }
-                    removed = true;
-                }
+                values.remove(key, future);
             } finally {
                 lock.unlock();
             }
+        }
 
-            if (removed) {
+        private void clearExpiredEntry(Entry<S, K, V> entry, Segment segment) {
+            if (remove(entry)) {
                 removed(entry, segment, RemovalNotification.RemovalReason.EVICTED);
                 entries.remove(entry);
             }
@@ -800,24 +776,24 @@ public class SegmentedCache<S, K, V> {
             final CompletableFuture<Entry<S, K, V>> future;
             lock.lock();
             try {
-                final Entry<S, K, V> e = values == null ? null : values.get(key);
-                if (e != null) {
-                    return e;
-                }
-                future = inFlight == null ? null : inFlight.get(key);
+                future = values == null ? null : values.get(key);
             } finally {
                 lock.unlock();
             }
-            if (future != null) {
-                try {
-                    return future.get();
-                } catch (ExecutionException e) {
-                    assert future.isCompletedExceptionally();
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
-                }
+            if (future == null) {
+                return null;
             }
-            return null;
+            try {
+                return future.get();
+            } catch (ExecutionException e) {
+                assert future.isCompletedExceptionally();
+                // A failed future means a cache loader throw an exception. We treat this the same as if the key was empty
+                // We have to force a removal here or else "computeIfAbsent" will fail because the map already has an entry for this key
+                remove(key, future);
+                return null;
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 

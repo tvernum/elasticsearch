@@ -95,6 +95,9 @@ public class SegmentedCacheTests extends ESTestCase {
         assertThat(cache.get(1L, "a"), nullValue());
         assertThat(cache.get(1L, "b"), is("B"));
         assertThat(cache.get(2L, "a"), is("AA"));
+
+        cache.compact();
+
         assertThat(cache.count(), equalTo(2));
 
         clock.addAndGet(10);
@@ -102,6 +105,9 @@ public class SegmentedCacheTests extends ESTestCase {
         assertThat(cache.get(1L, "a"), nullValue());
         assertThat(cache.get(1L, "b"), nullValue());
         assertThat(cache.get(2L, "a"), nullValue());
+
+        cache.compact();
+
         assertThat(cache.count(), equalTo(0));
     }
 
