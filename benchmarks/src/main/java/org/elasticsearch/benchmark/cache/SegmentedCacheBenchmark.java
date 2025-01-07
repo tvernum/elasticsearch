@@ -28,8 +28,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 @Fork(1)
 @Warmup(time = 20, timeUnit = TimeUnit.SECONDS, iterations = 1)
@@ -44,6 +46,8 @@ public class SegmentedCacheBenchmark {
 
     public interface TwoKeyCache<K1, K2, V> {
         void put(K1 k1, K2 k2, V value);
+
+        void computeIfAbsent(K1 k1, K2 k2, Supplier<V> supplier) throws ExecutionException;
 
         V get(K1 k1, K2 k2);
 
@@ -60,6 +64,11 @@ public class SegmentedCacheBenchmark {
         @Override
         public void put(Integer k1, String k2, Boolean value) {
             impl.put(k1, k2, value);
+        }
+
+        @Override
+        public void computeIfAbsent(Integer k1, String k2, Supplier<Boolean> supplier) {
+            impl.computeIfAbsent(k1, k2, ignore -> supplier.get());
         }
 
         @Override
@@ -83,6 +92,11 @@ public class SegmentedCacheBenchmark {
         @Override
         public void put(Integer k1, String k2, Boolean value) {
             impl.put(new Tuple<>(k1, k2), value);
+        }
+
+        @Override
+        public void computeIfAbsent(Integer k1, String k2, Supplier<Boolean> supplier) throws ExecutionException {
+            impl.computeIfAbsent(new Tuple<>(k1, k2), ignore -> supplier.get());
         }
 
         @Override
@@ -163,7 +177,6 @@ public class SegmentedCacheBenchmark {
     public void getHot(GlobalState state) {
         for (String key : state.hotKeys) {
             final Boolean result = state.cache.get(0, key);
-            trace(state.cache, "get-hot", 0, key, result);
             if (result != Boolean.TRUE) {
                 throw new IllegalStateException("Cache result for 0:" + key + " was " + result);
             }
@@ -176,7 +189,6 @@ public class SegmentedCacheBenchmark {
     public void putHot(GlobalState state) {
         final String key = state.hotKeys[0];
         state.cache.put(0, key, true);
-        trace(state.cache, "put-hot", 0, key, true);
     }
 
     @Benchmark
@@ -185,8 +197,7 @@ public class SegmentedCacheBenchmark {
     public void getWarm(ThreadState state) {
         for (String key : state.warmKeys) {
             for (Integer segment : state.segments) {
-                final Boolean value = state.cache.get(segment, key);
-                trace(state.cache, "get-warm", segment, key, value);
+                state.cache.get(segment, key);
             }
         }
     }
@@ -198,7 +209,6 @@ public class SegmentedCacheBenchmark {
         final Integer segment = random(state.segments);
         final String key = random(state.warmKeys);
         state.cache.put(segment, key, true);
-        trace(state.cache, "put-warm", segment, key, true);
     }
 
     @Benchmark
@@ -208,10 +218,50 @@ public class SegmentedCacheBenchmark {
         final Integer segment = random(state.segments);
         final String key = Integer.toHexString(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
         final Boolean existing = state.cache.get(segment, key);
-        trace(state.cache, "get-cold", segment, key, existing);
         if (existing == null) {
             state.cache.put(segment, key, true);
-            trace(state.cache, "put-cold", segment, key, true);
+        }
+    }
+
+    @Benchmark
+    @Group("computation")
+    @GroupThreads(3)
+    public void getHotComputed(GlobalState state) {
+        state.cache.get(0, random(state.hotKeys));
+    }
+
+    @Benchmark
+    @Group("computation")
+    @GroupThreads(1)
+    public void computeHot(GlobalState state) throws Exception {
+        state.cache.computeIfAbsent(0, random(state.hotKeys), () -> ThreadLocalRandom.current().nextBoolean());
+    }
+
+    @Benchmark
+    @Group("computation")
+    @GroupThreads(3)
+    public void getWarmComputed(ThreadState state) {
+        state.cache.get(random(state.segments), random(state.warmKeys));
+    }
+
+    @Benchmark
+    @Group("computation")
+    @GroupThreads(2)
+    public void computeWarm(ThreadState state) throws Exception {
+        state.cache.computeIfAbsent(random(state.segments), random(state.warmKeys), () -> ThreadLocalRandom.current().nextBoolean());
+    }
+
+    @Benchmark
+    @Group("computation")
+    @GroupThreads(5)
+    public void computeCold(ThreadState state) throws Exception {
+        final Integer segment = random(state.segments);
+        final String key = random(state.warmKeys);
+        Boolean existing = state.cache.get(segment, key);
+        if (existing == null) {
+            state.cache.computeIfAbsent(segment, key, () -> false);
+        } else if (existing == false) {
+            state.cache.put(segment, key, true);
         }
     }
 
@@ -219,10 +269,6 @@ public class SegmentedCacheBenchmark {
         final ThreadLocalRandom rand = ThreadLocalRandom.current();
         final int index = rand.nextInt(array.length);
         return array[index];
-    }
-
-    private void trace(TwoKeyCache<Integer, String, Boolean> cache, String action, int segment, String key, Boolean value) {
-        // no-op
     }
 
 }
