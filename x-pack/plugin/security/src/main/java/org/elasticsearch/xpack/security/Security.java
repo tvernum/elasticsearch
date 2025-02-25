@@ -332,6 +332,7 @@ import org.elasticsearch.xpack.security.authz.interceptor.SearchRequestIntercept
 import org.elasticsearch.xpack.security.authz.interceptor.ShardSearchRequestInterceptor;
 import org.elasticsearch.xpack.security.authz.interceptor.UpdateRequestInterceptor;
 import org.elasticsearch.xpack.security.authz.interceptor.ValidateRequestInterceptor;
+import org.elasticsearch.xpack.security.authz.restriction.IndexAccessRestrictionsStore;
 import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.authz.store.DeprecationRoleDescriptorConsumer;
 import org.elasticsearch.xpack.security.authz.store.FileRolesStore;
@@ -1027,6 +1028,10 @@ public class Security extends Plugin
             customRoleProviders,
             getLicenseState()
         );
+        final IndexAccessRestrictionsStore indexAccessRestrictionsStore = new IndexAccessRestrictionsStore(
+            environment,
+            resourceWatcherService
+        );
         final CompositeRolesStore allRolesStore = new CompositeRolesStore(
             settings,
             roleProviders,
@@ -1038,6 +1043,7 @@ public class Security extends Plugin
             serviceAccountService,
             dlsBitsetCache.get(),
             restrictedIndices,
+            indexAccessRestrictionsStore,
             buildRoleBuildingExecutor(threadPool, settings),
             new DeprecationRoleDescriptorConsumer(clusterService, threadPool)
         );
@@ -1484,6 +1490,7 @@ public class Security extends Plugin
         settingsList.add(CachingServiceAccountTokenStore.CACHE_MAX_TOKENS_SETTING);
         settingsList.add(SimpleRole.CACHE_SIZE_SETTING);
         settingsList.add(NativeRoleMappingStore.LAST_LOAD_CACHE_ENABLED_SETTING);
+        settingsList.addAll(IndexAccessRestrictionsStore.getSettings());
 
         // hide settings
         settingsList.add(Setting.stringListSetting(SecurityField.setting("hide_settings"), Property.NodeScope, Property.Filtered));

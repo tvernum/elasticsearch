@@ -106,6 +106,7 @@ import org.elasticsearch.xpack.security.Security;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.service.ServiceAccountService;
+import org.elasticsearch.xpack.security.authz.restriction.IndexAccessRestrictions;
 import org.elasticsearch.xpack.security.authz.restriction.WorkflowService;
 import org.elasticsearch.xpack.security.authz.restriction.WorkflowServiceTests.TestBaseRestHandler;
 import org.elasticsearch.xpack.security.support.CacheInvalidatorRegistry;
@@ -722,6 +723,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             mock(ServiceAccountService.class),
             buildBitsetCache(),
             TestRestrictedIndices.RESTRICTED_INDICES,
+            () -> IndexAccessRestrictions.EMPTY,
             EsExecutors.DIRECT_EXECUTOR_SERVICE,
             mock()
         );
@@ -795,6 +797,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             mock(ServiceAccountService.class),
             documentSubsetBitsetCache,
             TestRestrictedIndices.RESTRICTED_INDICES,
+            () -> IndexAccessRestrictions.EMPTY,
             EsExecutors.DIRECT_EXECUTOR_SERVICE,
             effectiveRoleDescriptors::set
         );
@@ -2396,6 +2399,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             mock(ServiceAccountService.class),
             buildBitsetCache(),
             TestRestrictedIndices.RESTRICTED_INDICES,
+            () -> IndexAccessRestrictions.EMPTY,
             EsExecutors.DIRECT_EXECUTOR_SERVICE,
             rds -> {}
         );
@@ -2510,6 +2514,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             mock(ServiceAccountService.class),
             buildBitsetCache(),
             TestRestrictedIndices.RESTRICTED_INDICES,
+            () -> IndexAccessRestrictions.EMPTY,
             EsExecutors.DIRECT_EXECUTOR_SERVICE,
             rds -> {}
         );
@@ -3146,6 +3151,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             serviceAccountService,
             documentSubsetBitsetCache,
             TestRestrictedIndices.RESTRICTED_INDICES,
+            () -> IndexAccessRestrictions.EMPTY,
             mockRoleBuildingExecutor,
             roleConsumer
         ) {

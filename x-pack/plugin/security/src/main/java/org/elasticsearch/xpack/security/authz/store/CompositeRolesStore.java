@@ -53,6 +53,7 @@ import org.elasticsearch.xpack.core.security.user.InternalUsers;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.service.ServiceAccountService;
+import org.elasticsearch.xpack.security.authz.restriction.IndexAccessRestrictions;
 import org.elasticsearch.xpack.security.authz.restriction.WorkflowService;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
 
@@ -69,6 +70,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.util.set.Sets.newHashSet;
@@ -112,6 +114,7 @@ public class CompositeRolesStore {
     private final Role superuserRole;
     private final Map<String, Role> internalUserRoles;
     private final RestrictedIndices restrictedIndices;
+    private final Supplier<IndexAccessRestrictions> indexRestrictions;
     private final ThreadContext threadContext;
     private final Executor roleBuildingExecutor;
 
@@ -126,6 +129,7 @@ public class CompositeRolesStore {
         ServiceAccountService serviceAccountService,
         DocumentSubsetBitsetCache dlsBitsetCache,
         RestrictedIndices restrictedIndices,
+        Supplier<IndexAccessRestrictions> indexRestrictions,
         Executor roleBuildingExecutor,
         Consumer<Collection<RoleDescriptor>> effectiveRoleDescriptorsConsumer
     ) {
@@ -159,6 +163,7 @@ public class CompositeRolesStore {
         }
         this.negativeLookupCache = nlcBuilder.build();
         this.restrictedIndices = restrictedIndices;
+        this.indexRestrictions = indexRestrictions;
         this.superuserRole = Role.buildFromRoleDescriptor(
             ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR,
             fieldPermissionsCache,
@@ -215,10 +220,11 @@ public class CompositeRolesStore {
 
         final RoleReferenceIntersection roleReferenceIntersection = subject.getRoleReferenceIntersection(anonymousUser);
         final String workflow = WorkflowService.readWorkflowFromThreadContext(threadContext);
-        roleReferenceIntersection.buildRole(
-            this::buildRoleFromRoleReference,
-            roleActionListener.delegateFailureAndWrap((l, role) -> l.onResponse(role.forWorkflow(workflow)))
-        );
+        roleReferenceIntersection.buildRole(this::buildRoleFromRoleReference, roleActionListener.delegateFailureAndWrap((l, role) -> {
+            role = role.forWorkflow(workflow);
+            role = indexRestrictions.get().getRestrictedRole(subject, role);
+            l.onResponse(role);
+        }));
     }
 
     // Accessible by tests

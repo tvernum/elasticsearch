@@ -80,6 +80,7 @@ import org.elasticsearch.xpack.core.security.user.InternalUsers;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.authc.service.ServiceAccountService;
+import org.elasticsearch.xpack.security.authz.restriction.IndexAccessRestrictions;
 import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 import org.elasticsearch.xpack.security.authz.store.NativePrivilegeStore;
 import org.elasticsearch.xpack.security.authz.store.RoleProviders;
@@ -257,6 +258,7 @@ public class IndicesAndAliasesResolverTests extends ESTestCase {
                 mock(ServiceAccountService.class),
                 new DocumentSubsetBitsetCache(Settings.EMPTY, mock(ThreadPool.class)),
                 RESTRICTED_INDICES,
+                () -> IndexAccessRestrictions.EMPTY,
                 EsExecutors.DIRECT_EXECUTOR_SERVICE,
                 rds -> {}
             )
