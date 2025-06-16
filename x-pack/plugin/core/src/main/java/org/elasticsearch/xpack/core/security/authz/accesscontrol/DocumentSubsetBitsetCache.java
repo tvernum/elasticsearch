@@ -23,7 +23,6 @@ import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.BitSet;
 import org.apache.lucene.util.FixedBitSet;
-import org.apache.lucene.util.RamUsageEstimator;
 import org.elasticsearch.common.cache.Cache;
 import org.elasticsearch.common.cache.CacheBuilder;
 import org.elasticsearch.common.cache.RemovalNotification;
@@ -38,7 +37,7 @@ import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.lucene.util.BitSets;
 import org.elasticsearch.lucene.util.MatchAllBitSet;
 import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.xpack.core.security.support.bits.IntArrayBitSet;
+import org.elasticsearch.xpack.core.security.support.bits.RoaringBitSet;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -296,26 +295,9 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
         if (bitSet instanceof MatchAllBitSet) {
             return bitSet;
         }
-        final int length = bitSet.length();
-        final int cardinality = bitSet.cardinality();
-        if (length < 256) {
-            // TODO
-            return bitSet;
-        }
-        if (length < Short.MAX_VALUE) {
-            // TODO
-            return bitSet;
-        }
-        if (length < Integer.MAX_VALUE) {
-            final int[] array = new int[cardinality];
-            long arrayRam = RamUsageEstimator.sizeOf(array);
-            if (arrayRam < bitSet.ramBytesUsed()) {
-                logger.info("Using int[] (with ram {}) instead of {} (with ram {})", arrayRam, bitSet, bitSet.ramBytesUsed());
-                return new IntArrayBitSet(bitSet);
-            }
-        }
-
-        return bitSet;
+        final RoaringBitSet roar = new RoaringBitSet(bitSet);
+        logger.info("Using {} with RAM {} in place of {} with RAM {}", roar, roar.ramBytesUsed(), bitSet, bitSet.ramBytesUsed());
+        return roar;
     }
 
     // Package private for testing

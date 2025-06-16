@@ -23,6 +23,7 @@ module org.elasticsearch.xcore {
     requires unboundid.ldapsdk;
     requires org.elasticsearch.tdigest;
     requires org.elasticsearch.xcore.templates;
+    requires roaringbitmap;
 
     exports org.elasticsearch.index.engine.frozen;
     exports org.elasticsearch.license;
@@ -230,6 +231,7 @@ module org.elasticsearch.xcore {
     exports org.elasticsearch.xpack.core.watcher.trigger;
     exports org.elasticsearch.xpack.core.watcher.watch;
     exports org.elasticsearch.xpack.core.watcher;
+    exports org.elasticsearch.xpack.core.security.support.bits;
 
     provides org.elasticsearch.action.admin.cluster.node.info.ComponentVersionNumber
         with

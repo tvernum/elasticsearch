@@ -38,10 +38,6 @@ public class RestGetDlsStatsAction extends SecurityBaseRestHandler {
 
     @Override
     protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) throws IOException {
-        return channel -> client.execute(
-            GetDlsStatsAction.TYPE,
-            new GetDlsStatsAction.Request(),
-            new RestToXContentListener<>(channel)
-        );
+        return channel -> client.execute(GetDlsStatsAction.TYPE, new GetDlsStatsAction.Request(), new RestToXContentListener<>(channel));
     }
 }
