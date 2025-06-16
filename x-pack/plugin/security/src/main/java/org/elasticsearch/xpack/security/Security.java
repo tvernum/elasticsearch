@@ -261,6 +261,7 @@ import org.elasticsearch.xpack.security.action.profile.TransportSetProfileEnable
 import org.elasticsearch.xpack.security.action.profile.TransportSuggestProfilesAction;
 import org.elasticsearch.xpack.security.action.profile.TransportUpdateProfileDataAction;
 import org.elasticsearch.xpack.security.action.realm.TransportClearRealmCacheAction;
+import org.elasticsearch.xpack.security.action.role.GetDlsStatsAction;
 import org.elasticsearch.xpack.security.action.role.TransportBulkDeleteRolesAction;
 import org.elasticsearch.xpack.security.action.role.TransportBulkPutRolesAction;
 import org.elasticsearch.xpack.security.action.role.TransportClearRolesCacheAction;
@@ -386,6 +387,7 @@ import org.elasticsearch.xpack.security.rest.action.role.RestBulkDeleteRolesActi
 import org.elasticsearch.xpack.security.rest.action.role.RestBulkPutRolesAction;
 import org.elasticsearch.xpack.security.rest.action.role.RestClearRolesCacheAction;
 import org.elasticsearch.xpack.security.rest.action.role.RestDeleteRoleAction;
+import org.elasticsearch.xpack.security.rest.action.role.RestGetDlsStatsAction;
 import org.elasticsearch.xpack.security.rest.action.role.RestGetRolesAction;
 import org.elasticsearch.xpack.security.rest.action.role.RestPutRoleAction;
 import org.elasticsearch.xpack.security.rest.action.role.RestQueryRoleAction;
@@ -1720,6 +1722,7 @@ public class Security extends Plugin
             new ActionHandler(UpdateSecuritySettingsAction.INSTANCE, TransportUpdateSecuritySettingsAction.class),
             new ActionHandler(ActionTypes.RELOAD_REMOTE_CLUSTER_CREDENTIALS_ACTION, TransportReloadRemoteClusterCredentialsAction.class),
             new ActionHandler(UpdateIndexMigrationVersionAction.INSTANCE, UpdateIndexMigrationVersionAction.TransportAction.class),
+            new ActionHandler(GetDlsStatsAction.TYPE, GetDlsStatsAction.StatsTransportAction.class),
             usageAction,
             infoAction
         ).filter(Objects::nonNull).toList();
@@ -1812,7 +1815,8 @@ public class Security extends Plugin
             new RestEnableProfileAction(settings, getLicenseState()),
             new RestDisableProfileAction(settings, getLicenseState()),
             new RestGetSecuritySettingsAction(settings, getLicenseState()),
-            new RestUpdateSecuritySettingsAction(settings, getLicenseState())
+            new RestUpdateSecuritySettingsAction(settings, getLicenseState()),
+            new RestGetDlsStatsAction(settings, getLicenseState())
         ).filter(Objects::nonNull).toList();
     }
 

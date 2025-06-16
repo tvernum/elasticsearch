@@ -202,6 +202,10 @@ public class CompositeRolesStore {
         this.roleBuildingExecutor = roleBuildingExecutor;
     }
 
+    public DocumentSubsetBitsetCache getDlsBitsetCache() {
+        return dlsBitsetCache;
+    }
+
     public void getRoles(Authentication authentication, ActionListener<Tuple<Role, Role>> roleActionListener) {
         getRole(authentication.getEffectiveSubject(), roleActionListener.delegateFailureAndWrap((delegate, role) -> {
             if (authentication.isRunAs()) {

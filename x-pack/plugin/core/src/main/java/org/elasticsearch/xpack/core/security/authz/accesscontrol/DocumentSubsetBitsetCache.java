@@ -40,6 +40,8 @@ import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -319,7 +321,24 @@ public final class DocumentSubsetBitsetCache implements IndexReader.ClosedListen
 
     public Map<String, Object> usageStats() {
         final ByteSizeValue ram = ByteSizeValue.ofBytes(ramBytesUsed());
-        return Map.of("count", entryCount(), "memory", ram.toString(), "memory_in_bytes", ram.getBytes());
+        Map<String, List<Map<String, Object>>> detail = new HashMap<>();
+        this.bitsetCache.forEach((key, bits) -> {
+            Map<String, Object> inner = new HashMap<>();
+            inner.put("type", bits.getClass().getName());
+            inner.put("approx_cardinality", bits.approximateCardinality());
+            inner.put("cardinality", bits.cardinality());
+            inner.put("memory", bits.ramBytesUsed());
+            inner.put("length", bits.length());
+
+            String q = key.query.toString();
+            detail.computeIfAbsent(q, ignore -> new LinkedList<>()).add(inner);
+        });
+        return Map.ofEntries(
+            Map.entry("count", entryCount()),
+            Map.entry("memory", ram.toString()),
+            Map.entry("memory_in_bytes", ram.getBytes()),
+            Map.entry("bits", detail)
+        );
     }
 
     private static class BitsetCacheKey {
