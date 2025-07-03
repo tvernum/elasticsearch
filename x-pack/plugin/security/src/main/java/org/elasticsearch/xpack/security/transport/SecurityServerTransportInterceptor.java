@@ -20,6 +20,7 @@ import org.elasticsearch.common.util.concurrent.AbstractRunnable;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.RunOnce;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.license.LicenseUtils;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.tasks.Task;
@@ -99,9 +100,10 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
     private final CrossClusterAccessAuthenticationService crossClusterAccessAuthcService;
     private final Function<Transport.Connection, Optional<RemoteClusterAliasWithCredentials>> remoteClusterCredentialsResolver;
     private final XPackLicenseState licenseState;
+    private final CrossClusterAccessSignatureManager clusterAccessSigner;
 
     public SecurityServerTransportInterceptor(
-        Settings settings,
+        Environment environment,
         ThreadPool threadPool,
         AuthenticationService authcService,
         AuthorizationService authzService,
@@ -112,7 +114,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
         XPackLicenseState licenseState
     ) {
         this(
-            settings,
+            environment,
             threadPool,
             authcService,
             authzService,
@@ -126,7 +128,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
     }
 
     SecurityServerTransportInterceptor(
-        Settings settings,
+        Environment environment,
         ThreadPool threadPool,
         AuthenticationService authcService,
         AuthorizationService authzService,
@@ -138,7 +140,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
         // Inject for simplified testing
         Function<Transport.Connection, Optional<RemoteClusterAliasWithCredentials>> remoteClusterCredentialsResolver
     ) {
-        this.settings = settings;
+        this.settings = environment.settings();
         this.threadPool = threadPool;
         this.authcService = authcService;
         this.authzService = authzService;
@@ -148,6 +150,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
         this.licenseState = licenseState;
         this.remoteClusterCredentialsResolver = remoteClusterCredentialsResolver;
         this.profileFilters = initializeProfileFilters(destructiveOperations);
+        this.clusterAccessSigner = new CrossClusterAccessSignatureManager(environment);
     }
 
     @Override
@@ -328,12 +331,15 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
                     );
                 }
 
+                final CrossClusterAccessSignatureManager.Signer signer = clusterAccessSigner.getSigner(remoteClusterAlias);
+
                 logger.trace(
                     () -> format(
-                        "Sending [%s] request for [%s] action to [%s] with cross cluster access headers",
+                        "Sending [%s] request for [%s] action to [%s] with cross cluster access headers; signing=[{}]",
                         request.getClass(),
                         action,
-                        remoteClusterAlias
+                        remoteClusterAlias,
+                        signer
                     )
                 );
 
@@ -378,7 +384,15 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
                     if (false == effectiveAction.equals(action)) {
                         logger.trace("switching internal action from [{}] to [{}]", action, effectiveAction);
                     }
-                    sendWithCrossClusterAccessHeaders(crossClusterAccessHeaders, connection, effectiveAction, request, options, handler);
+                    sendWithCrossClusterAccessHeaders(
+                        crossClusterAccessHeaders,
+                        signer,
+                        connection,
+                        effectiveAction,
+                        request,
+                        options,
+                        handler
+                    );
                 } else {
                     assert false == action.startsWith("internal:") : "internal action must be sent with system user";
                     authzService.getRoleDescriptorsIntersectionForRemoteCluster(
@@ -406,7 +420,15 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
                                 remoteClusterCredentials.credentials(),
                                 new CrossClusterAccessSubjectInfo(authentication, roleDescriptorsIntersection)
                             );
-                            sendWithCrossClusterAccessHeaders(crossClusterAccessHeaders, connection, action, request, options, handler);
+                            sendWithCrossClusterAccessHeaders(
+                                crossClusterAccessHeaders,
+                                signer,
+                                connection,
+                                action,
+                                request,
+                                options,
+                                handler
+                            );
                         }, // it's safe to not use a context restore handler here since `getRoleDescriptorsIntersectionForRemoteCluster`
                            // uses a context preserving listener internally, and `sendWithCrossClusterAccessHeaders` uses a context restore
                            // handler
@@ -418,6 +440,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
 
             private <T extends TransportResponse> void sendWithCrossClusterAccessHeaders(
                 final CrossClusterAccessHeaders crossClusterAccessHeaders,
+                final CrossClusterAccessSignatureManager.Signer signer,
                 final Transport.Connection connection,
                 final String action,
                 final TransportRequest request,
@@ -427,7 +450,7 @@ public class SecurityServerTransportInterceptor implements TransportInterceptor 
                 final ThreadContext threadContext = securityContext.getThreadContext();
                 final var contextRestoreHandler = new ContextRestoreResponseHandler<>(threadContext.newRestorableContext(true), handler);
                 try (ThreadContext.StoredContext ignored = threadContext.stashContextPreservingRequestHeaders(AuditUtil.AUDIT_REQUEST_ID)) {
-                    crossClusterAccessHeaders.writeToContext(threadContext);
+                    crossClusterAccessHeaders.writeToContext(threadContext, signer);
                     sender.sendRequest(connection, action, request, options, contextRestoreHandler);
                 } catch (Exception e) {
                     contextRestoreHandler.handleException(new SendRequestTransportException(connection.getNode(), action, e));

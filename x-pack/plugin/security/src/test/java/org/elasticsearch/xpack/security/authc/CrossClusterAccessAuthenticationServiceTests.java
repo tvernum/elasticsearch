@@ -77,7 +77,7 @@ public class CrossClusterAccessAuthenticationServiceTests extends ESTestCase {
             CrossClusterAccessHeadersTests.randomEncodedApiKeyHeader(),
             AuthenticationTestHelper.randomCrossClusterAccessSubjectInfo()
         );
-        crossClusterAccessHeaders.writeToContext(threadContext);
+        crossClusterAccessHeaders.writeToContext(threadContext, null);
         final AuthenticationService.AuditableRequest auditableRequest = mock(AuthenticationService.AuditableRequest.class);
         final ArgumentCaptor<Authentication> authenticationCapture = ArgumentCaptor.forClass(Authentication.class);
         doNothing().when(auditableRequest).authenticationSuccess(authenticationCapture.capture());
@@ -120,7 +120,7 @@ public class CrossClusterAccessAuthenticationServiceTests extends ESTestCase {
                 )
             )
         );
-        crossClusterAccessHeaders.writeToContext(threadContext);
+        crossClusterAccessHeaders.writeToContext(threadContext, null);
         final AuthenticationService.AuditableRequest auditableRequest = mock(AuthenticationService.AuditableRequest.class);
         final ArgumentCaptor<Authentication> authenticationCapture = ArgumentCaptor.forClass(Authentication.class);
         doNothing().when(auditableRequest).authenticationSuccess(authenticationCapture.capture());
@@ -166,7 +166,7 @@ public class CrossClusterAccessAuthenticationServiceTests extends ESTestCase {
             CrossClusterAccessHeadersTests.randomEncodedApiKeyHeader(),
             AuthenticationTestHelper.randomCrossClusterAccessSubjectInfo()
         );
-        crossClusterAccessHeaders.writeToContext(threadContext);
+        crossClusterAccessHeaders.writeToContext(threadContext, null);
         final AuthenticationService.AuditableRequest auditableRequest = mock(AuthenticationService.AuditableRequest.class);
         doAnswer(invocationOnMock -> {
             AuthenticationToken authenticationToken = (AuthenticationToken) invocationOnMock.getArguments()[2];

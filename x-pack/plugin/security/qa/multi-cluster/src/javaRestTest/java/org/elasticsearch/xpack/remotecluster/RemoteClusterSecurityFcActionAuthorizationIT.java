@@ -613,13 +613,14 @@ public class RemoteClusterSecurityFcActionAuthorizationIT extends ESRestTestCase
             service.addSendBehavior((connection, requestId, action, request, options) -> {
                 final ThreadContext threadContext = threadPool.getThreadContext();
                 try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
-                    new CrossClusterAccessHeaders(
+                    CrossClusterAccessHeaders headers = new CrossClusterAccessHeaders(
                         "ApiKey " + encodedApiKey,
                         subjectInfoLookup.getOrDefault(
                             action,
                             SystemUser.crossClusterAccessSubjectInfo(TransportVersion.current(), nodeName)
                         )
-                    ).writeToContext(threadContext);
+                    );
+                    headers.writeToContext(threadContext, null);
                     connection.sendRequest(requestId, action, request, options);
                 }
             });

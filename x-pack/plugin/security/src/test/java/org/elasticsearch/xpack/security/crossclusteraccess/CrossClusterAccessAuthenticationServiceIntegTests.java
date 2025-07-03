@@ -75,10 +75,11 @@ public class CrossClusterAccessAuthenticationServiceIntegTests extends SecurityI
         }
 
         try (var ignored = threadContext.stashContext()) {
-            new CrossClusterAccessHeaders(
+            CrossClusterAccessHeaders headers = new CrossClusterAccessHeaders(
                 ApiKeyService.withApiKeyPrefix("abc"),
                 AuthenticationTestHelper.randomCrossClusterAccessSubjectInfo()
-            ).writeToContext(threadContext);
+            );
+            headers.writeToContext(threadContext, null);
             authenticateAndAssertExpectedErrorMessage(
                 service,
                 msg -> assertThat(
@@ -107,13 +108,14 @@ public class CrossClusterAccessAuthenticationServiceIntegTests extends SecurityI
 
         try (var ignored = threadContext.stashContext()) {
             final var internalUser = randomValueOtherThan(InternalUsers.SYSTEM_USER, AuthenticationTestHelper::randomInternalUser);
-            new CrossClusterAccessHeaders(
+            CrossClusterAccessHeaders headers = new CrossClusterAccessHeaders(
                 encodedCrossClusterAccessApiKey,
                 new CrossClusterAccessSubjectInfo(
                     AuthenticationTestHelper.builder().internal(internalUser).build(),
                     RoleDescriptorsIntersection.EMPTY
                 )
-            ).writeToContext(threadContext);
+            );
+            headers.writeToContext(threadContext, null);
             authenticateAndAssertExpectedErrorMessage(
                 service,
                 msg -> assertThat(
@@ -125,10 +127,11 @@ public class CrossClusterAccessAuthenticationServiceIntegTests extends SecurityI
 
         try (var ignored = threadContext.stashContext()) {
             Authentication authentication = AuthenticationTestHelper.builder().crossClusterAccess().build();
-            new CrossClusterAccessHeaders(
+            CrossClusterAccessHeaders headers = new CrossClusterAccessHeaders(
                 encodedCrossClusterAccessApiKey,
                 new CrossClusterAccessSubjectInfo(authentication, RoleDescriptorsIntersection.EMPTY)
-            ).writeToContext(threadContext);
+            );
+            headers.writeToContext(threadContext, null);
 
             authenticateAndAssertExpectedErrorMessage(
                 service,
@@ -302,7 +305,7 @@ public class CrossClusterAccessAuthenticationServiceIntegTests extends SecurityI
     private void addRandomizedHeaders(ThreadContext threadContext, String validEncodedApiKey) throws IOException {
         // Headers in thread context should have no impact on tryAuthenticate
         if (randomBoolean()) {
-            new CrossClusterAccessHeaders(
+            CrossClusterAccessHeaders headers = new CrossClusterAccessHeaders(
                 validEncodedApiKey,
                 randomFrom(
                     new CrossClusterAccessSubjectInfo(AuthenticationTestHelper.builder().build(), RoleDescriptorsIntersection.EMPTY),
@@ -311,7 +314,8 @@ public class CrossClusterAccessAuthenticationServiceIntegTests extends SecurityI
                         RoleDescriptorsIntersection.EMPTY
                     )
                 )
-            ).writeToContext(threadContext);
+            );
+            headers.writeToContext(threadContext, null);
         } else {
             if (randomBoolean()) {
                 threadContext.putHeader(CROSS_CLUSTER_ACCESS_CREDENTIALS_HEADER_KEY, validEncodedApiKey);

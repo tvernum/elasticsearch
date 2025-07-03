@@ -32,8 +32,8 @@ public class CrossClusterAccessHeadersTests extends ESTestCase {
             AuthenticationTestHelper.randomCrossClusterAccessSubjectInfo(randomRoleDescriptorsIntersection())
         );
 
-        expected.writeToContext(ctx);
-        final CrossClusterAccessHeaders actual = CrossClusterAccessHeaders.readFromContext(ctx);
+        expected.writeToContext(ctx, null);
+        final CrossClusterAccessHeaders actual = CrossClusterAccessHeaders.readFromContext(ctx).headers();
 
         assertThat(actual.getSubjectInfo(), equalTo(expected.getSubjectInfo()));
         assertThat(actual.getCleanAndValidatedSubjectInfo(), equalTo(expected.getCleanAndValidatedSubjectInfo()));
@@ -63,7 +63,7 @@ public class CrossClusterAccessHeadersTests extends ESTestCase {
             AuthenticationTestHelper.randomCrossClusterAccessSubjectInfo(randomRoleDescriptorsIntersection())
         );
 
-        expected.writeToContext(ctx);
+        expected.writeToContext(ctx, null);
         var actual = expectThrows(IllegalArgumentException.class, () -> CrossClusterAccessHeaders.readFromContext(ctx));
 
         assertThat(

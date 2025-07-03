@@ -21,6 +21,7 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.security.Security;
 import org.elasticsearch.xpack.security.audit.AuditUtil;
 import org.elasticsearch.xpack.security.authc.CrossClusterAccessAuthenticationService;
+import org.elasticsearch.xpack.security.authc.CrossClusterAccessHeaders;
 import org.elasticsearch.xpack.security.authz.AuthorizationService;
 
 import java.util.HashSet;
@@ -38,7 +39,11 @@ final class CrossClusterAccessServerTransportFilter extends ServerTransportFilte
     static final Set<String> ALLOWED_TRANSPORT_HEADERS;
     static {
         final Set<String> allowedHeaders = new HashSet<>(
-            Set.of(CROSS_CLUSTER_ACCESS_CREDENTIALS_HEADER_KEY, CROSS_CLUSTER_ACCESS_SUBJECT_INFO_HEADER_KEY)
+            Set.of(
+                CROSS_CLUSTER_ACCESS_CREDENTIALS_HEADER_KEY,
+                CROSS_CLUSTER_ACCESS_SUBJECT_INFO_HEADER_KEY,
+                CrossClusterAccessHeaders.CROSS_CLUSTER_ACCESS_SIGNATURE_HEADER_KEY
+            )
         );
         allowedHeaders.add(AuditUtil.AUDIT_REQUEST_ID);
         allowedHeaders.add(Task.TRACE_STATE);

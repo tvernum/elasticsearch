@@ -19,10 +19,13 @@ import org.elasticsearch.transport.TransportRequest;
 import org.elasticsearch.xpack.core.ClientHelper;
 import org.elasticsearch.xpack.core.security.action.apikey.ApiKey;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
+import org.elasticsearch.xpack.core.security.authc.AuthenticationField;
 import org.elasticsearch.xpack.core.security.authc.AuthenticationResult;
 import org.elasticsearch.xpack.core.security.authc.CrossClusterAccessSubjectInfo;
 import org.elasticsearch.xpack.core.security.support.Exceptions;
+import org.elasticsearch.xpack.core.security.support.StringMatcher;
 
+import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -54,13 +57,14 @@ public class CrossClusterAccessAuthenticationService {
 
     public void authenticate(final String action, final TransportRequest request, final ActionListener<Authentication> listener) {
         final ThreadContext threadContext = clusterService.threadPool().getThreadContext();
-        final CrossClusterAccessHeaders crossClusterAccessHeaders;
+        final CrossClusterAccessHeaders.MaybeSignedHeaders maybeSignedHeaders;
         final Authenticator.Context authcContext;
         try {
             // parse and add as authentication token as early as possible so that failure events in audit log include API key ID
-            crossClusterAccessHeaders = CrossClusterAccessHeaders.readFromContext(threadContext);
-            final ApiKeyService.ApiKeyCredentials apiKeyCredentials = crossClusterAccessHeaders.credentials();
+            maybeSignedHeaders = CrossClusterAccessHeaders.readFromContext(threadContext);
+            final ApiKeyService.ApiKeyCredentials apiKeyCredentials = maybeSignedHeaders.headers().credentials();
             assert ApiKey.Type.CROSS_CLUSTER == apiKeyCredentials.getExpectedType();
+
             // authn must verify only the provided api key and not try to extract any other credential from the thread context
             authcContext = authenticationService.newContext(action, request, apiKeyCredentials);
         } catch (Exception ex) {
@@ -107,13 +111,58 @@ public class CrossClusterAccessAuthenticationService {
                     // try-catch so any failure here is wrapped by `withRequestProcessingFailure`, whereas `authenticate` failures are not
                     // we should _not_ wrap `authenticate` failures since this produces duplicate audit events
                     try {
-                        final CrossClusterAccessSubjectInfo subjectInfo = crossClusterAccessHeaders.getCleanAndValidatedSubjectInfo();
+                        verifySignature(maybeSignedHeaders, authentication);
+                        final CrossClusterAccessSubjectInfo subjectInfo = maybeSignedHeaders.headers().getCleanAndValidatedSubjectInfo();
                         writeAuthToContext(authcContext, authentication.toCrossClusterAccess(subjectInfo), listener);
                     } catch (Exception ex) {
                         withRequestProcessingFailure(authcContext, ex, listener);
                     }
                 }, listener::onFailure))
             );
+        }
+    }
+
+    private void verifySignature(CrossClusterAccessHeaders.MaybeSignedHeaders headers, Authentication authentication) {
+        logger.info("## VERIFY SIGNATURE Auth=[{}] Signature=[{}]", authentication, headers.signature());
+        /*
+         * If the API Key requires signing, then check
+         * (1) that there is a signature
+         * (2) that the signing certificate belongs to the correct DN
+         * (3) that the signing certificate is valid and chains to the current issuer
+         */
+        final String subjPattern = (String) authentication.getAuthenticatingSubject()
+            .getMetadata()
+            .get(AuthenticationField.API_KEY_REQUIRED_CERT_SUBJECT);
+        if (subjPattern != null) {
+            if (headers.isSigned() == false) {
+                throw new ElasticsearchSecurityException(
+                    "API Key [{}] requires signed CCS requests",
+                    authentication.getAuthenticatingSubject()
+                );
+            }
+            final StringMatcher matcher = StringMatcher.of(subjPattern);
+            final String subject = headers.signature().certificate().getSubjectX500Principal().getName();
+            if (matcher.test(subject) == false) {
+                throw new ElasticsearchSecurityException(
+                    "API Key [{}] requires CCS requests signed by [{}] but received [{}]",
+                    authentication.getAuthenticatingSubject(),
+                    subjPattern,
+                    subject
+                );
+            }
+            // TODO verify against trust store
+        }
+        /*
+         * If there is a signature, verify it (even if it wasn't required)
+         */
+        if (headers.isSigned()) {
+            try {
+                if (headers.verifySignature() == false) {
+                    throw new ElasticsearchSecurityException("Invalid signature received from [{}]", headers.signature().certificate());
+                }
+            } catch (GeneralSecurityException e) {
+                throw new ElasticsearchSecurityException("Failed to verify signature from [{}]", e, headers.signature().certificate());
+            }
         }
     }
 

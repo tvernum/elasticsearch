@@ -91,14 +91,16 @@ public final class RemoteClusterService extends RemoteClusterAware
         Setting.Property.NodeScope
     );
 
+    public static final String REMOTE_CLUSTER_SETTINGS_PREFIX = "cluster.remote.";
+
     public static final Setting.AffixSetting<Boolean> REMOTE_CLUSTER_SKIP_UNAVAILABLE = Setting.affixKeySetting(
-        "cluster.remote.",
+        REMOTE_CLUSTER_SETTINGS_PREFIX,
         "skip_unavailable",
         (ns, key) -> boolSetting(key, true, new RemoteConnectionEnabled<>(ns, key), Setting.Property.Dynamic, Setting.Property.NodeScope)
     );
 
     public static final Setting.AffixSetting<TimeValue> REMOTE_CLUSTER_PING_SCHEDULE = Setting.affixKeySetting(
-        "cluster.remote.",
+        REMOTE_CLUSTER_SETTINGS_PREFIX,
         "transport.ping_schedule",
         (ns, key) -> timeSetting(
             key,
@@ -110,7 +112,7 @@ public final class RemoteClusterService extends RemoteClusterAware
     );
 
     public static final Setting.AffixSetting<Compression.Enabled> REMOTE_CLUSTER_COMPRESS = Setting.affixKeySetting(
-        "cluster.remote.",
+        REMOTE_CLUSTER_SETTINGS_PREFIX,
         "transport.compress",
         (ns, key) -> enumSetting(
             Compression.Enabled.class,
@@ -123,7 +125,7 @@ public final class RemoteClusterService extends RemoteClusterAware
     );
 
     public static final Setting.AffixSetting<Compression.Scheme> REMOTE_CLUSTER_COMPRESSION_SCHEME = Setting.affixKeySetting(
-        "cluster.remote.",
+        REMOTE_CLUSTER_SETTINGS_PREFIX,
         "transport.compression_scheme",
         (ns, key) -> enumSetting(
             Compression.Scheme.class,
@@ -136,7 +138,7 @@ public final class RemoteClusterService extends RemoteClusterAware
     );
 
     public static final Setting.AffixSetting<SecureString> REMOTE_CLUSTER_CREDENTIALS = Setting.affixKeySetting(
-        "cluster.remote.",
+        REMOTE_CLUSTER_SETTINGS_PREFIX,
         "credentials",
         key -> SecureSetting.secureString(key, null)
     );

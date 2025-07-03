@@ -144,7 +144,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
             .build(false);
         authentication.writeToContext(threadContext);
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -195,7 +195,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         threadContext.putTransient(AuthorizationServiceField.ORIGINATING_ACTION_KEY, "indices:foo");
 
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -239,7 +239,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
 
     public void testSendWithoutUser() throws Exception {
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -301,7 +301,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         threadContext.putTransient(AuthorizationServiceField.ORIGINATING_ACTION_KEY, "indices:foo");
 
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -369,7 +369,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         threadContext.putTransient(AuthorizationServiceField.ORIGINATING_ACTION_KEY, "indices:foo");
 
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -435,7 +435,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
 
         threadContext.putTransient(ThreadContext.ACTION_ORIGIN_TRANSIENT_NAME, origin);
         SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -602,7 +602,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         final String remoteClusterAlias = randomAlphaOfLengthBetween(5, 10);
 
         final SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -739,7 +739,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
             .getRoleDescriptorsIntersectionForRemoteCluster(any(), any(), any(), listenerCaptor.capture());
 
         final SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             authzService,
@@ -877,7 +877,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
 
         final AuthorizationService authzService = mock(AuthorizationService.class);
         final SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             authzService,
@@ -936,7 +936,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         final String remoteClusterCredential = ApiKeyService.withApiKeyPrefix(encodedApiKey);
 
         final SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -1035,7 +1035,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
         }).when(authzService).getRoleDescriptorsIntersectionForRemoteCluster(any(), any(), any(), anyActionListener());
 
         final SecurityServerTransportInterceptor interceptor = new SecurityServerTransportInterceptor(
-            settings,
+            newEnvironment(settings),
             threadPool,
             mock(AuthenticationService.class),
             authzService,
@@ -1138,7 +1138,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
             .getSSLConfiguration("xpack.security.remote_cluster_client.ssl.");
 
         final var securityServerTransportInterceptor = new SecurityServerTransportInterceptor(
-            builder.build(),
+            newEnvironment(builder.build()),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
@@ -1191,7 +1191,7 @@ public class SecurityServerTransportInterceptorTests extends ESTestCase {
             .getSSLConfiguration("xpack.security.remote_cluster_client.ssl.");
 
         final var securityServerTransportInterceptor = new SecurityServerTransportInterceptor(
-            builder.build(),
+            newEnvironment(builder.build()),
             threadPool,
             mock(AuthenticationService.class),
             mock(AuthorizationService.class),
