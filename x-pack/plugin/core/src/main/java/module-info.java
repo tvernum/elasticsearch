@@ -232,6 +232,7 @@ module org.elasticsearch.xcore {
     exports org.elasticsearch.xpack.core.watcher.watch;
     exports org.elasticsearch.xpack.core.watcher;
     exports org.elasticsearch.xpack.core.security.support.bits;
+    exports org.elasticsearch.xpack.core.security.authc.apikey;
 
     provides org.elasticsearch.action.admin.cluster.node.info.ComponentVersionNumber
         with
