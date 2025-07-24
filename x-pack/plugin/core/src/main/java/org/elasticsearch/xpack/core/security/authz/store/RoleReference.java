@@ -13,6 +13,7 @@ import org.elasticsearch.common.hash.MessageDigests;
 import org.elasticsearch.xpack.core.security.authc.CrossClusterAccessSubjectInfo;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,11 @@ public interface RoleReference {
         @Override
         public void resolve(RoleReferenceResolver resolver, ActionListener<RolesRetrievalResult> listener) {
             resolver.resolveNamedRoleReference(this, listener);
+        }
+
+        @Override
+        public String toString() {
+            return "NamedRoleReference{" + Arrays.toString(roleNames) + '}';
         }
     }
 

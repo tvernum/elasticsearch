@@ -133,7 +133,7 @@ public class SecurityRolesMultiProjectIT extends MultiProjectRestTestCase {
         assertBusy(() -> {
             assertThat(getClusterPrivileges(project1, username1), contains("monitor"));
             assertThat(getClusterPrivileges(project2, username2), contains("monitor"));
-        }, 20, TimeUnit.SECONDS); // increasing this to try and solve for a rare failure
+        }, 10, TimeUnit.SECONDS); // increasing this to try and solve for a rare failure
 
         rolesFile.update(Resource.fromString(""));
 
@@ -141,7 +141,7 @@ public class SecurityRolesMultiProjectIT extends MultiProjectRestTestCase {
             // Both projects should automatically reflect that the role has been removed
             assertThat(getClusterPrivileges(project1, username1), empty());
             assertThat(getClusterPrivileges(project2, username2), empty());
-        }, 20, TimeUnit.SECONDS);
+        }, 10, TimeUnit.SECONDS);
     }
 
     private void createUser(ProjectId projectId, String username, String roleName) throws IOException {

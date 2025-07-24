@@ -50,4 +50,16 @@ public final class RolesRetrievalResult {
     public Set<String> getMissingRoles() {
         return missingRoles;
     }
+
+    @Override
+    public String toString() {
+        return "RolesRetrievalResult{"
+            + "roleDescriptors="
+            + roleDescriptors
+            + ", missingRoles="
+            + missingRoles
+            + ", success="
+            + success
+            + '}';
+    }
 }

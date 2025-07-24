@@ -19,6 +19,7 @@ import org.elasticsearch.cluster.SimpleBatchedExecutor;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.cluster.service.MasterServiceTaskQueue;
@@ -139,7 +140,11 @@ public class UpdateIndexMigrationVersionAction extends ActionType<UpdateIndexMig
             }
 
             ClusterState execute(ClusterState currentState) {
-                final var project = currentState.metadata().getProject();
+                // HACK NO-COMMIT
+                final var project = currentState.metadata().getProject(ProjectId.DEFAULT);
+                if (project.hasIndex(indexName) == false) {
+                    return currentState;
+                }
                 IndexMetadata.Builder indexMetadataBuilder = IndexMetadata.builder(project.indices().get(indexName));
                 indexMetadataBuilder.putCustom(
                     MIGRATION_VERSION_CUSTOM_KEY,

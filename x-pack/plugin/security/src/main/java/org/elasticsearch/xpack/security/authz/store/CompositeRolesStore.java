@@ -271,8 +271,15 @@ public class CompositeRolesStore {
 
         final var cacheKey = new ProjectScoped<>(projectId, roleKey);
         final Role existing = roleCache.get(cacheKey);
+        logger.info(
+            "Cached role for [{}] is {}: {}",
+            cacheKey,
+            existing == null ? null : existing.getClass().getSimpleName(),
+            existing == null ? "<>" : existing.names()
+        );
         if (existing == null) {
             final long invalidationCounter = numInvalidation.getOrDefault(projectId, 0L);
+            logger.info("Invalidation counter for project [{}] is [{}]", projectId, invalidationCounter);
             final Consumer<Exception> failureHandler = e -> {
                 // Because superuser does not have write access to restricted indices, it is valid to mix superuser with other roles to
                 // gain addition access. However, if retrieving those roles fails for some reason, then that could leave admins in a
@@ -294,6 +301,7 @@ public class CompositeRolesStore {
                 }
             };
             roleReference.resolve(roleReferenceResolver, ActionListener.wrap(rolesRetrievalResult -> {
+                logger.info("Role retrieval for [{}] is [{}]", roleReference, rolesRetrievalResult.toString());
                 if (RolesRetrievalResult.EMPTY == rolesRetrievalResult) {
                     roleActionListener.onResponse(Role.EMPTY);
                 } else if (RolesRetrievalResult.SUPERUSER == rolesRetrievalResult) {
@@ -407,7 +415,10 @@ public class CompositeRolesStore {
                          * numInvalidation.get() comparison to the number of invalidation when we started. we just try to
                          * be on the safe side and don't cache potentially stale results
                          */
-                        if (invalidationCounter == numInvalidation.getOrDefault(cacheKey.projectId(), 0L)) {
+                        final Long currentInvalidationCounter = numInvalidation.getOrDefault(cacheKey.projectId(), 0L);
+                        logger.info("Invalidation counter for [{}] is now [{}]", cacheKey.projectId(), currentInvalidationCounter);
+                        if (invalidationCounter == currentInvalidationCounter) {
+                            logger.info("Storing role [{}] in cache for [{}]", role, cacheKey);
                             roleCache.computeIfAbsent(cacheKey, (s) -> role);
                         }
                     }
@@ -650,9 +661,26 @@ public class CompositeRolesStore {
     }
 
     public void invalidateClusterScopedRoles(Set<String> roles) {
+        logger.info("Invalidating cluster scoped roles [{}]", roles);
         numInvalidation.replaceAll((p, num) -> num + 1);
-        roleCacheHelper.removeKeysIf(key -> Sets.haveEmptyIntersection(key.value().getNames(), roles) == false);
-        negativeLookupCacheHelper.removeKeysIf(key -> roles.contains(key.value()));
+        logger.info("Invalidation counters are now [{}]", numInvalidation);
+
+        logger.info("Before update, cache sizes are pos=[{}], neg=[{}]", roleCache.count(), negativeLookupCache.count());
+        roleCacheHelper.removeKeysIf(key -> {
+            if (Sets.haveEmptyIntersection(key.value().getNames(), roles) == false) {
+                logger.info("Cache entry [{}] intersects roles [{}]", key, roles);
+                return true;
+            }
+            return false;
+        });
+        negativeLookupCacheHelper.removeKeysIf(key -> {
+            if (roles.contains(key.value())) {
+                logger.info("Negative cache entry [{}] intersects roles [{}]", key, roles);
+                return true;
+            }
+            return false;
+        });
+        logger.info("After update, cache sizes are pos=[{}], neg=[{}]", roleCache.count(), negativeLookupCache.count());
     }
 
     public void usageStats(ActionListener<Map<String, Object>> listener) {

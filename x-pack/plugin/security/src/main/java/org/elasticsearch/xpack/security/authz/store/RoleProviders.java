@@ -7,7 +7,10 @@
 
 package org.elasticsearch.xpack.security.authz.store;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.core.Strings;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
@@ -31,6 +34,8 @@ import java.util.function.BiConsumer;
  * The set of permitted role providers can change due to changes in the license state.
  */
 public class RoleProviders {
+
+    private final Logger logger = LogManager.getLogger(getClass());
 
     private final List<ChangeListener> changeListeners;
 
@@ -98,7 +103,16 @@ public class RoleProviders {
     }
 
     private void onClusterScopedRoleModification(Set<String> roles) {
-        changeListeners.forEach(l -> l.clusterScopedRolesChanged(roles));
+        logger.info("Roles [{}] changed", roles);
+        changeListeners.forEach(l -> {
+            try {
+                l.clusterScopedRolesChanged(roles);
+                logger.info("Informed [{}] that roles [{}] changed", l, roles);
+            } catch (Exception e) {
+                logger.info(() -> Strings.format("Failed to inform [%s] that roles [%s] changed", l, roles), e);
+                throw e;
+            }
+        });
     }
 
     public void addChangeListener(ChangeListener listener) {

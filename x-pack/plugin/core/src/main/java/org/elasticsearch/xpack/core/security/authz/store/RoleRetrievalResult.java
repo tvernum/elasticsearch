@@ -73,4 +73,16 @@ public final class RoleRetrievalResult {
         Objects.requireNonNull(e, "Exception must be provided");
         return new RoleRetrievalResult(null, e);
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder str = new StringBuilder(getClass().getSimpleName()).append("{success=").append(isSuccess()).append(", ");
+        if (isSuccess()) {
+            str.append(descriptors);
+        } else {
+            str.append(failure);
+        }
+        str.append('}');
+        return str.toString();
+    }
 }
