@@ -13,13 +13,13 @@ import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.common.CheckedBiConsumer;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.license.XPackLicenseState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
-import org.elasticsearch.xpack.core.security.authz.support.SecurityQueryTemplateEvaluator;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 
 import static org.elasticsearch.xpack.core.security.SecurityField.DOCUMENT_LEVEL_SECURITY_FEATURE;
 import static org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField.INDICES_PERMISSIONS_VALUE;
@@ -30,16 +30,16 @@ public class DlsFlsRequestCacheDifferentiator implements CheckedBiConsumer<Shard
 
     private final XPackLicenseState licenseState;
     private final SetOnce<SecurityContext> securityContextHolder;
-    private final SetOnce<ScriptService> scriptServiceReference;
+    private final Supplier<? extends DlsQueryEvaluator> dlsQueryEvaluatorReference;
 
     public DlsFlsRequestCacheDifferentiator(
         XPackLicenseState licenseState,
         SetOnce<SecurityContext> securityContextReference,
-        SetOnce<ScriptService> scriptServiceReference
+        Supplier<? extends DlsQueryEvaluator> dlsQueryEvaluatorReference
     ) {
         this.licenseState = licenseState;
         this.securityContextHolder = securityContextReference;
-        this.scriptServiceReference = scriptServiceReference;
+        this.dlsQueryEvaluatorReference = dlsQueryEvaluatorReference;
     }
 
     @Override
@@ -59,10 +59,7 @@ public class DlsFlsRequestCacheDifferentiator implements CheckedBiConsumer<Shard
                 indexAccessControl.getFieldPermissions().hasFieldLevelSecurity(),
                 indexAccessControl.getDocumentPermissions().hasDocumentLevelPermissions()
             );
-            indexAccessControl.buildCacheKey(
-                out,
-                SecurityQueryTemplateEvaluator.wrap(securityContext.getUser(), scriptServiceReference.get())
-            );
+            indexAccessControl.buildCacheKey(out, dlsQueryEvaluatorReference.get().bind(securityContext.getUser()));
         }
     }
 }

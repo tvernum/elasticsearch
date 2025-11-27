@@ -17,7 +17,6 @@ import org.elasticsearch.index.query.GeoShapeQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.TermsQueryBuilder;
 import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
 import org.elasticsearch.xcontent.XContentFactory;
@@ -57,7 +56,7 @@ public final class DLSRoleQueryValidator {
                             continue;
                         }
 
-                        evaluateAndVerifyRoleQuery(query.utf8ToString(), xContentRegistry);
+                        parseAndVerifyRoleQuery(query.utf8ToString(), xContentRegistry);
                     }
                 } catch (ParsingException | IllegalArgumentException | IOException e) {
                     throw new ElasticsearchParseException(
@@ -124,7 +123,7 @@ public final class DLSRoleQueryValidator {
      * supported in DLS role query.
      *
      * @param query            {@link BytesReference} query field from the role
-     * @param scriptService    {@link ScriptService} used for evaluation of a template query
+     * @param dlsQueryEvaluator   used for evaluation of a template/extension query
      * @param xContentRegistry {@link NamedXContentRegistry} for finding named queries
      * @param user             {@link User} used when evaluation a template query
      * @return {@link QueryBuilder} if the query is valid and allowed, in case {@link RoleDescriptor.IndicesPrivileges}
@@ -133,14 +132,14 @@ public final class DLSRoleQueryValidator {
     @Nullable
     public static QueryBuilder evaluateAndVerifyRoleQuery(
         BytesReference query,
-        ScriptService scriptService,
+        DlsQueryEvaluator dlsQueryEvaluator,
         NamedXContentRegistry xContentRegistry,
         User user
     ) {
         if (query != null) {
-            String templateResult = SecurityQueryTemplateEvaluator.evaluateTemplate(query.utf8ToString(), scriptService, user);
+            String evaluatedResult = dlsQueryEvaluator.evaluate(query.utf8ToString(), user);
             try {
-                return evaluateAndVerifyRoleQuery(templateResult, xContentRegistry);
+                return parseAndVerifyRoleQuery(evaluatedResult, xContentRegistry);
             } catch (ElasticsearchParseException | ParsingException | XContentParseException | IOException e) {
                 throw new ElasticsearchParseException("failed to parse field 'query' from the role descriptor", e);
             }
@@ -149,7 +148,7 @@ public final class DLSRoleQueryValidator {
     }
 
     @Nullable
-    public static QueryBuilder evaluateAndVerifyRoleQuery(String query, NamedXContentRegistry xContentRegistry) throws IOException {
+    public static QueryBuilder parseAndVerifyRoleQuery(String query, NamedXContentRegistry xContentRegistry) throws IOException {
         if (query != null) {
             NamedXContentRegistry registryWrapper = new NamedXContentRegistry(Collections.emptyList()) {
                 @Override

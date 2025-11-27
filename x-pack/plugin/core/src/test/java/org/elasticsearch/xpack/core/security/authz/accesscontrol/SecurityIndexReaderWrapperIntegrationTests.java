@@ -46,7 +46,6 @@ import org.elasticsearch.index.query.SearchExecutionContext;
 import org.elasticsearch.index.query.TermsQueryBuilder;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.license.MockLicenseState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.test.AbstractBuilderTestCase;
 import org.elasticsearch.test.IndexSettingsModule;
@@ -59,6 +58,7 @@ import org.elasticsearch.xpack.core.security.authc.AuthenticationTestHelper;
 import org.elasticsearch.xpack.core.security.authc.support.AuthenticationContextSerializer;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -80,7 +80,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
     public void testDLS() throws Exception {
         ShardId shardId = new ShardId("_index", "_na_", 0);
         MappingLookup mappingLookup = createMappingLookup(List.of(new KeywordFieldType("field")));
-        ScriptService scriptService = mock(ScriptService.class);
+        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
 
         final ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
@@ -175,7 +175,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
                 bitsetCache,
                 securityContext,
                 licenseState,
-                scriptService
+                queryEvaluator
             ) {
 
                 @Override
@@ -214,7 +214,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
         MappingLookup mappingLookup = createMappingLookup(
             List.of(new KeywordFieldType("field"), new KeywordFieldType("f1"), new KeywordFieldType("f2"))
         );
-        ScriptService scriptService = mock(ScriptService.class);
+        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
 
         final ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
@@ -280,7 +280,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
             bitsetCache,
             securityContext,
             licenseState,
-            scriptService
+            queryEvaluator
         ) {
 
             @Override
@@ -477,13 +477,13 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
 
         final MockLicenseState licenseState = mock(MockLicenseState.class);
         when(licenseState.isAllowed(DOCUMENT_LEVEL_SECURITY_FEATURE)).thenReturn(true);
-        ScriptService scriptService = mock(ScriptService.class);
+        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
         SecurityIndexReaderWrapper wrapper = new SecurityIndexReaderWrapper(
             s -> context,
             bitsetCache,
             securityContext,
             licenseState,
-            scriptService
+            queryEvaluator
         ) {
 
             @Override

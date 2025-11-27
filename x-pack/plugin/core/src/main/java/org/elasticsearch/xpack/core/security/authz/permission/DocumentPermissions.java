@@ -22,11 +22,9 @@ import org.elasticsearch.index.query.Rewriteable;
 import org.elasticsearch.index.query.SearchExecutionContext;
 import org.elasticsearch.index.search.NestedHelper;
 import org.elasticsearch.index.shard.ShardId;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
 import org.elasticsearch.xpack.core.security.authz.support.DLSRoleQueryValidator;
-import org.elasticsearch.xpack.core.security.authz.support.SecurityQueryTemplateEvaluator;
-import org.elasticsearch.xpack.core.security.authz.support.SecurityQueryTemplateEvaluator.DlsQueryEvaluationContext;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.security.support.CacheKey;
 import org.elasticsearch.xpack.core.security.user.User;
 
@@ -111,7 +109,7 @@ public final class DocumentPermissions implements CacheKey {
      * limited queries.
      *
      * @param user authenticated {@link User}
-     * @param scriptService {@link ScriptService} for evaluating query templates
+     * @param queryEvaluator for evaluating query templates or extensions
      * @param shardId {@link ShardId}
      * @param searchExecutionContextProvider {@link SearchExecutionContext}
      * @return {@link BooleanQuery} for the filter
@@ -119,12 +117,12 @@ public final class DocumentPermissions implements CacheKey {
      */
     public BooleanQuery filter(
         User user,
-        ScriptService scriptService,
+        DlsQueryEvaluator queryEvaluator,
         ShardId shardId,
         Function<ShardId, SearchExecutionContext> searchExecutionContextProvider
     ) throws IOException {
         if (hasDocumentLevelPermissions()) {
-            evaluateQueries(SecurityQueryTemplateEvaluator.wrap(user, scriptService));
+            evaluateQueries(queryEvaluator.bind(user));
             assert listOfEvaluatedQueries != null : "evaluated queries must not be null";
             assert false == listOfEvaluatedQueries.isEmpty() : "evaluated queries must not be empty";
 
@@ -141,7 +139,7 @@ public final class DocumentPermissions implements CacheKey {
         return null;
     }
 
-    private void evaluateQueries(DlsQueryEvaluationContext context) {
+    private void evaluateQueries(DlsQueryEvaluator.UserContext context) throws IOException {
         if (listOfQueries != null && listOfEvaluatedQueries == null) {
             listOfEvaluatedQueries = listOfQueries.stream().map(queries -> queries.stream().map(context::evaluate).toList()).toList();
         }
@@ -155,7 +153,7 @@ public final class DocumentPermissions implements CacheKey {
     ) throws IOException {
         for (String query : queries) {
             SearchExecutionContext context = searchExecutionContextProvider.apply(shardId);
-            QueryBuilder queryBuilder = DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(query, context.getParserConfig().registry());
+            QueryBuilder queryBuilder = DLSRoleQueryValidator.parseAndVerifyRoleQuery(query, context.getParserConfig().registry());
             if (queryBuilder != null) {
                 failIfQueryUsesClient(queryBuilder, context);
                 Query roleQuery = context.toQuery(queryBuilder).query();
@@ -235,7 +233,7 @@ public final class DocumentPermissions implements CacheKey {
     }
 
     @Override
-    public void buildCacheKey(StreamOutput out, DlsQueryEvaluationContext context) throws IOException {
+    public void buildCacheKey(StreamOutput out, DlsQueryEvaluator.UserContext context) throws IOException {
         assert hasDocumentLevelPermissions() : "document permissions should not contribute to cache key when there is no DLS query";
         evaluateQueries(context);
         out.writeCollection(listOfEvaluatedQueries, StreamOutput::writeStringCollection);

@@ -100,6 +100,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.Transport;
 import org.elasticsearch.transport.TransportInterceptor;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.ssl.SSLService;
 
 import java.io.IOException;
@@ -756,5 +757,15 @@ public class LocalStateCompositeXPackPlugin extends XPackPlugin
     @Override
     public void signalShutdown(Collection<String> shutdownNodeIds) {
         filterPlugins(ShutdownAwarePlugin.class).forEach(plugin -> plugin.signalShutdown(shutdownNodeIds));
+    }
+
+    @Override
+    protected DlsQueryEvaluator.LateBinding getDlsQueryEvaluator(ExtensionLoader loader) {
+        return new DlsQueryEvaluator.LateBinding() {
+            @Override
+            public DlsQueryEvaluator get() {
+                throw new UnsupportedOperationException("Not supported in " + getClass().getSimpleName());
+            }
+        };
     }
 }

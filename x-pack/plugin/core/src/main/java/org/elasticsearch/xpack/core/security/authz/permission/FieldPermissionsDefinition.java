@@ -8,7 +8,7 @@ package org.elasticsearch.xpack.core.security.authz.permission;
 
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.xpack.core.security.authz.support.SecurityQueryTemplateEvaluator.DlsQueryEvaluationContext;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.security.support.CacheKey;
 
 import java.io.IOException;
@@ -62,7 +62,7 @@ public final class FieldPermissionsDefinition implements CacheKey {
     }
 
     @Override
-    public void buildCacheKey(StreamOutput out, DlsQueryEvaluationContext context) throws IOException {
+    public void buildCacheKey(StreamOutput out, DlsQueryEvaluator.UserContext context) throws IOException {
         out.writeCollection(fieldGrantExcludeGroups, (o, g) -> g.buildCacheKey(o, context));
     }
 
@@ -112,7 +112,7 @@ public final class FieldPermissionsDefinition implements CacheKey {
         }
 
         @Override
-        public void buildCacheKey(StreamOutput out, DlsQueryEvaluationContext context) throws IOException {
+        public void buildCacheKey(StreamOutput out, DlsQueryEvaluator.UserContext context) throws IOException {
             out.writeOptionalStringArray(grantedFields);
             out.writeOptionalStringArray(excludedFields);
         }

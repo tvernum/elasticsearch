@@ -223,6 +223,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCa
 import org.elasticsearch.xpack.core.security.authz.permission.SimpleRole;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.core.ssl.SSLConfigurationSettings;
@@ -330,6 +331,7 @@ import org.elasticsearch.xpack.security.authz.FileRoleValidator;
 import org.elasticsearch.xpack.security.authz.ReservedRoleNameChecker;
 import org.elasticsearch.xpack.security.authz.SecuritySearchOperationListener;
 import org.elasticsearch.xpack.security.authz.accesscontrol.OptOutQueryCache;
+import org.elasticsearch.xpack.security.authz.dls.SecurityQueryEvaluator;
 import org.elasticsearch.xpack.security.authz.interceptor.BulkShardRequestInterceptor;
 import org.elasticsearch.xpack.security.authz.interceptor.DlsFlsLicenseRequestInterceptor;
 import org.elasticsearch.xpack.security.authz.interceptor.IndicesAliasesRequestInterceptor;
@@ -620,7 +622,7 @@ public class Security extends Plugin
     private final SetOnce<List<BootstrapCheck>> bootstrapChecks = new SetOnce<>();
     private final List<SecurityExtension> securityExtensions = new ArrayList<>();
     private final SetOnce<Transport> transportReference = new SetOnce<>();
-    private final SetOnce<ScriptService> scriptServiceReference = new SetOnce<>();
+    private final SetOnce<SecurityQueryEvaluator> dlsEvaluator = new SetOnce<>();
     private final SetOnce<OperatorOnlyRegistry> operatorOnlyRegistry = new SetOnce<>();
     private final SetOnce<PutRoleRequestBuilderFactory> putRoleRequestBuilderFactory = new SetOnce<>();
     private final SetOnce<BulkPutRoleRequestBuilderFactory> bulkPutRoleRequestBuilderFactory = new SetOnce<>();
@@ -803,7 +805,6 @@ public class Security extends Plugin
 
         this.migrationManager.set(new SecurityMigrations.Manager(clusterService, persistentTasksService, systemIndices));
 
-        scriptServiceReference.set(scriptService);
         // We need to construct the checks here while the secure settings are still available.
         // If we wait until #getBoostrapChecks the secure settings will have been cleared/closed.
         final List<BootstrapCheck> checks = new ArrayList<>();
@@ -947,6 +948,8 @@ public class Security extends Plugin
         final ReservedRolesStore reservedRolesStore = new ReservedRolesStore(Set.copyOf(INCLUDED_RESERVED_ROLES_SETTING.get(settings)));
         dlsBitsetCache.set(new DocumentSubsetBitsetCache(settings));
         final FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(settings);
+        dlsEvaluator.set(new SecurityQueryEvaluator(scriptService, List.of()));
+        components.add(new PluginComponentBinding<>(DlsQueryEvaluator.class, dlsEvaluator.get()));
 
         RoleDescriptor.setFieldPermissionsCache(fieldPermissionsCache);
         // Need to set to default if it wasn't set by an extension
@@ -1721,7 +1724,7 @@ public class Security extends Plugin
                         dlsBitsetCache.get(),
                         securityContext.get(),
                         getLicenseState(),
-                        indexService.getScriptService()
+                        dlsEvaluator.get()
                     )
                 );
                 /*
@@ -2623,7 +2626,7 @@ public class Security extends Plugin
         if (enabled == false) {
             return null;
         }
-        return new DlsFlsRequestCacheDifferentiator(getLicenseState(), securityContext, scriptServiceReference);
+        return new DlsFlsRequestCacheDifferentiator(getLicenseState(), securityContext, dlsEvaluator::get);
     }
 
     @Override
@@ -2636,6 +2639,14 @@ public class Security extends Plugin
     ) {
         final SecurityMigrations.Manager manager = this.migrationManager.get();
         return manager == null ? List.of() : List.of(manager.getPersistentTasksExecutor(client, threadPool));
+    }
+
+    public DlsQueryEvaluator getDlsQueryEvaluator() {
+        if (enabled) {
+            return dlsEvaluator.get();
+        } else {
+            throw new IllegalStateException("security is not enabled");
+        }
     }
 
     List<ReservedProjectStateHandler<?>> reservedProjectStateHandlers() {

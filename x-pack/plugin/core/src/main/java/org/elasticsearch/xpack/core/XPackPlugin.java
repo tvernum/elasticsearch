@@ -106,6 +106,7 @@ import org.elasticsearch.xpack.core.rest.action.RestXPackInfoAction;
 import org.elasticsearch.xpack.core.rest.action.RestXPackUsageAction;
 import org.elasticsearch.xpack.core.security.authc.TokenMetadata;
 import org.elasticsearch.xpack.core.security.authz.RoleMappingMetadata;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.ssl.SSLConfigurationReloader;
 import org.elasticsearch.xpack.core.ssl.SSLService;
 import org.elasticsearch.xpack.core.ssl.extension.SslProfileExtension;
@@ -184,6 +185,7 @@ public class XPackPlugin extends XPackClientPlugin
     private static SetOnce<XPackLicenseState> licenseState = new SetOnce<>();
     private static SetOnce<LicenseService> licenseService = new SetOnce<>();
 
+    private final SetOnce<DlsQueryEvaluator.LateBinding> dlsEvaluator = new SetOnce<>();
     private final List<SslProfileExtension> sslExtensions = new ArrayList<>();
 
     public XPackPlugin(final Settings settings) {
@@ -349,6 +351,7 @@ public class XPackPlugin extends XPackClientPlugin
         components.add(new PluginComponentBinding<>(MutableLicenseService.class, licenseService));
         components.add(new PluginComponentBinding<>(LicenseService.class, licenseService));
         components.add(getLicenseState());
+        components.add(new PluginComponentBinding<>(DlsQueryEvaluator.LateBinding.class, dlsEvaluator.get()));
 
         return components;
     }
@@ -512,15 +515,12 @@ public class XPackPlugin extends XPackClientPlugin
     public void loadExtensions(ExtensionLoader loader) {
         loadLicenseService(loader);
         this.sslExtensions.addAll(loader.loadExtensions(SslProfileExtension.class));
+        this.dlsEvaluator.set(getDlsQueryEvaluator(loader));
     }
 
     private void loadLicenseService(ExtensionLoader loader) {
-        List<MutableLicenseService> licenseServices = loader.loadExtensions(MutableLicenseService.class);
-        if (licenseServices.size() > 1) {
-            throw new IllegalStateException(MutableLicenseService.class + " may not have multiple implementations");
-        } else if (licenseServices.size() == 1) {
-            MutableLicenseService licenseService = licenseServices.get(0);
-            logger.debug("Loaded implementation [{}] for interface MutableLicenseService", licenseService.getClass().getCanonicalName());
+        final MutableLicenseService licenseService = loadExtension(loader, MutableLicenseService.class);
+        if (licenseService != null) {
             setLicenseService(licenseService);
             setLicenseState(
                 new XPackLicenseState(
@@ -535,6 +535,28 @@ public class XPackPlugin extends XPackClientPlugin
                     new XPackLicenseStatus(License.OperationMode.TRIAL, true, null)
                 )
             );
+        }
+    }
+
+    protected DlsQueryEvaluator.LateBinding getDlsQueryEvaluator(ExtensionLoader loader) {
+        final DlsQueryEvaluator.LateBinding queryEvaluator = loadExtension(loader, DlsQueryEvaluator.LateBinding.class);
+        if (queryEvaluator == null) {
+            throw new IllegalStateException(DlsQueryEvaluator.LateBinding.class.getName() + " must have an implementation");
+
+        }
+        return queryEvaluator;
+    }
+
+    private <T> T loadExtension(ExtensionLoader loader, final Class<T> type) {
+        List<T> extensions = loader.loadExtensions(type);
+        if (extensions.size() > 1) {
+            throw new IllegalStateException(type + " may not have multiple implementations");
+        } else if (extensions.size() == 1) {
+            T instance = extensions.get(0);
+            logger.debug("Loaded implementation [{}] for interface {}", instance.getClass().getCanonicalName(), type.getSimpleName());
+            return instance;
+        } else {
+            return null;
         }
     }
 }

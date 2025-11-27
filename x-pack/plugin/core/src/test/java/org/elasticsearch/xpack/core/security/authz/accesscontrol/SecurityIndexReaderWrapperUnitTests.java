@@ -23,12 +23,12 @@ import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesModule;
 import org.elasticsearch.license.MockLicenseState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.junit.After;
 import org.junit.Before;
 
@@ -56,7 +56,7 @@ public class SecurityIndexReaderWrapperUnitTests extends ESTestCase {
     }
 
     private SecurityContext securityContext;
-    private ScriptService scriptService;
+    private DlsQueryEvaluator queryEvaluator;
     private SecurityIndexReaderWrapper securityIndexReaderWrapper;
     private ElasticsearchDirectoryReader esIn;
     private MockLicenseState licenseState;
@@ -64,7 +64,7 @@ public class SecurityIndexReaderWrapperUnitTests extends ESTestCase {
     @Before
     public void setup() throws Exception {
         Index index = new Index("_index", "testUUID");
-        scriptService = mock(ScriptService.class);
+        queryEvaluator = mock(DlsQueryEvaluator.class);
 
         ShardId shardId = new ShardId(index, 0);
         licenseState = mock(MockLicenseState.class);
@@ -96,7 +96,7 @@ public class SecurityIndexReaderWrapperUnitTests extends ESTestCase {
             null,
             securityContext,
             licenseState,
-            scriptService
+            queryEvaluator
         ) {
             @Override
             protected IndicesAccessControl getIndicesAccessControl() {
@@ -128,7 +128,7 @@ public class SecurityIndexReaderWrapperUnitTests extends ESTestCase {
 
     public void testWrapReaderWhenFeatureDisabled() {
         when(licenseState.isAllowed(DOCUMENT_LEVEL_SECURITY_FEATURE)).thenReturn(false);
-        securityIndexReaderWrapper = new SecurityIndexReaderWrapper(null, null, securityContext, licenseState, scriptService);
+        securityIndexReaderWrapper = new SecurityIndexReaderWrapper(null, null, securityContext, licenseState, queryEvaluator);
         DirectoryReader reader = securityIndexReaderWrapper.apply(esIn);
         assertThat(reader, sameInstance(esIn));
     }

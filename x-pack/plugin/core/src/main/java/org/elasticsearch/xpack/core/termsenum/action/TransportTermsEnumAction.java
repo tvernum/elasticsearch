@@ -48,7 +48,6 @@ import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.injection.guice.Inject;
 import org.elasticsearch.license.XPackLicenseState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.SearchService;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.internal.AliasFilter;
@@ -68,6 +67,7 @@ import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.support.DLSRoleQueryValidator;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -97,7 +97,7 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
     private final RemoteClusterService remoteClusterService;
     private final SearchService searchService;
     private final IndicesService indicesService;
-    private final ScriptService scriptService;
+    private final DlsQueryEvaluator.LateBinding dlsQueryEvaluator;
     private final ProjectResolver projectResolver;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
@@ -114,7 +114,7 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
         SearchService searchService,
         TransportService transportService,
         IndicesService indicesService,
-        ScriptService scriptService,
+        DlsQueryEvaluator.LateBinding dlsQueryEvaluator,
         ActionFilters actionFilters,
         XPackLicenseState licenseState,
         Settings settings,
@@ -138,7 +138,7 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
         this.coordinationExecutor = clusterService.threadPool().executor(ThreadPool.Names.SEARCH_COORDINATION);
         this.shardExecutor = clusterService.threadPool().executor(ThreadPool.Names.AUTO_COMPLETE);
         this.indicesService = indicesService;
-        this.scriptService = scriptService;
+        this.dlsQueryEvaluator = dlsQueryEvaluator;
         this.licenseState = licenseState;
         this.settings = settings;
         this.remoteClusterService = transportService.getRemoteClusterService();
@@ -477,7 +477,7 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
         for (BytesReference querySource : queries) {
             QueryBuilder queryBuilder = DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(
                 querySource,
-                scriptService,
+                dlsQueryEvaluator.get(),
                 queryShardContext.getParserConfig().registry(),
                 securityContext.getUser()
             );

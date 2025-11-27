@@ -8,7 +8,7 @@
 package org.elasticsearch.xpack.core.security.support;
 
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.xpack.core.security.authz.support.SecurityQueryTemplateEvaluator.DlsQueryEvaluationContext;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.IOException;
 
@@ -16,5 +16,5 @@ import java.io.IOException;
  * Interface in ES Security for objects that can contribute to a cache-key
  */
 public interface CacheKey {
-    void buildCacheKey(StreamOutput out, DlsQueryEvaluationContext context) throws IOException;
+    void buildCacheKey(StreamOutput out, DlsQueryEvaluator.UserContext context) throws IOException;
 }

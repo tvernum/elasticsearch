@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-package org.elasticsearch.xpack.core.security.authz.support;
+package org.elasticsearch.xpack.security.authz.dls;
 
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
@@ -25,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.xcontent.XContentFactory.jsonBuilder;
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class SecurityQueryTemplateEvaluatorTests extends ESTestCase {
+public class SecurityQueryEvaluatorTests extends ESTestCase {
     private ScriptService scriptService;
 
     @Before
@@ -63,9 +64,10 @@ public class SecurityQueryTemplateEvaluatorTests extends ESTestCase {
         Script script = new Script(ScriptType.INLINE, "mustache", query, Collections.singletonMap("custom", "value"));
         builder = jsonBuilder().startObject().field("template");
         script.toXContent(builder, ToXContent.EMPTY_PARAMS);
-        String querySource = Strings.toString(builder.endObject());
+        var querySource = Strings.toString(builder.endObject());
 
-        SecurityQueryTemplateEvaluator.evaluateTemplate(querySource, scriptService, user);
+        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
+        evaluator.evaluate(querySource, user);
         ArgumentCaptor<Script> argument = ArgumentCaptor.forClass(Script.class);
         verify(scriptService).compile(argument.capture(), eq(TemplateScript.CONTEXT));
         Script usedScript = argument.getValue();
@@ -109,7 +111,7 @@ public class SecurityQueryTemplateEvaluatorTests extends ESTestCase {
             return factory;
         });
 
-        String template = """
+        final var template = """
             {
               "template": {
                 "source": {
@@ -120,15 +122,17 @@ public class SecurityQueryTemplateEvaluatorTests extends ESTestCase {
               }
             }""";
 
-        String evaluated = SecurityQueryTemplateEvaluator.evaluateTemplate(template, scriptService, user);
+        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
+        String evaluated = evaluator.evaluate(template, user);
         assertThat(evaluated, equalTo("""
             {"term":{"field":"sample@example.com"}}"""));
     }
 
     public void testSkipTemplating() throws Exception {
         XContentBuilder builder = jsonBuilder();
-        String querySource = Strings.toString(new TermQueryBuilder("field", "value").toXContent(builder, ToXContent.EMPTY_PARAMS));
-        String result = SecurityQueryTemplateEvaluator.evaluateTemplate(querySource, scriptService, null);
+        final var querySource = Strings.toString(new TermQueryBuilder("field", "value").toXContent(builder, ToXContent.EMPTY_PARAMS));
+        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
+        String result = evaluator.evaluate(querySource, null);
         assertThat(result, sameInstance(querySource));
         verifyNoMoreInteractions(scriptService);
     }

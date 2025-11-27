@@ -15,7 +15,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.license.MockLicenseState;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.core.security.SecurityContext;
@@ -23,6 +22,8 @@ import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessCo
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
+import org.elasticsearch.xpack.core.security.user.User;
 import org.junit.Before;
 
 import java.io.IOException;
@@ -54,11 +55,14 @@ public class DlsFlsRequestCacheDifferentiatorTests extends ESTestCase {
         threadContext = new ThreadContext(Settings.EMPTY);
         out = new BytesStreamOutput();
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
-        differentiator = new DlsFlsRequestCacheDifferentiator(
-            licenseState,
-            new SetOnce<>(securityContext),
-            new SetOnce<>(mock(ScriptService.class))
-        );
+        final var queryEvaluator = new DlsQueryEvaluator() {
+            @Override
+            public String evaluate(String querySource, User user) {
+                return querySource;
+            }
+        };
+
+        differentiator = new DlsFlsRequestCacheDifferentiator(licenseState, new SetOnce<>(securityContext), () -> queryEvaluator);
         shardSearchRequest = mock(ShardSearchRequest.class);
         indexName = randomAlphaOfLengthBetween(3, 8);
         dlsIndexName = "dls-" + randomAlphaOfLengthBetween(3, 8);

@@ -69,6 +69,7 @@ module org.elasticsearch.security {
     exports org.elasticsearch.xpack.security.action.stats to org.elasticsearch.server;
     exports org.elasticsearch.xpack.security.operator to org.elasticsearch.internal.operator, org.elasticsearch.internal.security;
     exports org.elasticsearch.xpack.security.authz to org.elasticsearch.internal.security;
+    exports org.elasticsearch.xpack.security.authz.dls to org.elasticsearch.server;
     exports org.elasticsearch.xpack.security.authc to org.elasticsearch.xcontent, org.elasticsearch.internal.security;
     exports org.elasticsearch.xpack.security.authc.saml to org.elasticsearch.internal.security;
     exports org.elasticsearch.xpack.security.slowlog to org.elasticsearch.server;
@@ -98,4 +99,8 @@ module org.elasticsearch.security {
     provides ReservedStateHandlerProvider with org.elasticsearch.xpack.security.ReservedSecurityStateHandlerProvider;
 
     provides org.elasticsearch.features.FeatureSpecification with org.elasticsearch.xpack.security.SecurityFeatures;
+
+    provides org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator.LateBinding
+        with
+            org.elasticsearch.xpack.security.authz.dls.LateBindingQueryEvaluator;
 }

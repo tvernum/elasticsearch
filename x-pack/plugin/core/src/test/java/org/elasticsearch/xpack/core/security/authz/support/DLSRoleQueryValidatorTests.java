@@ -40,40 +40,40 @@ public class DLSRoleQueryValidatorTests extends ESTestCase {
 
     public void testVerifyRoleQuery() throws Exception {
         QueryBuilder queryBuilder1 = new TermsQueryBuilder("field", "val1", "val2");
-        DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder1), XCONTENT_REGISTRY);
+        DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder1), XCONTENT_REGISTRY);
 
         QueryBuilder queryBuilder2 = new TermsQueryBuilder("field", new TermsLookup("_index", "_id", "_path"));
         Exception e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder2), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder2), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("terms query with terms lookup isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder3 = new GeoShapeQueryBuilder("field", "_id");
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder3), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder3), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder4 = new HasChildQueryBuilder("_type", new MatchAllQueryBuilder(), ScoreMode.None);
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder4), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder4), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("has_child query isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder5 = new HasParentQueryBuilder("_type", new MatchAllQueryBuilder(), false);
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder5), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder5), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("has_parent query isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder6 = new BoolQueryBuilder().must(new GeoShapeQueryBuilder("field", "_id"));
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder6), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder6), XCONTENT_REGISTRY)
         );
         assertThat(
             e.getCause().getMessage(),
@@ -83,21 +83,21 @@ public class DLSRoleQueryValidatorTests extends ESTestCase {
         QueryBuilder queryBuilder7 = new ConstantScoreQueryBuilder(new GeoShapeQueryBuilder("field", "_id"));
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder7), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder7), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder8 = new FunctionScoreQueryBuilder(new GeoShapeQueryBuilder("field", "_id"));
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder8), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder8), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
 
         QueryBuilder queryBuilder9 = new BoostingQueryBuilder(new GeoShapeQueryBuilder("field", "_id"), new MatchAllQueryBuilder());
         e = expectThrows(
             IllegalArgumentException.class,
-            () -> DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(Strings.toString(queryBuilder9), XCONTENT_REGISTRY)
+            () -> DLSRoleQueryValidator.parseAndVerifyRoleQuery(Strings.toString(queryBuilder9), XCONTENT_REGISTRY)
         );
         assertThat(e.getMessage(), equalTo("geoshape query referring to indexed shapes isn't supported as part of a role query"));
     }
