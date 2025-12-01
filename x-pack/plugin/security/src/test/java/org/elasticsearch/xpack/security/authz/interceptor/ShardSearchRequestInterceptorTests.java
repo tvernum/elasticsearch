@@ -11,19 +11,23 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.license.MockLicenseState;
+import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.TestThreadPool;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.xpack.core.security.authc.AuthenticationTestHelper;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
+import org.elasticsearch.xpack.core.security.user.User;
+import org.elasticsearch.xpack.security.authz.dls.SecurityQueryBuilder;
 import org.junit.After;
 import org.junit.Before;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,8 +64,10 @@ public class ShardSearchRequestInterceptorTests extends ESTestCase {
 
     public void testRequestCacheWillBeDisabledWhenDlsUsesStoredScripts() {
         configureMinMondeVersion(Version.CURRENT);
-        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
-            {"template":{"id":"my-script"}}""")));
+        final SecurityQueryBuilder queryBuilder = new SecurityQueryBuilder(mock(ScriptService.class), List.of());
+        final User user = AuthenticationTestHelper.randomUser();
+        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(queryBuilder.build("""
+            {"template":{"id":"my-script"}}""", user)));
         final ShardSearchRequest shardSearchRequest = mock(ShardSearchRequest.class);
         final String index = randomAlphaOfLengthBetween(3, 8);
         when(shardSearchRequest.shardId()).thenReturn(new ShardId(index, randomAlphaOfLength(22), randomInt(3)));
@@ -77,8 +83,18 @@ public class ShardSearchRequestInterceptorTests extends ESTestCase {
 
     public void testRequestWillNotBeDisabledCacheWhenDlsUsesInlineScripts() {
         configureMinMondeVersion(Version.CURRENT);
-        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
-            {"term":{"username":"foo"}}""")));
+        final SecurityQueryBuilder queryBuilder = new SecurityQueryBuilder(mock(ScriptService.class), List.of());
+        final User user = AuthenticationTestHelper.randomUser();
+        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(queryBuilder.build("""
+            {
+              "template":{
+                "source":{
+                  "term":{
+                    "username":"foo"
+                  }
+                }
+              }
+            }""", user)));
         final ShardSearchRequest shardSearchRequest = mock(ShardSearchRequest.class);
         final String index = randomAlphaOfLengthBetween(3, 8);
         when(shardSearchRequest.shardId()).thenReturn(new ShardId(index, randomAlphaOfLength(22), randomInt(3)));

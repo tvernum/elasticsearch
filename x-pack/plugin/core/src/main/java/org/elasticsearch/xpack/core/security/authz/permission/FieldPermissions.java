@@ -24,7 +24,6 @@ import org.elasticsearch.lucene.util.automaton.MinimizationOperations;
 import org.elasticsearch.plugins.FieldPredicate;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.FieldSubsetReader;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition.FieldGrantExcludeGroup;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.support.CacheKey;
 
@@ -236,8 +235,8 @@ public final class FieldPermissions implements Accountable, CacheKey {
     }
 
     @Override
-    public void buildCacheKey(StreamOutput out, DlsQueryEvaluator.UserContext context) throws IOException {
-        out.writeCollection(fieldPermissionsDefinitions, (o, fpd) -> fpd.buildCacheKey(o, context));
+    public void buildCacheKey(StreamOutput out) throws IOException {
+        out.writeCollection(fieldPermissionsDefinitions, (o, fpd) -> fpd.buildCacheKey(o));
     }
 
     /** Return whether field-level security is enabled, ie. whether any field might be filtered out. */

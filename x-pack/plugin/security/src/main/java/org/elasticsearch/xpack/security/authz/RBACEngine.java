@@ -90,6 +90,7 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeRes
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.NamedClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.support.StringMatcher;
 import org.elasticsearch.xpack.core.sql.SqlAsyncActionNames;
@@ -152,17 +153,20 @@ public class RBACEngine implements AuthorizationEngine {
     private final Settings settings;
     private final CompositeRolesStore rolesStore;
     private final FieldPermissionsCache fieldPermissionsCache;
+    private final DlsQueryBuilder dlsQueryBuilder;
     private final LoadAuthorizedIndicesTimeChecker.Factory authzIndicesTimerFactory;
 
     public RBACEngine(
         Settings settings,
         CompositeRolesStore rolesStore,
         FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder,
         LoadAuthorizedIndicesTimeChecker.Factory authzIndicesTimerFactory
     ) {
         this.settings = settings;
         this.rolesStore = rolesStore;
         this.fieldPermissionsCache = fieldPermissionsCache;
+        this.dlsQueryBuilder = dlsQueryBuilder;
         this.authzIndicesTimerFactory = authzIndicesTimerFactory;
     }
 
@@ -434,7 +438,13 @@ public class RBACEngine implements AuthorizationEngine {
                                 .allMatch(IndicesAliasesRequest.AliasActions::expandAliasesWildcards))
                         : "expanded wildcards for local indices OR the request should not expand wildcards at all";
 
-                    IndexAuthorizationResult result = buildIndicesAccessControl(action, role, resolvedIndices, metadata);
+                    IndexAuthorizationResult result = buildIndicesAccessControl(
+                        requestInfo.getAuthentication(),
+                        action,
+                        role,
+                        resolvedIndices,
+                        metadata
+                    );
                     if (requestInfo.getAuthentication().isCrossClusterAccess()
                         && request instanceof IndicesRequest.RemoteClusterShardRequest shardsRequest
                         && shardsRequest.shards() != null) {
@@ -1003,16 +1013,19 @@ public class RBACEngine implements AuthorizationEngine {
     }
 
     private IndexAuthorizationResult buildIndicesAccessControl(
+        Authentication authentication,
         String action,
         Role role,
         ResolvedIndices resolvedIndices,
         ProjectMetadata metadata
     ) {
         final IndicesAccessControl accessControl = role.authorize(
+            authentication,
             action,
             Sets.newHashSet(resolvedIndices.getLocal()),
             metadata,
-            fieldPermissionsCache
+            fieldPermissionsCache,
+            dlsQueryBuilder
         );
         return new IndexAuthorizationResult(accessControl);
     }

@@ -8,7 +8,6 @@ package org.elasticsearch.xpack.core.security.authz.support;
 
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.BoostingQueryBuilder;
@@ -25,6 +24,7 @@ import org.elasticsearch.join.query.HasParentQueryBuilder;
 import org.elasticsearch.search.SearchModule;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 
 import java.io.IOException;
 import java.util.List;
@@ -104,11 +104,17 @@ public class DLSRoleQueryValidatorTests extends ESTestCase {
 
     public void testHasStoredScript() throws IOException {
         assertThat(
-            DLSRoleQueryValidator.hasStoredScript(new BytesArray("{\"template\":{\"id\":\"my-script\"}}"), NamedXContentRegistry.EMPTY),
+            DLSRoleQueryValidator.hasStoredScript(
+                new StaticSecurityQuery("{\"template\":{\"id\":\"my-script\"}}"),
+                NamedXContentRegistry.EMPTY
+            ),
             is(true)
         );
         assertThat(
-            DLSRoleQueryValidator.hasStoredScript(new BytesArray("{\"template\":{\"source\":\"{}\"}}"), NamedXContentRegistry.EMPTY),
+            DLSRoleQueryValidator.hasStoredScript(
+                new StaticSecurityQuery("{\"template\":{\"source\":\"{}\"}}"),
+                NamedXContentRegistry.EMPTY
+            ),
             is(false)
         );
     }

@@ -26,6 +26,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.IndicesPermission.
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.restriction.WorkflowsRestriction;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -193,12 +194,14 @@ public class SimpleRole implements Role {
 
     @Override
     public IndicesAccessControl authorize(
+        Authentication authentication,
         String action,
         Set<String> requestedIndicesOrAliases,
         ProjectMetadata metadata,
-        FieldPermissionsCache fieldPermissionsCache
+        FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder
     ) {
-        return indices.authorize(action, requestedIndicesOrAliases, metadata, fieldPermissionsCache);
+        return indices.authorize(authentication, action, requestedIndicesOrAliases, metadata, fieldPermissionsCache, dlsQueryBuilder);
     }
 
     @Override

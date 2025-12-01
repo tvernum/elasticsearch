@@ -25,7 +25,6 @@ import org.apache.lucene.store.Directory;
 import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.lucene.index.ElasticsearchDirectoryReader;
 import org.elasticsearch.common.lucene.search.Queries;
@@ -57,8 +56,10 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authc.AuthenticationTestHelper;
 import org.elasticsearch.xpack.core.security.authc.support.AuthenticationContextSerializer;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -80,7 +81,6 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
     public void testDLS() throws Exception {
         ShardId shardId = new ShardId("_index", "_na_", 0);
         MappingLookup mappingLookup = createMappingLookup(List.of(new KeywordFieldType("field")));
-        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
 
         final ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
@@ -168,14 +168,13 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
             String termQuery = "{\"term\": {\"field\": \"" + values[i] + "\"} }";
             IndicesAccessControl.IndexAccessControl indexAccessControl = new IndicesAccessControl.IndexAccessControl(
                 FieldPermissions.DEFAULT,
-                DocumentPermissions.filteredBy(Set.of(new BytesArray(termQuery)))
+                DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery(termQuery)))
             );
             SecurityIndexReaderWrapper wrapper = new SecurityIndexReaderWrapper(
                 s -> searchExecutionContext,
                 bitsetCache,
                 securityContext,
-                licenseState,
-                queryEvaluator
+                licenseState
             ) {
 
                 @Override
@@ -214,7 +213,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
         MappingLookup mappingLookup = createMappingLookup(
             List.of(new KeywordFieldType("field"), new KeywordFieldType("f1"), new KeywordFieldType("f2"))
         );
-        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
+        DlsQueryBuilder queryEvaluator = mock(DlsQueryBuilder.class);
 
         final ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
@@ -226,16 +225,16 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
         if (noFilteredIndexPermissions == false) {
             restrictiveLimitedIndexPermissions = randomBoolean();
         }
-        Set<BytesReference> queries = new HashSet<>();
-        queries.add(new BytesArray("{\"terms\" : { \"f2\" : [\"fv22\"] } }"));
-        queries.add(new BytesArray("{\"terms\" : { \"f2\" : [\"fv32\"] } }"));
+        Set<DocumentSecurityQuery> queries = new HashSet<>();
+        queries.add(new StaticSecurityQuery("{\"terms\" : { \"f2\" : [\"fv22\"] } }"));
+        queries.add(new StaticSecurityQuery("{\"terms\" : { \"f2\" : [\"fv32\"] } }"));
         IndicesAccessControl.IndexAccessControl indexAccessControl = new IndicesAccessControl.IndexAccessControl(
             FieldPermissions.DEFAULT,
             DocumentPermissions.filteredBy(queries)
         );
-        queries = Set.of(new BytesArray("{\"terms\" : { \"f1\" : [\"fv11\", \"fv21\", \"fv31\"] } }"));
+        queries = Set.of(new StaticSecurityQuery("{\"terms\" : { \"f1\" : [\"fv11\", \"fv21\", \"fv31\"] } }"));
         if (restrictiveLimitedIndexPermissions) {
-            queries = Set.of(new BytesArray("{\"terms\" : { \"f1\" : [\"fv11\", \"fv31\"] } }"));
+            queries = Set.of(new StaticSecurityQuery("{\"terms\" : { \"f1\" : [\"fv11\", \"fv31\"] } }"));
         }
         IndicesAccessControl.IndexAccessControl limitedIndexAccessControl = new IndicesAccessControl.IndexAccessControl(
             FieldPermissions.DEFAULT,
@@ -279,8 +278,7 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
             s -> searchExecutionContext,
             bitsetCache,
             securityContext,
-            licenseState,
-            queryEvaluator
+            licenseState
         ) {
 
             @Override
@@ -466,8 +464,8 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
         final Authentication authentication = AuthenticationTestHelper.builder().build();
         new AuthenticationContextSerializer().writeToContext(authentication, threadContext);
 
-        Set<BytesReference> queries = new HashSet<>();
-        queries.add(new BytesArray("{\"bool\": { \"must_not\": { \"exists\": { \"field\": \"f1\" } } } }"));
+        Set<DocumentSecurityQuery> queries = new HashSet<>();
+        queries.add(new StaticSecurityQuery("{\"bool\": { \"must_not\": { \"exists\": { \"field\": \"f1\" } } } }"));
         IndicesAccessControl.IndexAccessControl indexAccessControl = new IndicesAccessControl.IndexAccessControl(
             FieldPermissions.DEFAULT,
             DocumentPermissions.filteredBy(queries)
@@ -477,13 +475,13 @@ public class SecurityIndexReaderWrapperIntegrationTests extends AbstractBuilderT
 
         final MockLicenseState licenseState = mock(MockLicenseState.class);
         when(licenseState.isAllowed(DOCUMENT_LEVEL_SECURITY_FEATURE)).thenReturn(true);
-        DlsQueryEvaluator queryEvaluator = mock(DlsQueryEvaluator.class);
+        DlsQueryBuilder queryEvaluator = mock(DlsQueryBuilder.class);
         SecurityIndexReaderWrapper wrapper = new SecurityIndexReaderWrapper(
             s -> context,
             bitsetCache,
             securityContext,
-            licenseState,
-            queryEvaluator
+            licenseState
+
         ) {
 
             @Override

@@ -173,7 +173,7 @@ public class FieldPermissionsTests extends ESTestCase {
                 )
             )
         );
-        fieldPermissions0.buildCacheKey(out0, BytesReference::utf8ToString);
+        fieldPermissions0.buildCacheKey(out0);
 
         // Mixed definition
         final BytesStreamOutput out1 = new BytesStreamOutput();
@@ -185,7 +185,7 @@ public class FieldPermissionsTests extends ESTestCase {
                 )
             )
         ).limitFieldPermissions(new FieldPermissions(fieldPermissionDef(new String[] { "z*" }, new String[] { "z2" })));
-        fieldPermissions1.buildCacheKey(out1, BytesReference::utf8ToString);
+        fieldPermissions1.buildCacheKey(out1);
 
         // Another mixed definition
         final BytesStreamOutput out2 = new BytesStreamOutput();
@@ -203,7 +203,7 @@ public class FieldPermissionsTests extends ESTestCase {
                 )
             )
         );
-        fieldPermissions2.buildCacheKey(out2, BytesReference::utf8ToString);
+        fieldPermissions2.buildCacheKey(out2);
 
         // Just limited by
         final BytesStreamOutput out3 = new BytesStreamOutput();
@@ -218,7 +218,7 @@ public class FieldPermissionsTests extends ESTestCase {
                 )
             )
         );
-        fieldPermissions3.buildCacheKey(out3, BytesReference::utf8ToString);
+        fieldPermissions3.buildCacheKey(out3);
 
         assertThat(Arrays.equals(BytesReference.toBytes(out0.bytes()), BytesReference.toBytes(out1.bytes())), is(false));
         assertThat(Arrays.equals(BytesReference.toBytes(out0.bytes()), BytesReference.toBytes(out2.bytes())), is(false));

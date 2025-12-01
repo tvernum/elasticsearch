@@ -101,7 +101,7 @@ public class TemplateRoleName implements ToXContentObject, Writeable {
     public void validate(ScriptService scriptService) {
         try {
             final XContentParser parser = XContentHelper.createParser(XContentParserConfiguration.EMPTY, template, XContentType.JSON);
-            final Script script = MustacheTemplateEvaluator.parseForScript(parser, Collections.emptyMap());
+            final Script script = MustacheTemplateEvaluator.enrichScript(Script.parse(parser), Collections.emptyMap());
             final TemplateScript compiledTemplate = scriptService.compile(script, TemplateScript.CONTEXT).newInstance(script.getParams());
             if ("mustache".equals(script.getLang())) {
                 compiledTemplate.execute();

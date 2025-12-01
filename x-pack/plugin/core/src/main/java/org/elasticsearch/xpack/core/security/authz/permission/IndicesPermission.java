@@ -29,12 +29,15 @@ import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.core.Nullable;
 import org.elasticsearch.core.Tuple;
 import org.elasticsearch.index.Index;
+import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.RestrictedIndices;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexComponentSelectorPredicate;
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.support.StringMatcher;
+import org.elasticsearch.xpack.core.security.user.User;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -579,10 +582,12 @@ public final class IndicesPermission {
      * Authorizes the provided action against the provided indices, given the current cluster metadata
      */
     public IndicesAccessControl authorize(
+        Authentication authentication,
         String action,
         Set<String> requestedIndicesOrAliases,
         ProjectMetadata metadata,
-        FieldPermissionsCache fieldPermissionsCache
+        FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder
     ) {
         // Short circuit if the indicesPermission allows all access to every index
         for (Group group : groups) {
@@ -615,10 +620,12 @@ public final class IndicesPermission {
             .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getFailureIndices(metadata)));
 
         final Supplier<Map<String, IndicesAccessControl.IndexAccessControl>> indexPermissions = () -> buildIndicesAccessControl(
+            authentication,
             action,
             resources,
             finalTotalResourceCount,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             failureIndicesByResourceName
         );
 
@@ -626,10 +633,12 @@ public final class IndicesPermission {
     }
 
     private Map<String, IndicesAccessControl.IndexAccessControl> buildIndicesAccessControl(
+        final Authentication authentication,
         final String action,
         final Map<String, IndexResource> requestedResources,
         final int totalResourceCount,
         final FieldPermissionsCache fieldPermissionsCache,
+        final DlsQueryBuilder queryBuilder,
         final Map<String, List<Index>> failureIndicesByIndexResource
     ) {
 
@@ -722,7 +731,9 @@ public final class IndicesPermission {
             final DocumentLevelPermissions permissions = roleQueriesByIndex.get(index);
             final DocumentPermissions documentPermissions;
             if (permissions != null && permissions.isAllowAll() == false) {
-                documentPermissions = DocumentPermissions.filteredBy(permissions.queries);
+                documentPermissions = DocumentPermissions.filteredBy(
+                    parse(permissions.queries, queryBuilder, authentication.getEffectiveSubject().getUser())
+                );
             } else {
                 documentPermissions = DocumentPermissions.allowAll();
             }
@@ -738,6 +749,10 @@ public final class IndicesPermission {
             indexPermissions.put(index, new IndicesAccessControl.IndexAccessControl(fieldPermissions, documentPermissions));
         }
         return unmodifiableMap(indexPermissions);
+    }
+
+    private Set<DocumentSecurityQuery> parse(Set<BytesReference> queries, DlsQueryBuilder evaluator, User user) {
+        return queries.stream().map(q -> evaluator.build(q.utf8ToString(), user)).collect(Collectors.toSet());
     }
 
     /**

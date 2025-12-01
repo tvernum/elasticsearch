@@ -8,7 +8,6 @@
 package org.elasticsearch.xpack.security.authz;
 
 import org.apache.lucene.util.SetOnce;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.Settings;
@@ -22,8 +21,7 @@ import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessCo
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
-import org.elasticsearch.xpack.core.security.user.User;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.junit.Before;
 
 import java.io.IOException;
@@ -55,21 +53,15 @@ public class DlsFlsRequestCacheDifferentiatorTests extends ESTestCase {
         threadContext = new ThreadContext(Settings.EMPTY);
         out = new BytesStreamOutput();
         final SecurityContext securityContext = new SecurityContext(Settings.EMPTY, threadContext);
-        final var queryEvaluator = new DlsQueryEvaluator() {
-            @Override
-            public String evaluate(String querySource, User user) {
-                return querySource;
-            }
-        };
 
-        differentiator = new DlsFlsRequestCacheDifferentiator(licenseState, new SetOnce<>(securityContext), () -> queryEvaluator);
+        differentiator = new DlsFlsRequestCacheDifferentiator(licenseState, new SetOnce<>(securityContext));
         shardSearchRequest = mock(ShardSearchRequest.class);
         indexName = randomAlphaOfLengthBetween(3, 8);
         dlsIndexName = "dls-" + randomAlphaOfLengthBetween(3, 8);
         flsIndexName = "fls-" + randomAlphaOfLengthBetween(3, 8);
         dlsFlsIndexName = "dls-fls-" + randomAlphaOfLengthBetween(3, 8);
 
-        final DocumentPermissions documentPermissions1 = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
+        final DocumentPermissions documentPermissions1 = DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("""
             {"term":{"number":1}}""")));
 
         securityContext.putIndicesAccessControl(

@@ -30,7 +30,6 @@ import org.elasticsearch.cluster.routing.SearchShardRouting;
 import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.EsThreadPoolExecutor;
@@ -63,16 +62,17 @@ import org.elasticsearch.transport.TransportResponseHandler;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.transport.Transports;
 import org.elasticsearch.xpack.core.XPackSettings;
-import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.support.DLSRoleQueryValidator;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,7 +97,6 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
     private final RemoteClusterService remoteClusterService;
     private final SearchService searchService;
     private final IndicesService indicesService;
-    private final DlsQueryEvaluator.LateBinding dlsQueryEvaluator;
     private final ProjectResolver projectResolver;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
@@ -114,7 +113,6 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
         SearchService searchService,
         TransportService transportService,
         IndicesService indicesService,
-        DlsQueryEvaluator.LateBinding dlsQueryEvaluator,
         ActionFilters actionFilters,
         XPackLicenseState licenseState,
         Settings settings,
@@ -138,7 +136,6 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
         this.coordinationExecutor = clusterService.threadPool().executor(ThreadPool.Names.SEARCH_COORDINATION);
         this.shardExecutor = clusterService.threadPool().executor(ThreadPool.Names.AUTO_COMPLETE);
         this.indicesService = indicesService;
-        this.dlsQueryEvaluator = dlsQueryEvaluator;
         this.licenseState = licenseState;
         this.settings = settings;
         this.remoteClusterService = transportService.getRemoteClusterService();
@@ -437,7 +434,6 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
                 && DOCUMENT_LEVEL_SECURITY_FEATURE.checkWithoutTracking(frozenLicenseState)) {
                 // Check to see if any of the roles defined for the current user rewrite to match_all
 
-                SecurityContext securityContext = new SecurityContext(clusterService.getSettings(), threadContext);
                 final IndexService indexService = indicesService.indexServiceSafe(shardId.getIndex());
                 final SearchExecutionContext queryShardContext = indexService.newSearchExecutionContext(
                     shardId.id(),
@@ -450,7 +446,8 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
 
                 // Current user has potentially many roles and therefore potentially many queries
                 // defining sets of docs accessible
-                final List<Set<BytesReference>> listOfQueries = indexAccessControl.getDocumentPermissions().getListOfQueries();
+                final DocumentPermissions.DocumentQueries<DocumentSecurityQuery> listOfQueries = indexAccessControl.getDocumentPermissions()
+                    .getAssignedQueries();
 
                 // When the user is an API Key, its role is a limitedRole and its effective document permissions
                 // are intersections of the two sets of queries, one belongs to the API key itself and the other belongs
@@ -458,28 +455,22 @@ public class TransportTermsEnumAction extends HandledTransportAction<TermsEnumRe
                 // the "all" permission, i.e. the query can be rewritten into a MatchAll query.
                 // The following code loop through both sets queries and returns true only when both of them
                 // have the "all" permission.
-                return listOfQueries.stream().allMatch(queries -> hasMatchAllEquivalent(queries, securityContext, queryShardContext));
+                return listOfQueries.outer().allMatch(queries -> hasMatchAllEquivalent(queries, queryShardContext));
             }
         }
         return true;
     }
 
-    private boolean hasMatchAllEquivalent(
-        Set<BytesReference> queries,
-        SecurityContext securityContext,
-        SearchExecutionContext queryShardContext
-    ) {
+    private boolean hasMatchAllEquivalent(Collection<DocumentSecurityQuery> queries, SearchExecutionContext queryShardContext) {
         if (queries == null) {
             return true;
         }
         // Current user has potentially many roles and therefore potentially many queries
         // defining sets of docs accessible
-        for (BytesReference querySource : queries) {
+        for (DocumentSecurityQuery querySource : queries) {
             QueryBuilder queryBuilder = DLSRoleQueryValidator.evaluateAndVerifyRoleQuery(
                 querySource,
-                dlsQueryEvaluator.get(),
-                queryShardContext.getParserConfig().registry(),
-                securityContext.getUser()
+                queryShardContext.getParserConfig().registry()
             );
             QueryBuilder rewrittenQueryBuilder;
             try {

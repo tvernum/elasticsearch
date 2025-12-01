@@ -16,10 +16,8 @@ import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import static org.elasticsearch.xpack.core.security.SecurityField.DOCUMENT_LEVEL_SECURITY_FEATURE;
 import static org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField.INDICES_PERMISSIONS_VALUE;
@@ -30,16 +28,10 @@ public class DlsFlsRequestCacheDifferentiator implements CheckedBiConsumer<Shard
 
     private final XPackLicenseState licenseState;
     private final SetOnce<SecurityContext> securityContextHolder;
-    private final Supplier<? extends DlsQueryEvaluator> dlsQueryEvaluatorReference;
 
-    public DlsFlsRequestCacheDifferentiator(
-        XPackLicenseState licenseState,
-        SetOnce<SecurityContext> securityContextReference,
-        Supplier<? extends DlsQueryEvaluator> dlsQueryEvaluatorReference
-    ) {
+    public DlsFlsRequestCacheDifferentiator(XPackLicenseState licenseState, SetOnce<SecurityContext> securityContextReference) {
         this.licenseState = licenseState;
         this.securityContextHolder = securityContextReference;
-        this.dlsQueryEvaluatorReference = dlsQueryEvaluatorReference;
     }
 
     @Override
@@ -59,7 +51,7 @@ public class DlsFlsRequestCacheDifferentiator implements CheckedBiConsumer<Shard
                 indexAccessControl.getFieldPermissions().hasFieldLevelSecurity(),
                 indexAccessControl.getDocumentPermissions().hasDocumentLevelPermissions()
             );
-            indexAccessControl.buildCacheKey(out, dlsQueryEvaluatorReference.get().bind(securityContext.getUser()));
+            indexAccessControl.buildCacheKey(out);
         }
     }
 }

@@ -30,6 +30,7 @@ import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.authz.restriction.WorkflowResolver;
 import org.elasticsearch.xpack.core.security.authz.restriction.WorkflowsRestriction;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 
 import java.util.ArrayList;
@@ -178,10 +179,12 @@ public interface Role {
      * is configured for any group also the allowed fields and role queries are resolved.
      */
     IndicesAccessControl authorize(
+        Authentication authentication,
         String action,
         Set<String> requestedIndicesOrAliases,
         ProjectMetadata metadata,
-        FieldPermissionsCache fieldPermissionsCache
+        FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder
     );
 
     /**

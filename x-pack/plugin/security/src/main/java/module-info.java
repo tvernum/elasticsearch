@@ -100,7 +100,4 @@ module org.elasticsearch.security {
 
     provides org.elasticsearch.features.FeatureSpecification with org.elasticsearch.xpack.security.SecurityFeatures;
 
-    provides org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator.LateBinding
-        with
-            org.elasticsearch.xpack.security.authz.dls.LateBindingQueryEvaluator;
 }

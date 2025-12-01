@@ -12,22 +12,24 @@ import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.common.ParsingException;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentParserUtils;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.xcontent.XContentParserConfiguration;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
-import org.elasticsearch.xpack.core.security.support.MustacheTemplateEvaluator;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.TemplatedSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
+import org.elasticsearch.xpack.core.security.ext.DlsQueryExtension;
 import org.elasticsearch.xpack.core.security.user.User;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class SecurityQueryEvaluator implements DlsQueryEvaluator {
+public class SecurityQueryBuilder implements DlsQueryBuilder {
 
     private static final class Fields {
         private static final String TEMPLATE = "template";
@@ -39,7 +41,7 @@ public class SecurityQueryEvaluator implements DlsQueryEvaluator {
     private final ScriptService scriptService;
     private final Map<String, DlsQueryExtension> extensions;
 
-    public SecurityQueryEvaluator(ScriptService scriptService, List<DlsQueryExtension> extensions) {
+    public SecurityQueryBuilder(ScriptService scriptService, List<DlsQueryExtension> extensions) {
         this.scriptService = scriptService;
         Map<String, DlsQueryExtension> map = new HashMap<>();
         for (DlsQueryExtension extension : extensions) {
@@ -65,29 +67,35 @@ public class SecurityQueryEvaluator implements DlsQueryEvaluator {
     }
 
     @Override
-    public String evaluate(String querySource, User user) {
+    public DocumentSecurityQuery build(String querySource, User user) {
         // EMPTY is safe here because we never use namedObject
         try (XContentParser parser = XContentFactory.xContent(querySource).createParser(XContentParserConfiguration.EMPTY, querySource)) {
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, parser.nextToken(), parser);
             return switch (parser.currentName()) {
-                case Fields.TEMPLATE -> evaluateTemplate(user, parser);
-                case Fields.EXTENSION -> evaluateExtension(user, parser);
-                case null, default -> querySource;
+                case Fields.TEMPLATE -> buildTemplate(user, parser);
+                case Fields.EXTENSION -> buildExtension(user, parser);
+                case null, default -> new StaticSecurityQuery(querySource);
             };
         } catch (IOException ioe) {
             throw new ElasticsearchParseException("failed to parse query", ioe);
         }
     }
 
-    private String evaluateExtension(User user, XContentParser parser) throws IOException {
+    private TemplatedSecurityQuery buildTemplate(User user, XContentParser parser) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        Script script = Script.parse(parser);
+        return new TemplatedSecurityQuery(scriptService, script, user);
+    }
+
+    private DocumentSecurityQuery buildExtension(User user, XContentParser parser) throws IOException {
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
 
         String extensionName = null;
         Map<String, Object> config = Map.of();
 
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-            XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, parser.nextToken(), parser);
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, parser.currentToken(), parser);
             switch (parser.currentName()) {
                 case Fields.NAME -> {
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.VALUE_STRING, parser.nextToken(), parser);
@@ -113,26 +121,7 @@ public class SecurityQueryEvaluator implements DlsQueryEvaluator {
             throw new ElasticsearchSecurityException("no such DLS extension [" + extensionName + "]");
         }
 
-        return extension.evaluate(user, config);
+        return extension.build(user, config);
     }
 
-    /** For cases where the query source is a template, this method parses the script, compiles the
-     * script with user details parameters and then executes it to return the query string.
-     * <p>
-     * Note: This method always enforces "mustache" script language for the
-     * template.
-     *
-     * @return resultant query string after compiling and executing the script.
-     */
-    private String evaluateTemplate(User user, XContentParser parser) throws IOException {
-        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-        Map<String, Object> userModel = new HashMap<>();
-        userModel.put("username", user.principal());
-        userModel.put("full_name", user.fullName());
-        userModel.put("email", user.email());
-        userModel.put("roles", Arrays.asList(user.roles()));
-        userModel.put("metadata", Collections.unmodifiableMap(user.metadata()));
-        Map<String, Object> extraParams = Collections.singletonMap("_user", userModel);
-        return MustacheTemplateEvaluator.evaluate(scriptService, parser, extraParams);
-    }
 }

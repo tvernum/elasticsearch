@@ -26,8 +26,7 @@ public final class MustacheTemplateEvaluator {
         throw new UnsupportedOperationException("Cannot construct " + MustacheTemplateEvaluator.class);
     }
 
-    public static Script parseForScript(XContentParser parser, Map<String, Object> extraParams) throws IOException {
-        Script script = Script.parse(parser);
+    public static Script enrichScript(Script script, Map<String, Object> extraParams) {
         // Add the user details to the params
         Map<String, Object> params = new HashMap<>();
         if (script.getParams() != null) {
@@ -46,8 +45,13 @@ public final class MustacheTemplateEvaluator {
     }
 
     public static String evaluate(ScriptService scriptService, XContentParser parser, Map<String, Object> extraParams) throws IOException {
-        Script script = parseForScript(parser, extraParams);
-        TemplateScript compiledTemplate = scriptService.compile(script, TemplateScript.CONTEXT).newInstance(script.getParams());
+        return evaluate(scriptService, Script.parse(parser), extraParams);
+    }
+
+    public static String evaluate(ScriptService scriptService, Script rawScript, Map<String, Object> extraParams) {
+        Script parameterizedScript = enrichScript(rawScript, extraParams);
+        TemplateScript compiledTemplate = scriptService.compile(parameterizedScript, TemplateScript.CONTEXT)
+            .newInstance(parameterizedScript.getParams());
         return compiledTemplate.execute();
     }
 }

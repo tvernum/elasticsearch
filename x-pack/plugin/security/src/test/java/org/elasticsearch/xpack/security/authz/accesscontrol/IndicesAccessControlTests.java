@@ -6,14 +6,14 @@
  */
 package org.elasticsearch.xpack.security.authz.accesscontrol;
 
-import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl.IndexAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 
 import java.util.Collections;
 import java.util.Map;
@@ -146,14 +146,14 @@ public class IndicesAccessControlTests extends ESTestCase {
         assertThat(resultFieldPermissions.grantsAccessTo("f31"), is(true));
         assertThat(resultFieldPermissions.grantsAccessTo("f4"), is(false));
 
-        Set<BytesReference> queries = Collections.singleton(new BytesArray("{\"match_all\" : {}}"));
+        Set<DocumentSecurityQuery> queries = Collections.singleton(new StaticSecurityQuery("{\"match_all\" : {}}"));
         final DocumentPermissions documentPermissions1 = DocumentPermissions.filteredBy(queries);
         assertThat(documentPermissions1, is(notNullValue()));
         assertThat(documentPermissions1.hasDocumentLevelPermissions(), is(true));
         assertThat(documentPermissions1.getSingleSetOfQueries(), equalTo(queries));
 
         final DocumentPermissions documentPermissions2 = DocumentPermissions.filteredBy(
-            Set.of(new BytesArray("{\"term\":{ \"public\":true } }"))
+            Set.of(new StaticSecurityQuery("{\"term\":{ \"public\":true } }"))
         );
 
         indicesAccessControl = new IndicesAccessControl(

@@ -16,7 +16,7 @@ import org.elasticsearch.action.search.TransportSearchAction;
 import org.elasticsearch.cluster.metadata.AliasMetadata;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
-import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -39,7 +39,9 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeRes
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.restriction.Workflow;
 import org.elasticsearch.xpack.core.security.authz.restriction.WorkflowResolver;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
+import org.elasticsearch.xpack.core.security.user.User;
 import org.junit.Before;
 
 import java.util.ArrayList;
@@ -342,7 +344,7 @@ public class LimitedRoleTests extends ESTestCase {
         IndexMetadata.Builder imbBuilder1 = IndexMetadata.builder("_index1")
             .settings(indexSettings(IndexVersion.current(), 1, 1))
             .putAlias(AliasMetadata.builder("_alias1"));
-        Metadata md = Metadata.builder().put(imbBuilder).put(imbBuilder1).build();
+        ProjectMetadata project = ProjectMetadata.builder(randomProjectIdOrDefault()).put(imbBuilder).put(imbBuilder1).build();
         FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
         Role fromRole = Role.builder(EMPTY_RESTRICTED_INDICES, "a-role")
             .cluster(Collections.singleton("manage_security"), Collections.emptyList())
@@ -350,11 +352,18 @@ public class LimitedRoleTests extends ESTestCase {
             .add(IndexPrivilege.CREATE_INDEX, "_index1")
             .build();
 
+        final Authentication auth = AuthenticationTestHelper.builder()
+            .user(new User(randomAlphanumericOfLength(8), fromRole.names()))
+            .build();
+        final DlsQueryBuilder queryBuilder = (querySource, user) -> new StaticSecurityQuery(querySource);
+
         IndicesAccessControl iac = fromRole.authorize(
+            auth,
             TransportSearchAction.TYPE.name(),
             Sets.newHashSet("_index", "_alias1"),
-            md.getProject(),
-            fieldPermissionsCache
+            project,
+            fieldPermissionsCache,
+            queryBuilder
         );
         assertThat(iac.isGranted(), is(false));
         assertThat(iac.getIndexPermissions("_index"), is(notNullValue()));
@@ -362,10 +371,12 @@ public class LimitedRoleTests extends ESTestCase {
         assertThat(iac.getIndexPermissions("_index1"), is(nullValue()));
         assertThat(iac.hasIndexPermissions("_index1"), is(false));
         iac = fromRole.authorize(
+            auth,
             TransportCreateIndexAction.TYPE.name(),
             Sets.newHashSet("_index", "_index1"),
-            md.getProject(),
-            fieldPermissionsCache
+            project,
+            fieldPermissionsCache,
+            queryBuilder
         );
         assertThat(iac.isGranted(), is(true));
         assertThat(iac.getIndexPermissions("_index"), is(notNullValue()));
@@ -380,10 +391,12 @@ public class LimitedRoleTests extends ESTestCase {
                 .add(IndexPrivilege.NONE, "_index1")
                 .build();
             iac = limitedByRole.authorize(
+                auth,
                 TransportSearchAction.TYPE.name(),
                 Sets.newHashSet("_index", "_alias1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(notNullValue()));
@@ -391,10 +404,12 @@ public class LimitedRoleTests extends ESTestCase {
             assertThat(iac.getIndexPermissions("_index1"), is(nullValue()));
             assertThat(iac.hasIndexPermissions("_index1"), is(false));
             iac = limitedByRole.authorize(
+                auth,
                 TransportDeleteIndexAction.TYPE.name(),
                 Sets.newHashSet("_index", "_alias1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(nullValue()));
@@ -402,10 +417,12 @@ public class LimitedRoleTests extends ESTestCase {
             assertThat(iac.getIndexPermissions("_index1"), is(nullValue()));
             assertThat(iac.hasIndexPermissions("_index1"), is(false));
             iac = limitedByRole.authorize(
+                auth,
                 TransportCreateIndexAction.TYPE.name(),
                 Sets.newHashSet("_index", "_alias1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(nullValue()));
@@ -420,10 +437,12 @@ public class LimitedRoleTests extends ESTestCase {
                 role = fromRole.limitedBy(limitedByRole);
             }
             iac = role.authorize(
+                auth,
                 TransportSearchAction.TYPE.name(),
                 Sets.newHashSet("_index", "_alias1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(notNullValue()));
@@ -431,10 +450,12 @@ public class LimitedRoleTests extends ESTestCase {
             assertThat(iac.getIndexPermissions("_index1"), is(nullValue()));
             assertThat(iac.hasIndexPermissions("_index1"), is(false));
             iac = role.authorize(
+                auth,
                 TransportDeleteIndexAction.TYPE.name(),
                 Sets.newHashSet("_index", "_alias1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(nullValue()));
@@ -442,10 +463,12 @@ public class LimitedRoleTests extends ESTestCase {
             assertThat(iac.getIndexPermissions("_index1"), is(nullValue()));
             assertThat(iac.hasIndexPermissions("_index1"), is(false));
             iac = role.authorize(
+                auth,
                 TransportCreateIndexAction.TYPE.name(),
                 Sets.newHashSet("_index", "_index1"),
-                md.getProject(),
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
             assertThat(iac.isGranted(), is(false));
             assertThat(iac.getIndexPermissions("_index"), is(nullValue()));

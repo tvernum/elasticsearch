@@ -84,6 +84,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCa
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeResolver;
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.core.security.user.InternalUser;
 import org.elasticsearch.xpack.core.security.user.SystemUser;
@@ -161,6 +162,7 @@ public class AuthorizationService {
         Settings settings,
         CompositeRolesStore rolesStore,
         FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder,
         ClusterService clusterService,
         AuditTrailService auditTrailService,
         AuthenticationFailureHandler authcFailureHandler,
@@ -199,6 +201,7 @@ public class AuthorizationService {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             new LoadAuthorizedIndicesTimeChecker.Factory(logger, settings, clusterService.getClusterSettings())
         );
         this.authorizationEngine = authorizationEngine == null ? this.rbacEngine : authorizationEngine;

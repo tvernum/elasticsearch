@@ -11,8 +11,6 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.alias.TransportIndicesAliasesAction;
 import org.elasticsearch.action.support.PlainActionFuture;
-import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.license.MockLicenseState;
@@ -27,8 +25,10 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.EmptyAuth
 import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine.RequestInfo;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.elasticsearch.xpack.security.Security;
 import org.elasticsearch.xpack.security.audit.AuditTrailService;
@@ -85,9 +85,9 @@ public class IndicesAliasesRequestInterceptorTests extends ESTestCase {
             fieldPermissions = FieldPermissions.DEFAULT;
         }
         final boolean useDls = (useFls == false) || randomBoolean();
-        final Set<BytesReference> queries;
+        final Set<DocumentSecurityQuery> queries;
         if (useDls) {
-            queries = Collections.singleton(new BytesArray(randomAlphaOfLengthBetween(2, 8)));
+            queries = Set.of(new StaticSecurityQuery(randomAlphaOfLengthBetween(2, 8)));
         } else {
             queries = null;
         }

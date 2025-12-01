@@ -18,6 +18,10 @@ import org.elasticsearch.script.mustache.MustacheScriptEngine;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xcontent.ToXContent;
 import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.TemplatedSecurityQuery;
+import org.elasticsearch.xpack.core.security.ext.DlsQueryExtension;
 import org.elasticsearch.xpack.core.security.user.User;
 import org.junit.Before;
 import org.mockito.ArgumentCaptor;
@@ -39,7 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class SecurityQueryEvaluatorTests extends ESTestCase {
+public class SecurityQueryBuilderTests extends ESTestCase {
     private ScriptService scriptService;
 
     @Before
@@ -66,8 +70,13 @@ public class SecurityQueryEvaluatorTests extends ESTestCase {
         script.toXContent(builder, ToXContent.EMPTY_PARAMS);
         var querySource = Strings.toString(builder.endObject());
 
-        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
-        evaluator.evaluate(querySource, user);
+        final SecurityQueryBuilder evaluator = new SecurityQueryBuilder(scriptService, List.of());
+        final DocumentSecurityQuery queryObject = evaluator.build(querySource, user);
+
+        final TemplatedSecurityQuery template = asInstanceOf(TemplatedSecurityQuery.class, queryObject);
+        final String dsl = template.getQueryDsl();
+        assertThat(dsl, equalTo("rendered_text"));
+
         ArgumentCaptor<Script> argument = ArgumentCaptor.forClass(Script.class);
         verify(scriptService).compile(argument.capture(), eq(TemplateScript.CONTEXT));
         Script usedScript = argument.getValue();
@@ -122,8 +131,8 @@ public class SecurityQueryEvaluatorTests extends ESTestCase {
               }
             }""";
 
-        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
-        String evaluated = evaluator.evaluate(template, user);
+        final SecurityQueryBuilder evaluator = new SecurityQueryBuilder(scriptService, List.of());
+        String evaluated = evaluator.build(template, user).getQueryDsl();
         assertThat(evaluated, equalTo("""
             {"term":{"field":"sample@example.com"}}"""));
     }
@@ -131,10 +140,65 @@ public class SecurityQueryEvaluatorTests extends ESTestCase {
     public void testSkipTemplating() throws Exception {
         XContentBuilder builder = jsonBuilder();
         final var querySource = Strings.toString(new TermQueryBuilder("field", "value").toXContent(builder, ToXContent.EMPTY_PARAMS));
-        final SecurityQueryEvaluator evaluator = new SecurityQueryEvaluator(scriptService, List.of());
-        String result = evaluator.evaluate(querySource, null);
+        final SecurityQueryBuilder evaluator = new SecurityQueryBuilder(scriptService, List.of());
+        String result = evaluator.build(querySource, null).getQueryDsl();
         assertThat(result, sameInstance(querySource));
         verifyNoMoreInteractions(scriptService);
+    }
+
+    public void testExtensions() {
+        DlsQueryExtension ext1 = new DlsQueryExtension() {
+            @Override
+            public String name() {
+                return "ext-1";
+            }
+
+            @Override
+            public DocumentSecurityQuery build(User user, Map<String, Object> config) {
+                return new StaticSecurityQuery(String.valueOf(config.get("q")));
+            }
+        };
+        DlsQueryExtension ext2 = new DlsQueryExtension() {
+            @Override
+            public String name() {
+                return "ext-2";
+            }
+
+            @Override
+            public DocumentSecurityQuery build(User user, Map<String, Object> config) {
+                return new StaticSecurityQuery(Strings.format("""
+                    { "term": { "document.owner": "%s" } }
+                    """.trim(), user.principal()));
+            }
+        };
+
+        final User user = new User(
+            "bob",
+            generateRandomStringArray(5, 5, false),
+            randomAlphaOfLength(9),
+            randomAlphaOfLength(4) + "@example.com",
+            Map.of(),
+            true
+        );
+
+        final SecurityQueryBuilder evaluator = new SecurityQueryBuilder(scriptService, List.of(ext1, ext2));
+        assertThat(evaluator.build("""
+            {
+                "extension": {
+                    "name": "ext-1",
+                    "config": {
+                        "q": "foo"
+                    }
+                }
+            }
+            """, user).getQueryDsl(), equalTo("foo"));
+        assertThat(evaluator.build("""
+            {
+                "extension": {
+                    "name": "ext-2"
+                }
+            }
+            """, user).getQueryDsl(), equalTo("{ \"term\": { \"document.owner\": \"bob\" } }"));
     }
 
 }

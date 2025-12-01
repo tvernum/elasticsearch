@@ -7,7 +7,6 @@
 
 package org.elasticsearch.xpack.security.authz.accesscontrol.wrapper;
 
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.license.MockLicenseState;
 import org.elasticsearch.test.ESTestCase;
@@ -17,6 +16,7 @@ import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessCo
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsDefinition;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.mockito.Mockito;
 
 import java.util.Map;
@@ -50,7 +50,7 @@ public class DlsFlsFeatureTrackingIndicesAccessControlWrapperTests extends ESTes
         FieldPermissions fieldPermissions = new FieldPermissions(
             new FieldPermissionsDefinition(new String[] { "*" }, new String[] { "private" })
         );
-        DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
+        DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("""
             {"term":{"number":1}}""")));
 
         IndicesAccessControl indicesAccessControl = wrapper.wrap(

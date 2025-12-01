@@ -11,7 +11,6 @@ import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryRequestBuilder;
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.client.internal.ElasticsearchClient;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.license.MockLicenseState;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.TestThreadPool;
@@ -19,6 +18,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.junit.After;
 import org.junit.Before;
 
@@ -50,7 +50,7 @@ public class ValidateRequestInterceptorTests extends ESTestCase {
     }
 
     public void testValidateRequestWithDLS() {
-        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
+        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("""
             {"term":{"username":"foo"}}"""))); // value does not matter
         ElasticsearchClient client = mock(ElasticsearchClient.class);
         ValidateQueryRequestBuilder builder = new ValidateQueryRequestBuilder(client);

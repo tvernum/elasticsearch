@@ -92,6 +92,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.RemoteClusterPermi
 import org.elasticsearch.xpack.core.security.authz.permission.RemoteIndicesPermission;
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
 import org.elasticsearch.xpack.core.security.authz.permission.SimpleRole;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.privilege.ActionClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeTests;
@@ -107,6 +108,7 @@ import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.authz.store.RoleReference;
 import org.elasticsearch.xpack.core.security.authz.store.RoleReferenceIntersection;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.support.MetadataUtils;
 import org.elasticsearch.xpack.core.security.test.TestRestrictedIndices;
@@ -1014,7 +1016,9 @@ public class CompositeRolesStoreTests extends ESTestCase {
         );
         Role role = future.actionGet();
 
-        Metadata metadata = Metadata.builder()
+        final Authentication authentication = AuthenticationTestHelper.builder().build();
+        final DlsQueryBuilder queryBuilder = (query, user) -> { return new StaticSecurityQuery(query); };
+        ProjectMetadata metadata = ProjectMetadata.builder(randomProjectIdOrDefault())
             .put(
                 new IndexMetadata.Builder("test").settings(
                     Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, IndexVersion.current()).build()
@@ -1023,7 +1027,7 @@ public class CompositeRolesStoreTests extends ESTestCase {
             )
             .build();
         IndicesAccessControl iac = role.indices()
-            .authorize("indices:data/read/search", Collections.singleton("test"), metadata.getProject(), cache);
+            .authorize(authentication, "indices:data/read/search", Collections.singleton("test"), metadata, cache, queryBuilder);
         assertTrue(iac.getIndexPermissions("test").getFieldPermissions().grantsAccessTo("L1.foo"));
         assertFalse(iac.getIndexPermissions("test").getFieldPermissions().grantsAccessTo("L2.foo"));
         assertTrue(iac.getIndexPermissions("test").getFieldPermissions().grantsAccessTo("L3.foo"));
@@ -2919,24 +2923,43 @@ public class CompositeRolesStoreTests extends ESTestCase {
         assertThat(role.names()[0], equalTo("cross_cluster"));
 
         // Smoke-test for authorization
-        final Metadata indexMetadata = Metadata.builder()
+        final ProjectMetadata projectMetadata = ProjectMetadata.builder(randomProjectIdOrDefault())
             .put(IndexMetadata.builder("index1").settings(indexSettings(IndexVersion.current(), 1, 1)))
             .put(IndexMetadata.builder("index2").settings(indexSettings(IndexVersion.current(), 1, 1)))
             .build();
         final var emptyCache = new FieldPermissionsCache(Settings.EMPTY);
+        final DlsQueryBuilder queryBuilder = (query, user) -> { return new StaticSecurityQuery(query); };
         assertThat(
-            role.authorize(TransportSearchAction.TYPE.name(), Sets.newHashSet("index1"), indexMetadata.getProject(), emptyCache)
-                .isGranted(),
+            role.authorize(
+                authentication,
+                TransportSearchAction.TYPE.name(),
+                Sets.newHashSet("index1"),
+                projectMetadata,
+                emptyCache,
+                queryBuilder
+            ).isGranted(),
             is(false == emptyRemoteRole)
         );
         assertThat(
-            role.authorize(TransportCreateIndexAction.TYPE.name(), Sets.newHashSet("index1"), indexMetadata.getProject(), emptyCache)
-                .isGranted(),
+            role.authorize(
+                authentication,
+                TransportCreateIndexAction.TYPE.name(),
+                Sets.newHashSet("index1"),
+                projectMetadata,
+                emptyCache,
+                queryBuilder
+            ).isGranted(),
             is(false)
         );
         assertThat(
-            role.authorize(TransportSearchAction.TYPE.name(), Sets.newHashSet("index2"), indexMetadata.getProject(), emptyCache)
-                .isGranted(),
+            role.authorize(
+                authentication,
+                TransportSearchAction.TYPE.name(),
+                Sets.newHashSet("index2"),
+                projectMetadata,
+                emptyCache,
+                queryBuilder
+            ).isGranted(),
             is(false)
         );
     }

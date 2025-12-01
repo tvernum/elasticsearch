@@ -5,8 +5,9 @@
  * 2.0.
  */
 
-package org.elasticsearch.xpack.security.authz.dls;
+package org.elasticsearch.xpack.core.security.ext;
 
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.user.User;
 
 import java.util.Map;
@@ -14,5 +15,5 @@ import java.util.Map;
 public interface DlsQueryExtension {
     String name();
 
-    String evaluate(User user, Map<String, Object> config);
+    DocumentSecurityQuery build(User user, Map<String, Object> config);
 }

@@ -25,6 +25,7 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine;
 import org.elasticsearch.xpack.core.security.authz.AuthorizedProjectsResolver;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
+import org.elasticsearch.xpack.core.security.ext.DlsQueryExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -156,5 +157,9 @@ public interface SecurityExtension {
 
     default AuthorizedProjectsResolver getAuthorizedProjectsResolver(SecurityComponents components) {
         return null;
+    }
+
+    default List<DlsQueryExtension> getDocumentLevelSecurityExtensions(SecurityComponents components) {
+        return List.of();
     }
 }

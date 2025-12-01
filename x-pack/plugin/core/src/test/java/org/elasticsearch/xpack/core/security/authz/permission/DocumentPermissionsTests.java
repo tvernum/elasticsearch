@@ -8,7 +8,6 @@
 package org.elasticsearch.xpack.core.security.authz.permission;
 
 import org.elasticsearch.client.internal.Client;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.settings.Settings;
@@ -39,18 +38,18 @@ public class DocumentPermissionsTests extends ESTestCase {
         final DocumentPermissions documentPermissions1 = DocumentPermissions.allowAll();
         assertThat(documentPermissions1, is(notNullValue()));
         assertThat(documentPermissions1.hasDocumentLevelPermissions(), is(false));
-        assertThat(documentPermissions1.filter(null, null, null, null), is(nullValue()));
+        assertThat(documentPermissions1.filter(null, null), is(nullValue()));
 
-        final Set<BytesReference> queries = Collections.singleton(new BytesArray("{\"match_all\" : {}}"));
+        final Set<DocumentSecurityQuery> queries = Collections.singleton(new StaticSecurityQuery("{\"match_all\" : {}}"));
         final DocumentPermissions documentPermissions2 = DocumentPermissions.filteredBy(queries);
         assertThat(documentPermissions2, is(notNullValue()));
         assertThat(documentPermissions2.hasDocumentLevelPermissions(), is(true));
-        assertThat(documentPermissions2.getListOfQueries(), equalTo(List.of(queries)));
+        assertThat(documentPermissions2.getAssignedQueries(), equalTo(List.of(queries)));
 
         final DocumentPermissions documentPermissions3 = documentPermissions1.limitDocumentPermissions(documentPermissions2);
         assertThat(documentPermissions3, is(notNullValue()));
         assertThat(documentPermissions3.hasDocumentLevelPermissions(), is(true));
-        assertThat(documentPermissions3.getListOfQueries(), equalTo(List.of(queries)));
+        assertThat(documentPermissions3.getAssignedQueries(), equalTo(List.of(queries)));
 
         final DocumentPermissions documentPermissions4 = DocumentPermissions.allowAll()
             .limitDocumentPermissions(DocumentPermissions.allowAll());
@@ -60,11 +59,11 @@ public class DocumentPermissionsTests extends ESTestCase {
         final DocumentPermissions documentPermissions5 = DocumentPermissions.allowAll().limitDocumentPermissions(documentPermissions3);
         assertThat(documentPermissions5, is(notNullValue()));
         assertThat(documentPermissions5.hasDocumentLevelPermissions(), is(true));
-        assertThat(documentPermissions5.getListOfQueries(), equalTo(List.of(queries)));
+        assertThat(documentPermissions5.getAssignedQueries(), equalTo(List.of(queries)));
     }
 
     public void testMultipleSetsOfQueries() {
-        final Set<BytesReference> queries = Collections.singleton(new BytesArray("{\"match_all\" : {}}"));
+        final Set<DocumentSecurityQuery> queries = Collections.singleton(new StaticSecurityQuery("{\"match_all\" : {}}"));
         DocumentPermissions documentPermissions = DocumentPermissions.allowAll();
         final int nSets = randomIntBetween(2, 8);
         for (int i = 0; i < nSets; i++) {
@@ -72,7 +71,7 @@ public class DocumentPermissionsTests extends ESTestCase {
         }
 
         assertThat(documentPermissions.hasDocumentLevelPermissions(), is(true));
-        assertThat(documentPermissions.getListOfQueries(), equalTo(IntStream.range(0, nSets).mapToObj(i -> queries).toList()));
+        assertThat(documentPermissions.getAssignedQueries(), equalTo(IntStream.range(0, nSets).mapToObj(i -> queries).toList()));
     }
 
     public void testFailIfQueryUsesClient() throws Exception {
@@ -92,29 +91,29 @@ public class DocumentPermissionsTests extends ESTestCase {
         final BytesStreamOutput out0 = new BytesStreamOutput();
         final DocumentPermissions documentPermissions0 = DocumentPermissions.filteredBy(
             Set.of(
-                new BytesArray("{\"term\":{\"q1\":\"v1\"}}"),
-                new BytesArray("{\"term\":{\"q2\":\"v2\"}}"),
-                new BytesArray("{\"term\":{\"q3\":\"v3\"}}")
+                new StaticSecurityQuery("{\"term\":{\"q1\":\"v1\"}}"),
+                new StaticSecurityQuery("{\"term\":{\"q2\":\"v2\"}}"),
+                new StaticSecurityQuery("{\"term\":{\"q3\":\"v3\"}}")
             )
         );
-        documentPermissions0.buildCacheKey(out0, BytesReference::utf8ToString);
+        documentPermissions0.buildCacheKey(out0);
 
         final BytesStreamOutput out1 = new BytesStreamOutput();
         final DocumentPermissions documentPermissions1 = DocumentPermissions.filteredBy(
-            Set.of(new BytesArray("{\"term\":{\"q1\":\"v1\"}}"), new BytesArray("{\"term\":{\"q2\":\"v2\"}}"))
-        ).limitDocumentPermissions(DocumentPermissions.filteredBy(Set.of(new BytesArray("{\"term\":{\"q3\":\"v3\"}}"))));
-        documentPermissions1.buildCacheKey(out1, BytesReference::utf8ToString);
+            Set.of(new StaticSecurityQuery("{\"term\":{\"q1\":\"v1\"}}"), new StaticSecurityQuery("{\"term\":{\"q2\":\"v2\"}}"))
+        ).limitDocumentPermissions(DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("{\"term\":{\"q3\":\"v3\"}}"))));
+        documentPermissions1.buildCacheKey(out1);
 
         final BytesStreamOutput out2 = new BytesStreamOutput();
         final DocumentPermissions documentPermissions2 = DocumentPermissions.filteredBy(
-            Set.of(new BytesArray("{\"term\":{\"q1\":\"v1\"}}"))
+            Set.of(new StaticSecurityQuery("{\"term\":{\"q1\":\"v1\"}}"))
         )
             .limitDocumentPermissions(
                 DocumentPermissions.filteredBy(
-                    Set.of(new BytesArray("{\"term\":{\"q2\":\"v2\"}}"), new BytesArray("{\"term\":{\"q3\":\"v3\"}}"))
+                    Set.of(new StaticSecurityQuery("{\"term\":{\"q2\":\"v2\"}}"), new StaticSecurityQuery("{\"term\":{\"q3\":\"v3\"}}"))
                 )
             );
-        documentPermissions2.buildCacheKey(out2, BytesReference::utf8ToString);
+        documentPermissions2.buildCacheKey(out2);
 
         assertThat(Arrays.equals(BytesReference.toBytes(out0.bytes()), BytesReference.toBytes(out1.bytes())), is(false));
         assertThat(Arrays.equals(BytesReference.toBytes(out0.bytes()), BytesReference.toBytes(out2.bytes())), is(false));
@@ -122,16 +121,16 @@ public class DocumentPermissionsTests extends ESTestCase {
     }
 
     public void testHasStoredScript() throws IOException {
-        final Set<BytesReference> queries = new HashSet<>();
+        final Set<DocumentSecurityQuery> queries = new HashSet<>();
         if (randomBoolean()) {
-            queries.add(new BytesArray("{\"term\":{\"username\":\"foo\"}}"));
+            queries.add(new StaticSecurityQuery("{\"term\":{\"username\":\"foo\"}}"));
         }
         final boolean hasStoredScript = randomBoolean();
         if (hasStoredScript) {
-            queries.add(new BytesArray("{\"template\":{\"id\":\"my-script\"}}"));
+            queries.add(new StaticSecurityQuery("{\"template\":{\"id\":\"my-script\"}}"));
         }
         if (queries.isEmpty() || randomBoolean()) {
-            queries.add(new BytesArray("{\"term\":{\"tag\":\"prod\"}}"));
+            queries.add(new StaticSecurityQuery("{\"term\":{\"tag\":\"prod\"}}"));
         }
         final DocumentPermissions documentPermissions0 = DocumentPermissions.filteredBy(queries);
         assertThat(documentPermissions0.hasStoredScript(), is(hasStoredScript));

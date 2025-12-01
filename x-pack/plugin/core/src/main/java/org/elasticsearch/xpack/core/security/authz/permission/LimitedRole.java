@@ -22,6 +22,7 @@ import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessCo
 import org.elasticsearch.xpack.core.security.authz.permission.IndicesPermission.IsResourceAuthorizedPredicate;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ import java.util.Set;
 /**
  * A {@link Role} limited by another role.<br>
  * The effective permissions returned on
- * {@link #authorize(String, Set, ProjectMetadata, FieldPermissionsCache)} call would be limited by the
+ * {@link #authorize} call would be limited by the
  * provided role.
  */
 public final class LimitedRole implements Role {
@@ -137,17 +138,28 @@ public final class LimitedRole implements Role {
 
     @Override
     public IndicesAccessControl authorize(
+        Authentication authentication,
         String action,
         Set<String> requestedIndicesOrAliases,
         ProjectMetadata metadata,
-        FieldPermissionsCache fieldPermissionsCache
+        FieldPermissionsCache fieldPermissionsCache,
+        DlsQueryBuilder dlsQueryBuilder
     ) {
-        IndicesAccessControl indicesAccessControl = baseRole.authorize(action, requestedIndicesOrAliases, metadata, fieldPermissionsCache);
-        IndicesAccessControl limitedByIndicesAccessControl = limitedByRole.authorize(
+        IndicesAccessControl indicesAccessControl = baseRole.authorize(
+            authentication,
             action,
             requestedIndicesOrAliases,
             metadata,
-            fieldPermissionsCache
+            fieldPermissionsCache,
+            dlsQueryBuilder
+        );
+        IndicesAccessControl limitedByIndicesAccessControl = limitedByRole.authorize(
+            authentication,
+            action,
+            requestedIndicesOrAliases,
+            metadata,
+            fieldPermissionsCache,
+            dlsQueryBuilder
         );
         return indicesAccessControl.limitIndicesAccessControl(limitedByIndicesAccessControl);
     }

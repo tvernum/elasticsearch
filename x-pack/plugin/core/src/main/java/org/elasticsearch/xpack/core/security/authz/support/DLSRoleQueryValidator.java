@@ -16,7 +16,6 @@ import org.elasticsearch.index.query.AbstractQueryBuilder;
 import org.elasticsearch.index.query.GeoShapeQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.TermsQueryBuilder;
-import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
 import org.elasticsearch.xcontent.XContentFactory;
@@ -25,7 +24,8 @@ import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.xcontent.XContentParserConfiguration;
 import org.elasticsearch.xcontent.XContentType;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
-import org.elasticsearch.xpack.core.security.user.User;
+import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.TemplatedSecurityQuery;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -102,18 +102,11 @@ public final class DLSRoleQueryValidator {
         return "template".equals(fieldName);
     }
 
-    public static boolean hasStoredScript(BytesReference query, NamedXContentRegistry xContentRegistry) throws IOException {
-        try (XContentParser parser = XContentType.JSON.xContent().createParser(parserConfig(xContentRegistry), query.utf8ToString())) {
-            if (false == isTemplateQuery(parser)) {
-                return false;
-            }
-            if (parser.nextToken() != XContentParser.Token.START_OBJECT) {
-                throw new XContentParseException(
-                    parser.getTokenLocation(),
-                    "expected [" + XContentParser.Token.START_OBJECT + "] but found [" + parser.currentToken() + "] instead"
-                );
-            }
-            return ScriptType.STORED == Script.parse(parser).getType();
+    public static boolean hasStoredScript(DocumentSecurityQuery query, NamedXContentRegistry xContentRegistry) throws IOException {
+        if (query instanceof TemplatedSecurityQuery template) {
+            return template.getScript().getType() == ScriptType.STORED;
+        } else {
+            return false;
         }
     }
 
@@ -123,21 +116,14 @@ public final class DLSRoleQueryValidator {
      * supported in DLS role query.
      *
      * @param query            {@link BytesReference} query field from the role
-     * @param dlsQueryEvaluator   used for evaluation of a template/extension query
      * @param xContentRegistry {@link NamedXContentRegistry} for finding named queries
-     * @param user             {@link User} used when evaluation a template query
      * @return {@link QueryBuilder} if the query is valid and allowed, in case {@link RoleDescriptor.IndicesPrivileges}
      * * does not have a query field then it returns {@code null}.
      */
     @Nullable
-    public static QueryBuilder evaluateAndVerifyRoleQuery(
-        BytesReference query,
-        DlsQueryEvaluator dlsQueryEvaluator,
-        NamedXContentRegistry xContentRegistry,
-        User user
-    ) {
+    public static QueryBuilder evaluateAndVerifyRoleQuery(DocumentSecurityQuery query, NamedXContentRegistry xContentRegistry) {
         if (query != null) {
-            String evaluatedResult = dlsQueryEvaluator.evaluate(query.utf8ToString(), user);
+            String evaluatedResult = query.getQueryDsl();
             try {
                 return parseAndVerifyRoleQuery(evaluatedResult, xContentRegistry);
             } catch (ElasticsearchParseException | ParsingException | XContentParseException | IOException e) {

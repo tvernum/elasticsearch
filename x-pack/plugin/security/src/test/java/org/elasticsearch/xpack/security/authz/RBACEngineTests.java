@@ -28,7 +28,7 @@ import org.elasticsearch.cluster.metadata.DataStream;
 import org.elasticsearch.cluster.metadata.DataStreamTestHelper;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
-import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -92,6 +92,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.ResourcePrivileges
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
 import org.elasticsearch.xpack.core.security.authz.permission.RunAsPermission;
 import org.elasticsearch.xpack.core.security.authz.permission.SimpleRole;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeTests;
@@ -101,6 +102,7 @@ import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.IndexPrivilegeTests;
 import org.elasticsearch.xpack.core.security.authz.privilege.Privilege;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.test.TestRestrictedIndices;
 import org.elasticsearch.xpack.core.security.user.User;
@@ -172,7 +174,8 @@ public class RBACEngineTests extends ESTestCase {
         final LoadAuthorizedIndicesTimeChecker.Factory timerFactory = mock(LoadAuthorizedIndicesTimeChecker.Factory.class);
         when(timerFactory.newTimer(any())).thenReturn(LoadAuthorizedIndicesTimeChecker.NO_OP_CONSUMER);
         rolesStore = mock(CompositeRolesStore.class);
-        engine = new RBACEngine(Settings.EMPTY, rolesStore, new FieldPermissionsCache(Settings.EMPTY), timerFactory);
+        DlsQueryBuilder dlsQueryBuilder = (query, user) -> new StaticSecurityQuery(query);
+        engine = new RBACEngine(Settings.EMPTY, rolesStore, new FieldPermissionsCache(Settings.EMPTY), dlsQueryBuilder, timerFactory);
     }
 
     public void testResolveAuthorizationInfoForEmptyRolesWithAuthentication() {
@@ -1961,7 +1964,8 @@ public class RBACEngineTests extends ESTestCase {
                 assertTrue(indexAuthorizationResult.isGranted());
                 // Child authorization should be skipped since we passed parent authorization.
                 Mockito.verify(role, never()).checkIndicesAction(action);
-                Mockito.verify(role, never()).authorize(eq(action), any(), any(), any());
+                Mockito.verify(role, never())
+                    .authorize(any(Authentication.class), eq(action), any(), any(), any(), any(DlsQueryBuilder.class));
             }
 
             @Override
@@ -1985,7 +1989,8 @@ public class RBACEngineTests extends ESTestCase {
             public void onResponse(IndexAuthorizationResult indexAuthorizationResult) {
                 assertTrue(indexAuthorizationResult.isGranted());
                 // Child action should have been authorized normally since we did not pass parent authorization
-                Mockito.verify(role, atLeastOnce()).authorize(eq(action), any(), any(), any());
+                Mockito.verify(role, atLeastOnce())
+                    .authorize(any(Authentication.class), eq(action), any(), any(), any(), any(DlsQueryBuilder.class));
             }
 
             @Override
@@ -2021,7 +2026,8 @@ public class RBACEngineTests extends ESTestCase {
             public void onResponse(IndexAuthorizationResult indexAuthorizationResult) {
                 assertTrue(indexAuthorizationResult.isGranted());
                 // Child action authorization should not be skipped, even though the parent authorization was present
-                Mockito.verify(role, atLeastOnce()).authorize(eq(action), any(), any(), any());
+                Mockito.verify(role, atLeastOnce())
+                    .authorize(any(Authentication.class), eq(action), any(), any(), any(), any(DlsQueryBuilder.class));
             }
 
             @Override
@@ -2042,7 +2048,8 @@ public class RBACEngineTests extends ESTestCase {
             @Override
             public void onResponse(IndexAuthorizationResult indexAuthorizationResult) {
                 assertTrue(indexAuthorizationResult.isGranted());
-                Mockito.verify(role, atLeastOnce()).authorize(eq(action), any(), any(), any());
+                Mockito.verify(role, atLeastOnce())
+                    .authorize(any(Authentication.class), eq(action), any(), any(), any(), any(DlsQueryBuilder.class));
             }
 
             @Override
@@ -2066,7 +2073,7 @@ public class RBACEngineTests extends ESTestCase {
         final RequestInfo requestInfo = createRequestInfo(searchRequest, action, parentAuthorization);
         final AsyncSupplier<ResolvedIndices> indicesAsyncSupplier = () -> SubscribableListener.newSucceeded(resolvedIndices);
 
-        Metadata.Builder metadata = Metadata.builder();
+        ProjectMetadata.Builder metadata = ProjectMetadata.builder(randomProjectIdOrDefault());
         Stream.of(indices)
             .forEach(
                 indexName -> metadata.put(
@@ -2075,7 +2082,7 @@ public class RBACEngineTests extends ESTestCase {
                 )
             );
 
-        engine.authorizeIndexAction(requestInfo, authzInfo, indicesAsyncSupplier, metadata.build().getProject()).addListener(listener);
+        engine.authorizeIndexAction(requestInfo, authzInfo, indicesAsyncSupplier, metadata.build()).addListener(listener);
     }
 
     private static RequestInfo createRequestInfo(TransportRequest request, String action, ParentActionAuthorization parentAuthorization) {

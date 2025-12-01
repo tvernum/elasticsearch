@@ -63,7 +63,7 @@ import org.elasticsearch.action.update.TransportUpdateAction;
 import org.elasticsearch.cluster.metadata.AliasMetadata;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
-import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.ProjectMetadata;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.index.IndexVersion;
@@ -185,8 +185,10 @@ import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCa
 import org.elasticsearch.xpack.core.security.authz.permission.RemoteClusterPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.RemoteIndicesPermission;
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeTests;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.test.TestRestrictedIndices;
 import org.elasticsearch.xpack.core.security.user.RemoteMonitoringUser;
 import org.elasticsearch.xpack.core.security.user.SystemUser;
@@ -2824,15 +2826,20 @@ public class ReservedRolesStoreTests extends ESTestCase {
             TestRestrictedIndices.INTERNAL_SECURITY_MAIN_INDEX_6,
             TestRestrictedIndices.INTERNAL_SECURITY_MAIN_INDEX_7
         );
-        final Metadata metadata = new Metadata.Builder().put(
-            new IndexMetadata.Builder(internalSecurityIndex).settings(indexSettings)
-                .numberOfShards(1)
-                .numberOfReplicas(0)
-                .putAlias(new AliasMetadata.Builder(TestRestrictedIndices.SECURITY_MAIN_ALIAS).build())
-                .build(),
-            true
-        ).build();
+        final ProjectMetadata project = ProjectMetadata.builder(randomProjectIdOrDefault())
+            .put(
+                new IndexMetadata.Builder(internalSecurityIndex).settings(indexSettings)
+                    .numberOfShards(1)
+                    .numberOfReplicas(0)
+                    .putAlias(new AliasMetadata.Builder(TestRestrictedIndices.SECURITY_MAIN_ALIAS).build())
+                    .build(),
+                true
+            )
+            .build();
+
+        final Authentication authentication = AuthenticationTestHelper.builder().build();
         final FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
+        final DlsQueryBuilder queryBuilder = (str, user) -> new StaticSecurityQuery(str);
         final List<String> indexMonitoringActionNamesList = Arrays.asList(
             IndicesStatsAction.NAME,
             IndicesSegmentsAction.NAME,
@@ -2844,10 +2851,12 @@ public class ReservedRolesStoreTests extends ESTestCase {
             String asyncSearchIndex = XPackPlugin.ASYNC_RESULTS_INDEX + randomAlphaOfLengthBetween(0, 2);
             final IndicesAccessControl iac = role.indices()
                 .authorize(
+                    authentication,
                     indexMonitoringActionName,
                     Sets.newHashSet(internalSecurityIndex, TestRestrictedIndices.SECURITY_MAIN_ALIAS, asyncSearchIndex),
-                    metadata.getProject(),
-                    fieldPermissionsCache
+                    project,
+                    fieldPermissionsCache,
+                    queryBuilder
                 );
             assertThat(iac.hasIndexPermissions(internalSecurityIndex), is(true));
             assertThat(iac.hasIndexPermissions(TestRestrictedIndices.SECURITY_MAIN_ALIAS), is(true));
@@ -3033,10 +3042,8 @@ public class ReservedRolesStoreTests extends ESTestCase {
             TestRestrictedIndices.INTERNAL_SECURITY_MAIN_INDEX_6,
             TestRestrictedIndices.INTERNAL_SECURITY_MAIN_INDEX_7
         );
-        final var metadata = new Metadata.Builder().put(
-            new IndexMetadata.Builder("a1").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(),
-            true
-        )
+        final var project = ProjectMetadata.builder(randomProjectIdOrDefault())
+            .put(new IndexMetadata.Builder("a1").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
             .put(new IndexMetadata.Builder("a2").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
             .put(new IndexMetadata.Builder("aaaaaa").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
             .put(new IndexMetadata.Builder("bbbbb").settings(indexSettings).numberOfShards(1).numberOfReplicas(0).build(), true)
@@ -3057,33 +3064,52 @@ public class ReservedRolesStoreTests extends ESTestCase {
                     .build(),
                 true
             )
-            .build()
-            .getProject();
+            .build();
+
+        final Authentication auth = AuthenticationTestHelper.builder().build();
+        final DlsQueryBuilder queryBuilder = (str, user) -> new StaticSecurityQuery(str);
 
         FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
         IndicesAccessControl iac = superuserRole.indices()
-            .authorize(TransportSearchAction.TYPE.name(), Sets.newHashSet("a1", "ba"), metadata, fieldPermissionsCache);
+            .authorize(auth, TransportSearchAction.TYPE.name(), Sets.newHashSet("a1", "ba"), project, fieldPermissionsCache, queryBuilder);
         assertThat(iac.hasIndexPermissions("a1"), is(true));
         assertThat(iac.hasIndexPermissions("b"), is(true));
         iac = superuserRole.indices()
-            .authorize(TransportDeleteIndexAction.TYPE.name(), Sets.newHashSet("a1", "ba"), metadata, fieldPermissionsCache);
+            .authorize(
+                auth,
+                TransportDeleteIndexAction.TYPE.name(),
+                Sets.newHashSet("a1", "ba"),
+                project,
+                fieldPermissionsCache,
+                queryBuilder
+            );
         assertThat(iac.hasIndexPermissions("a1"), is(true));
         assertThat(iac.hasIndexPermissions("b"), is(true));
-        iac = superuserRole.indices().authorize(TransportIndexAction.NAME, Sets.newHashSet("a2", "ba"), metadata, fieldPermissionsCache);
+        iac = superuserRole.indices()
+            .authorize(auth, TransportIndexAction.NAME, Sets.newHashSet("a2", "ba"), project, fieldPermissionsCache, queryBuilder);
         assertThat(iac.hasIndexPermissions("a2"), is(true));
         assertThat(iac.hasIndexPermissions("b"), is(true));
         iac = superuserRole.indices()
-            .authorize(TransportUpdateSettingsAction.TYPE.name(), Sets.newHashSet("aaaaaa", "ba"), metadata, fieldPermissionsCache);
+            .authorize(
+                auth,
+                TransportUpdateSettingsAction.TYPE.name(),
+                Sets.newHashSet("aaaaaa", "ba"),
+                project,
+                fieldPermissionsCache,
+                queryBuilder
+            );
         assertThat(iac.hasIndexPermissions("aaaaaa"), is(true));
         assertThat(iac.hasIndexPermissions("b"), is(true));
 
         // Read security indices => allowed
         iac = superuserRole.indices()
             .authorize(
+                auth,
                 randomFrom(TransportSearchAction.TYPE.name(), GetIndexAction.NAME),
                 Sets.newHashSet(TestRestrictedIndices.SECURITY_MAIN_ALIAS),
-                metadata,
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
         assertThat("For " + iac, iac.hasIndexPermissions(TestRestrictedIndices.SECURITY_MAIN_ALIAS), is(true));
         assertThat("For " + iac, iac.hasIndexPermissions(internalSecurityIndex), is(true));
@@ -3091,10 +3117,12 @@ public class ReservedRolesStoreTests extends ESTestCase {
         // Write security indices => denied
         iac = superuserRole.indices()
             .authorize(
+                auth,
                 randomFrom(TransportIndexAction.NAME, TransportDeleteIndexAction.TYPE.name()),
                 Sets.newHashSet(TestRestrictedIndices.SECURITY_MAIN_ALIAS),
-                metadata,
-                fieldPermissionsCache
+                project,
+                fieldPermissionsCache,
+                queryBuilder
             );
         assertThat("For " + iac, iac.hasIndexPermissions(TestRestrictedIndices.SECURITY_MAIN_ALIAS), is(false));
         assertThat("For " + iac, iac.hasIndexPermissions(internalSecurityIndex), is(false));

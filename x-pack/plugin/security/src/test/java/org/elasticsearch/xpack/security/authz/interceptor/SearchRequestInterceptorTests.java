@@ -10,7 +10,6 @@ package org.elasticsearch.xpack.security.authz.interceptor;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.license.MockLicenseState;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
@@ -21,6 +20,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessControl;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.junit.After;
 import org.junit.Before;
 
@@ -60,7 +60,7 @@ public class SearchRequestInterceptorTests extends ESTestCase {
         searchSourceBuilder.aggregation(termsAggregationBuilder);
         searchRequest.source(searchSourceBuilder);
 
-        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
+        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("""
             {"term":{"username":"foo"}}""")));
         final String index = randomAlphaOfLengthBetween(3, 8);
         final PlainActionFuture<Void> listener = new PlainActionFuture<>();
@@ -81,7 +81,7 @@ public class SearchRequestInterceptorTests extends ESTestCase {
         searchSourceBuilder.aggregation(termsAggregationBuilder);
         searchRequest.source(searchSourceBuilder);
 
-        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new BytesArray("""
+        final DocumentPermissions documentPermissions = DocumentPermissions.filteredBy(Set.of(new StaticSecurityQuery("""
             {"term":{"username":"foo"}}""")));
         final String index = randomAlphaOfLengthBetween(3, 8);
         final PlainActionFuture<Void> listener = new PlainActionFuture<>();

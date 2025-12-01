@@ -174,12 +174,14 @@ import org.elasticsearch.xpack.core.security.authz.accesscontrol.IndicesAccessCo
 import org.elasticsearch.xpack.core.security.authz.permission.ClusterPermission;
 import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCache;
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
+import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.privilege.ActionClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilegeDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeResolver;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
+import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.core.security.user.ElasticUser;
 import org.elasticsearch.xpack.core.security.user.InternalUser;
@@ -276,6 +278,7 @@ public class AuthorizationServiceTests extends ESTestCase {
     private Map<String, RoleDescriptor> roleMap = new HashMap<>();
     private CompositeRolesStore rolesStore;
     private FieldPermissionsCache fieldPermissionsCache;
+    private DlsQueryBuilder dlsQueryBuilder;
     private OperatorPrivileges.OperatorPrivilegesService operatorPrivilegesService;
     private boolean shouldFailOperatorPrivilegesCheck = false;
     private boolean setFakeOriginatingAction = true;
@@ -292,6 +295,7 @@ public class AuthorizationServiceTests extends ESTestCase {
     public void setup() {
         projectId = randomUniqueProjectId();
         fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
+        dlsQueryBuilder = (query, user) -> new StaticSecurityQuery(query);
         rolesStore = mock(CompositeRolesStore.class);
         clusterService = mock(ClusterService.class);
         final Settings settings = Settings.builder().put("cluster.remote.other_cluster.seeds", "localhost:9999").build();
@@ -354,6 +358,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -1320,6 +1325,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -1384,6 +1390,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -1932,6 +1939,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -1986,6 +1994,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             settings,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -3528,6 +3537,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             Settings.EMPTY,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),
@@ -3688,6 +3698,7 @@ public class AuthorizationServiceTests extends ESTestCase {
             Settings.EMPTY,
             rolesStore,
             fieldPermissionsCache,
+            dlsQueryBuilder,
             clusterService,
             auditTrailService,
             new DefaultAuthenticationFailureHandler(Collections.emptyMap()),

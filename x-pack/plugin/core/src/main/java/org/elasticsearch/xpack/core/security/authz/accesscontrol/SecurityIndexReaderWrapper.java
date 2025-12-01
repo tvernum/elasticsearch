@@ -22,7 +22,6 @@ import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.xpack.core.security.SecurityContext;
 import org.elasticsearch.xpack.core.security.authz.AuthorizationServiceField;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
-import org.elasticsearch.xpack.core.security.authz.support.DlsQueryEvaluator;
 import org.elasticsearch.xpack.core.security.support.Exceptions;
 import org.elasticsearch.xpack.core.security.user.User;
 
@@ -50,16 +49,13 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
     private final DocumentSubsetBitsetCache bitsetCache;
     private final XPackLicenseState licenseState;
     private final SecurityContext securityContext;
-    private final DlsQueryEvaluator dlsEvaluator;
 
     public SecurityIndexReaderWrapper(
         Function<ShardId, SearchExecutionContext> searchExecutionContextProvider,
         DocumentSubsetBitsetCache bitsetCache,
         SecurityContext securityContext,
-        XPackLicenseState licenseState,
-        DlsQueryEvaluator dlsEvaluator
+        XPackLicenseState licenseState
     ) {
-        this.dlsEvaluator = dlsEvaluator;
         this.searchExecutionContextProvider = searchExecutionContextProvider;
         this.bitsetCache = bitsetCache;
         this.securityContext = securityContext;
@@ -90,7 +86,7 @@ public class SecurityIndexReaderWrapper implements CheckedFunction<DirectoryRead
             DirectoryReader wrappedReader = reader;
             DocumentPermissions documentPermissions = permissions.getDocumentPermissions();
             if (documentPermissions.hasDocumentLevelPermissions()) {
-                BooleanQuery filterQuery = documentPermissions.filter(getUser(), dlsEvaluator, shardId, searchExecutionContextProvider);
+                BooleanQuery filterQuery = documentPermissions.filter(shardId, searchExecutionContextProvider);
                 if (filterQuery != null) {
                     wrappedReader = DocumentSubsetReader.wrap(wrappedReader, bitsetCache, new ConstantScoreQuery(filterQuery));
                 }
