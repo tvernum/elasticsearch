@@ -9,6 +9,8 @@ package org.elasticsearch.xpack.security.authz.dls;
 
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.ElasticsearchSecurityException;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.support.GroupedActionListener;
 import org.elasticsearch.common.ParsingException;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentParserUtils;
@@ -17,7 +19,10 @@ import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.xcontent.XContentParserConfiguration;
+import org.elasticsearch.xpack.core.security.authc.Authentication;
+import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
+import org.elasticsearch.xpack.core.security.authz.permission.Role;
 import org.elasticsearch.xpack.core.security.authz.permission.StaticSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.permission.TemplatedSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.support.DlsQueryBuilder;
@@ -64,6 +69,16 @@ public class SecurityQueryBuilder implements DlsQueryBuilder {
             + " in module: "
             + extension.getClass().getModule().getName()
             + ")";
+    }
+
+    @Override
+    public void precache(Authentication authentication, Role role, ResolvedIndices requestedIndices, ActionListener<Void> listener) {
+        if (this.extensions.isEmpty()) {
+            listener.onResponse(null);
+        } else {
+            final GroupedActionListener<Void> eachExtension = new GroupedActionListener<>(extensions.size(), listener.map(ignore -> null));
+            this.extensions.values().forEach(ext -> { ext.precache(authentication, role, requestedIndices, eachExtension); });
+        }
     }
 
     @Override

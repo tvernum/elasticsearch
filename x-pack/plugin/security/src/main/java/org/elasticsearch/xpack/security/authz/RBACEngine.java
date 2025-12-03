@@ -455,7 +455,22 @@ public class RBACEngine implements AuthorizationEngine {
                             }
                         }
                     }
-                    delegateListener.onResponse(result);
+                    if (role.hasFieldOrDocumentLevelSecurity()) {
+                        // It is possible that the role is using extension-based DLS, and that extension may need to perform asynchronous
+                        // work in order to determine the exact query to use.
+                        // This is a challenge because:
+                        // (a) The places where we need to use that query are synchronous (and it's hard to make them async)
+                        // (b) We want the IndexAccessControl to be lazily loaded, so we can't evaluate the queries in advance
+                        // Instead we give the extension an opportunity to load what it needs here, so that it can generate the query later
+                        dlsQueryBuilder.precache(
+                            requestInfo.getAuthentication(),
+                            role,
+                            resolvedIndices,
+                            delegateListener.map(ignore -> result)
+                        );
+                    } else {
+                        delegateListener.onResponse(result);
+                    }
                 }
             }));
             return listener;
