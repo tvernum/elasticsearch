@@ -7,7 +7,7 @@
 
 package org.elasticsearch.xpack.core.security.ext;
 
-import org.elasticsearch.action.support.GroupedActionListener;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
@@ -19,7 +19,7 @@ import java.util.Map;
 public interface DlsQueryExtension {
     String name();
 
-    DocumentSecurityQuery build(User user, Map<String, Object> config);
+    DocumentSecurityQuery build(User user, Map<String, Object> config, RequestData data);
 
     /**
      * This method provides an opportunity for extensions to preload any values that are needed in order to {@link #build} the DLS query.
@@ -34,8 +34,17 @@ public interface DlsQueryExtension {
         Authentication authentication,
         Role role,
         ResolvedIndices requestedIndices,
-        GroupedActionListener<Void> listener
+        ActionListener<RequestData> listener
     ) {
-        listener.onResponse(null);
+        listener.onResponse(RequestData.EMPTY);
+    }
+
+    record RequestData(Map<String, Object> data) {
+        public static final RequestData EMPTY = new RequestData(Map.of());
+
+        @SuppressWarnings("unchecked")
+        public <T> T get(String key) {
+            return (T) data.get(key);
+        }
     }
 }

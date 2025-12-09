@@ -647,6 +647,10 @@ public class AuthorizationService {
         final TransportRequest request = requestInfo.getRequest();
         final String action = requestInfo.getAction();
         securityContext.putIndicesAccessControl(indicesAccessControl);
+        final AuthorizationEngine.AuthorizationData authorizationData = result.getData();
+        if (authorizationData != null) {
+            authorizationData.store(threadContext);
+        }
 
         final AuthorizationContext authzContext = new AuthorizationContext(action, authzInfo, indicesAccessControl);
         PreAuthorizationUtils.maybeSkipChildrenActionAuthorization(securityContext, authzContext);

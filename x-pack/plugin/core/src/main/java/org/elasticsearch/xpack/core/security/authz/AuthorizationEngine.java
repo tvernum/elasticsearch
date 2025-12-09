@@ -631,10 +631,16 @@ public interface AuthorizationEngine {
         public static final IndexAuthorizationResult ALLOW_NO_INDICES = new IndexAuthorizationResult(IndicesAccessControl.ALLOW_NO_INDICES);
 
         private final IndicesAccessControl indicesAccessControl;
+        private final AuthorizationData data;
 
         public IndexAuthorizationResult(IndicesAccessControl indicesAccessControl) {
+            this(indicesAccessControl, null);
+        }
+
+        public IndexAuthorizationResult(IndicesAccessControl indicesAccessControl, AuthorizationData data) {
             super(indicesAccessControl == null || indicesAccessControl.isGranted());
             this.indicesAccessControl = indicesAccessControl;
+            this.data = data;
         }
 
         @Override
@@ -682,6 +688,21 @@ public interface AuthorizationEngine {
         @Nullable
         public IndicesAccessControl getIndicesAccessControl() {
             return indicesAccessControl;
+        }
+
+        public AuthorizationData getData() {
+            return data;
+        }
+
+        public IndexAuthorizationResult withData(AuthorizationData data) {
+            if (this.data != null) {
+                throw new IllegalStateException("data already set");
+            }
+            if (data == null) {
+                return this;
+            } else {
+                return new IndexAuthorizationResult(this.indicesAccessControl, data);
+            }
         }
     }
 
@@ -780,5 +801,9 @@ public interface AuthorizationEngine {
          * completion.
          */
         SubscribableListener<V> getAsync();
+    }
+
+    interface AuthorizationData {
+        void store(ThreadContext threadContext);
     }
 }

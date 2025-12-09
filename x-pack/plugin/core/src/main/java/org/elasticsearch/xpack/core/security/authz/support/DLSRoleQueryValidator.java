@@ -51,7 +51,7 @@ public final class DLSRoleQueryValidator {
                 BytesReference query = indicesPrivileges[i].getQuery();
                 try {
                     if (query != null) {
-                        if (isTemplateQuery(query, xContentRegistry)) {
+                        if (isTemplateOrExtensions(query, xContentRegistry)) {
                             // skip template query, this requires runtime information like 'User' information.
                             continue;
                         }
@@ -72,13 +72,13 @@ public final class DLSRoleQueryValidator {
         }
     }
 
-    private static boolean isTemplateQuery(BytesReference query, NamedXContentRegistry xContentRegistry) throws IOException {
+    private static boolean isTemplateOrExtensions(BytesReference query, NamedXContentRegistry xContentRegistry) throws IOException {
         try (XContentParser parser = XContentType.JSON.xContent().createParser(parserConfig(xContentRegistry), query.utf8ToString())) {
-            return isTemplateQuery(parser);
+            return isTemplateOrExtensions(parser);
         }
     }
 
-    private static boolean isTemplateQuery(XContentParser parser) throws IOException {
+    private static boolean isTemplateOrExtensions(XContentParser parser) throws IOException {
         XContentParser.Token token = parser.nextToken();
         if (token != XContentParser.Token.START_OBJECT) {
             throw new XContentParseException(
@@ -93,13 +93,13 @@ public final class DLSRoleQueryValidator {
                 "expected ["
                     + XContentParser.Token.FIELD_NAME
                     + "] with "
-                    + "value a query name or 'template' but found ["
+                    + "value a query name, 'template' or 'extension' but found ["
                     + token
                     + "] instead"
             );
         }
         String fieldName = parser.currentName();
-        return "template".equals(fieldName);
+        return "template".equals(fieldName) || "extension".equals(fieldName);
     }
 
     public static boolean hasStoredScript(DocumentSecurityQuery query, NamedXContentRegistry xContentRegistry) throws IOException {

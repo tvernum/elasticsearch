@@ -949,6 +949,7 @@ public class Security extends Plugin
         final FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(settings);
         final SecurityQueryBuilder securityQueryBuilder = new SecurityQueryBuilder(
             scriptService,
+            threadContext.get(),
             securityExtensions.stream()
                 .map(ext -> ext.getDocumentLevelSecurityExtensions(extensionComponents))
                 .flatMap(List::stream)

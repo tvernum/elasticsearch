@@ -466,7 +466,7 @@ public class RBACEngine implements AuthorizationEngine {
                             requestInfo.getAuthentication(),
                             role,
                             resolvedIndices,
-                            delegateListener.map(ignore -> result)
+                            delegateListener.map(result::withData)
                         );
                     } else {
                         delegateListener.onResponse(result);

@@ -11,6 +11,9 @@ import java.util.Objects;
 
 public class StaticSecurityQuery implements DocumentSecurityQuery {
 
+    public static final StaticSecurityQuery MATCH_NONE = new StaticSecurityQuery("{ \"match_none\": {} }");
+    public static final StaticSecurityQuery MATCH_ALL = new StaticSecurityQuery("{ \"match_all\": {} }");
+
     private final String query;
 
     public StaticSecurityQuery(String query) {

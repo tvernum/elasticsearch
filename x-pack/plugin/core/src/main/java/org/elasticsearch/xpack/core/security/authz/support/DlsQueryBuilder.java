@@ -9,6 +9,7 @@ package org.elasticsearch.xpack.core.security.authz.support;
 
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
+import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine;
 import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentPermissions;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
@@ -30,7 +31,12 @@ public interface DlsQueryBuilder {
      * The {@link #build} method is synchronous and it is not safe for any DLS extension to perform asynchronous tasks (actions) during
      * query building. If an extension needs to perform asynchronous tasks then it has to do it here, in advance of query building.
      */
-    default void precache(Authentication authentication, Role role, ResolvedIndices requestedIndices, ActionListener<Void> listener) {
+    default void precache(
+        Authentication authentication,
+        Role role,
+        ResolvedIndices requestedIndices,
+        ActionListener<AuthorizationEngine.AuthorizationData> listener
+    ) {
         listener.onResponse(null);
     }
 }

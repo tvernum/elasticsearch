@@ -13,13 +13,16 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.GroupedActionListener;
 import org.elasticsearch.common.ParsingException;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.XContentParserUtils;
+import org.elasticsearch.core.Tuple;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.xcontent.XContentParserConfiguration;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
+import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine;
 import org.elasticsearch.xpack.core.security.authz.ResolvedIndices;
 import org.elasticsearch.xpack.core.security.authz.permission.DocumentSecurityQuery;
 import org.elasticsearch.xpack.core.security.authz.permission.Role;
@@ -36,6 +39,8 @@ import java.util.Map;
 
 public class SecurityQueryBuilder implements DlsQueryBuilder {
 
+    private static final String TC_PREFIX = "dls.extension.";
+
     private static final class Fields {
         private static final String TEMPLATE = "template";
         private static final String EXTENSION = "extension";
@@ -44,10 +49,12 @@ public class SecurityQueryBuilder implements DlsQueryBuilder {
     }
 
     private final ScriptService scriptService;
+    private final ThreadContext threadContext;
     private final Map<String, DlsQueryExtension> extensions;
 
-    public SecurityQueryBuilder(ScriptService scriptService, List<DlsQueryExtension> extensions) {
+    public SecurityQueryBuilder(ScriptService scriptService, ThreadContext threadContext, List<DlsQueryExtension> extensions) {
         this.scriptService = scriptService;
+        this.threadContext = threadContext;
         Map<String, DlsQueryExtension> map = new HashMap<>();
         for (DlsQueryExtension extension : extensions) {
             final String name = extension.name();
@@ -72,12 +79,26 @@ public class SecurityQueryBuilder implements DlsQueryBuilder {
     }
 
     @Override
-    public void precache(Authentication authentication, Role role, ResolvedIndices requestedIndices, ActionListener<Void> listener) {
+    public void precache(
+        Authentication authentication,
+        Role role,
+        ResolvedIndices requestedIndices,
+        ActionListener<AuthorizationEngine.AuthorizationData> listener
+    ) {
         if (this.extensions.isEmpty()) {
             listener.onResponse(null);
         } else {
-            final GroupedActionListener<Void> eachExtension = new GroupedActionListener<>(extensions.size(), listener.map(ignore -> null));
-            this.extensions.values().forEach(ext -> { ext.precache(authentication, role, requestedIndices, eachExtension); });
+            final GroupedActionListener<Tuple<String, DlsQueryExtension.RequestData>> eachExtension = new GroupedActionListener<>(
+                extensions.size(),
+                listener.map(extData -> threadContext -> extData.forEach(tup -> {
+                    if (tup.v2() != null) {
+                        threadContext.putTransient(TC_PREFIX + "." + tup.v1(), tup.v2());
+                    }
+                }))
+            );
+            this.extensions.forEach((name, ext) -> {
+                ext.precache(authentication, role, requestedIndices, eachExtension.map(d -> new Tuple<>(name, d)));
+            });
         }
     }
 
@@ -136,7 +157,8 @@ public class SecurityQueryBuilder implements DlsQueryBuilder {
             throw new ElasticsearchSecurityException("no such DLS extension [" + extensionName + "]");
         }
 
-        return extension.build(user, config);
+        final DlsQueryExtension.RequestData requestData = threadContext.getTransient(TC_PREFIX + "." + extensionName);
+        return extension.build(user, config, requestData);
     }
 
 }
