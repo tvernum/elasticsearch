@@ -52,7 +52,7 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", basicAuthHeaderValue(ADMIN_USER, PASSWORD)).build();
     }
 
-    public void testDlsExtension() throws Exception {
+    public void testDynamicRoleExtension() throws Exception {
         createPrivileges();
         createBaseRole();
         createUser("user_a", "base");
