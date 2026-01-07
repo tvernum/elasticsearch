@@ -25,6 +25,7 @@ import org.elasticsearch.xpack.core.security.authz.AuthorizationEngine;
 import org.elasticsearch.xpack.core.security.authz.AuthorizedProjectsResolver;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
+import org.elasticsearch.xpack.core.security.ext.DynamicRoleAssigner;
 
 import java.util.Collections;
 import java.util.List;
@@ -120,6 +121,10 @@ public interface SecurityExtension {
      */
     default List<BiConsumer<Set<String>, ActionListener<RoleRetrievalResult>>> getRolesProviders(SecurityComponents components) {
         return Collections.emptyList();
+    }
+
+    default List<DynamicRoleAssigner> getDynamicRoleAssigners(SecurityComponents components) {
+        return List.of();
     }
 
     /**

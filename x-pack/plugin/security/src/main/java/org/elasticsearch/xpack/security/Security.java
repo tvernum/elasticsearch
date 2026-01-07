@@ -224,6 +224,7 @@ import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissionsCa
 import org.elasticsearch.xpack.core.security.authz.permission.SimpleRole;
 import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.authz.store.RoleRetrievalResult;
+import org.elasticsearch.xpack.core.security.ext.DynamicRoleAssigner;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.core.ssl.SSLConfigurationSettings;
@@ -1037,10 +1038,15 @@ public class Security extends Plugin
             customRoleProviders,
             getLicenseState()
         );
+        final List<DynamicRoleAssigner> dynamicRoleAssigners = securityExtensions.stream()
+            .map(ext -> ext.getDynamicRoleAssigners(extensionComponents))
+            .flatMap(List::stream)
+            .toList();
         final CompositeRolesStore allRolesStore = new CompositeRolesStore(
             settings,
             clusterService,
             roleProviders,
+            dynamicRoleAssigners,
             privilegeStore,
             threadPool.getThreadContext(),
             getLicenseState(),

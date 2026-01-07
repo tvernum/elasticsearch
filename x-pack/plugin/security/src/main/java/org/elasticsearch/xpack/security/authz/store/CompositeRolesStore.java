@@ -51,6 +51,7 @@ import org.elasticsearch.xpack.core.security.authz.store.RoleKey;
 import org.elasticsearch.xpack.core.security.authz.store.RoleReference;
 import org.elasticsearch.xpack.core.security.authz.store.RoleReferenceIntersection;
 import org.elasticsearch.xpack.core.security.authz.store.RolesRetrievalResult;
+import org.elasticsearch.xpack.core.security.ext.DynamicRoleAssigner;
 import org.elasticsearch.xpack.core.security.support.CacheIteratorHelper;
 import org.elasticsearch.xpack.core.security.user.AnonymousUser;
 import org.elasticsearch.xpack.core.security.user.InternalUser;
@@ -105,6 +106,7 @@ public class CompositeRolesStore {
     private static final int INDEX_PRIVILEGE_FORK_THRESHOLD = 1000;
 
     private final RoleProviders roleProviders;
+    private final List<DynamicRoleAssigner> dynamicRoleAssigners;
     private final NativePrivilegeStore privilegeStore;
     private final ProjectResolver projectResolver;
     private final FieldPermissionsCache fieldPermissionsCache;
@@ -127,6 +129,7 @@ public class CompositeRolesStore {
         Settings settings,
         ClusterService clusterService,
         RoleProviders roleProviders,
+        List<DynamicRoleAssigner> dynamicRoleAssigners,
         NativePrivilegeStore privilegeStore,
         ThreadContext threadContext,
         XPackLicenseState licenseState,
@@ -139,6 +142,7 @@ public class CompositeRolesStore {
         Executor roleBuildingExecutor,
         Consumer<Collection<RoleDescriptor>> effectiveRoleDescriptorsConsumer
     ) {
+        this.dynamicRoleAssigners = dynamicRoleAssigners;
         new ProjectDeletedListener(this::removeProject).attach(clusterService);
 
         this.roleProviders = roleProviders;
@@ -303,35 +307,66 @@ public class CompositeRolesStore {
                 } else if (RolesRetrievalResult.SUPERUSER == rolesRetrievalResult) {
                     roleActionListener.onResponse(superuserRole);
                 } else {
-                    final ActionListener<Role> wrapped = ActionListener.wrap(roleActionListener::onResponse, failureHandler);
-                    if (shouldForkRoleBuilding(rolesRetrievalResult.getRoleDescriptors())) {
-                        roleBuildingExecutor.execute(
-                            ActionRunnable.wrap(
-                                wrapped,
-                                l -> buildThenMaybeCacheRole(
-                                    cacheKey,
-                                    rolesRetrievalResult.getRoleDescriptors(),
-                                    rolesRetrievalResult.getMissingRoles(),
-                                    rolesRetrievalResult.isSuccess(),
-                                    invalidationCounter,
-                                    l
-                                )
-                            )
-                        );
+                    final ActionListener<Role> handledRoleListener = ActionListener.wrap(roleActionListener::onResponse, failureHandler);
+                    final String[] additionalRoleNames = dynamicRoleAssigners.stream()
+                        .map(dra -> dra.additionalRoles(rolesRetrievalResult.getRoleDescriptors()))
+                        .flatMap(Set::stream)
+                        .distinct()
+                        .toArray(String[]::new);
+                    if (additionalRoleNames.length == 0) {
+                        buildRoleFromRetrievalResult(rolesRetrievalResult, cacheKey, invalidationCounter, handledRoleListener);
                     } else {
-                        buildThenMaybeCacheRole(
-                            cacheKey,
-                            rolesRetrievalResult.getRoleDescriptors(),
-                            rolesRetrievalResult.getMissingRoles(),
-                            rolesRetrievalResult.isSuccess(),
-                            invalidationCounter,
-                            wrapped
+                        new RoleReference.NamedRoleReference(additionalRoleNames).resolve(
+                            roleReferenceResolver,
+                            ActionListener.wrap(
+                                additionalRoleResult -> buildRoleFromRetrievalResult(
+                                    RolesRetrievalResult.union(rolesRetrievalResult, additionalRoleResult),
+                                    cacheKey,
+                                    invalidationCounter,
+                                    handledRoleListener
+                                ),
+                                failureHandler
+                            )
                         );
                     }
                 }
             }, failureHandler));
-        } else {
+        } else
+
+        {
             roleActionListener.onResponse(existing);
+        }
+    }
+
+    private void buildRoleFromRetrievalResult(
+        RolesRetrievalResult result,
+        ProjectScoped<RoleKey> cacheKey,
+        long invalidationCounter,
+        ActionListener<Role> roleListener
+    ) {
+        if (shouldForkRoleBuilding(result.getRoleDescriptors())) {
+            roleBuildingExecutor.execute(
+                ActionRunnable.wrap(
+                    roleListener,
+                    l -> buildThenMaybeCacheRole(
+                        cacheKey,
+                        result.getRoleDescriptors(),
+                        result.getMissingRoles(),
+                        result.isSuccess(),
+                        invalidationCounter,
+                        l
+                    )
+                )
+            );
+        } else {
+            buildThenMaybeCacheRole(
+                cacheKey,
+                result.getRoleDescriptors(),
+                result.getMissingRoles(),
+                result.isSuccess(),
+                invalidationCounter,
+                roleListener
+            );
         }
     }
 
@@ -813,7 +848,9 @@ public class CompositeRolesStore {
      */
     protected record ProjectScoped<T>(ProjectId projectId, T value) {
 
-        protected ProjectScoped {
+        protected ProjectScoped
+
+        {
             Objects.requireNonNull(projectId);
         }
 

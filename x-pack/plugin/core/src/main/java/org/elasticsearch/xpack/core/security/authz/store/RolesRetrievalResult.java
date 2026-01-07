@@ -7,6 +7,7 @@
 
 package org.elasticsearch.xpack.core.security.authz.store;
 
+import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 
 import java.util.Collections;
@@ -49,5 +50,16 @@ public final class RolesRetrievalResult {
 
     public Set<String> getMissingRoles() {
         return missingRoles;
+    }
+
+    public static RolesRetrievalResult union(RolesRetrievalResult left, RolesRetrievalResult right) {
+        final RolesRetrievalResult result = new RolesRetrievalResult();
+        result.addDescriptors(left.roleDescriptors);
+        result.addDescriptors(right.getRoleDescriptors());
+        result.setMissingRoles(Sets.union(left.missingRoles, right.missingRoles));
+        if (left.isSuccess() == false || right.isSuccess() == false) {
+            result.setFailure();
+        }
+        return result;
     }
 }
