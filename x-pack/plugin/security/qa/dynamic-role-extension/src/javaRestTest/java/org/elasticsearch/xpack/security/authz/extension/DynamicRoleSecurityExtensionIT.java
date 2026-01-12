@@ -9,6 +9,7 @@ package org.elasticsearch.xpack.security.authz.extension;
 
 import org.elasticsearch.client.Request;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.hash.MessageDigests;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
@@ -16,16 +17,19 @@ import org.elasticsearch.test.cluster.ElasticsearchCluster;
 import org.elasticsearch.test.cluster.local.distribution.DistributionType;
 import org.elasticsearch.test.rest.ESRestTestCase;
 import org.elasticsearch.xcontent.ObjectPath;
+import org.elasticsearch.xpack.core.security.authc.Subject;
 import org.elasticsearch.xpack.core.security.authc.support.UsernamePasswordToken;
 import org.junit.ClassRule;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
 
@@ -58,6 +62,23 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         createUser("user_a", "base");
         createUser("user_b", "none");
         createUser("user_c", "@test");
+
+        String apiKeyA1 = createApiKey("user_a", null);
+        String apiKeyA2 = createApiKey("user_a", """
+            {
+                "applications": [
+                    { "application": "test", "privileges": [ "read" ], "resources": [ "foo" ] }
+                ]
+            }
+            """);
+        String apiKeyA3 = createApiKey("user_a", """
+            {
+                "applications": [ ]
+            }
+            """);
+        String apiKeyB = createApiKey("user_b", null);
+        String apiKeyC = createApiKey("user_c", null);
+
         createIndex();
 
         createDoc("a1", "a");
@@ -67,9 +88,15 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         assertRoles("user_b", "none");
         assertRoles("user_c", "@test");
 
-        assertIndexPrivilege("user_a", "test", "read", true);
-        assertIndexPrivilege("user_b", "test", "read", false);
-        assertIndexPrivilege("user_c", "test", "read", true);
+        assertIndexPrivilege(Subject.Type.USER, "user_a", "test", "read", true);
+        assertIndexPrivilege(Subject.Type.USER, "user_b", "test", "read", false);
+        assertIndexPrivilege(Subject.Type.USER, "user_c", "test", "read", true);
+
+        assertIndexPrivilege(Subject.Type.API_KEY, apiKeyA1, "test", "read", true);
+        assertIndexPrivilege(Subject.Type.API_KEY, apiKeyA2, "test", "read", true);
+        assertIndexPrivilege(Subject.Type.API_KEY, apiKeyA3, "test", "read", false);
+        assertIndexPrivilege(Subject.Type.API_KEY, apiKeyB, "test", "read", false);
+        assertIndexPrivilege(Subject.Type.API_KEY, apiKeyC, "test", "read", true);
 
         assertSearch("user_a", Set.of("a1"));
         assertSearch("user_c", Set.of("a1"));
@@ -84,7 +111,13 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         assertThat(actualRoles, containsInAnyOrder(roles));
     }
 
-    private void assertIndexPrivilege(final String username, String index, String privilege, boolean expected) throws IOException {
+    private void assertIndexPrivilege(
+        final Subject.Type subjectType,
+        final String identity,
+        String index,
+        String privilege,
+        boolean expected
+    ) throws IOException {
         final Request request = new Request("GET", "/_security/user/_has_privileges");
         request.setJsonEntity(Strings.format("""
             {
@@ -93,7 +126,11 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
                 ]
             }
             """, index, privilege));
-        setUserForRequest(request, username);
+        switch (subjectType) {
+            case USER -> setUserForRequest(request, identity);
+            case API_KEY -> setApiKeyHeader(request, identity);
+            default -> fail("unexpected subject_type: " + subjectType);
+        }
         final Map<String, Object> response = entityAsMap(client().performRequest(request));
         final Boolean hasPrivilege = ObjectPath.eval("index." + index + "." + privilege, response);
         assertThat(hasPrivilege, equalTo(expected));
@@ -118,6 +155,13 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         return request;
     }
 
+    private Request setApiKeyHeader(Request request, String encodedApiKey) {
+        request.setOptions(
+            request.getOptions().toBuilder().removeHeader("Authorization").addHeader("Authorization", "ApiKey " + encodedApiKey)
+        );
+        return request;
+    }
+
     private void createPrivileges() throws Exception {
         final Request request = new Request("PUT", "/_security/privilege/");
         request.setJsonEntity("""
@@ -126,6 +170,11 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
                     "read": {
                         "actions": [
                             "*:read"
+                        ]
+                    },
+                    "write": {
+                        "actions": [
+                            "*:write"
                         ]
                     }
                 }
@@ -139,7 +188,7 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
         request.setJsonEntity("""
             {
                 "applications": [
-                    { "application": "test", "privileges": [ "read" ], "resources": [ "foo" ] }
+                    { "application": "test", "privileges": [ "read", "write" ], "resources": [ "foo", "bar", "baz" ] }
                 ]
             }
             """);
@@ -155,6 +204,44 @@ public class DynamicRoleSecurityExtensionIT extends ESRestTestCase {
             }
             """, PASSWORD_STR, role));
         adminClient().performRequest(request);
+    }
+
+    private String createApiKey(String owner, String roleDescriptor) throws IOException {
+        final Request request = new Request("POST", "/_security/api_key/grant");
+        final String apiKeyObj;
+        if (roleDescriptor == null) {
+            apiKeyObj = Strings.format("""
+                    {
+                        "name": "%s-empty"
+                    }
+                """, owner);
+        } else {
+            apiKeyObj = Strings.format(
+                """
+                        {
+                            "name": "%s-%s",
+                            "role_descriptors": {
+                                "limit": %s
+                            }
+                        }
+                    """,
+                owner,
+                MessageDigests.toHexString(MessageDigests.md5().digest(roleDescriptor.getBytes(StandardCharsets.UTF_8))),
+                roleDescriptor
+            );
+        }
+        request.setJsonEntity(Strings.format("""
+            {
+                "grant_type": "password",
+                "username": "%s",
+                "password": "%s",
+                "api_key": %s
+            }
+            """, owner, PASSWORD_STR, apiKeyObj));
+        final Map<String, Object> response = entityAsMap(client().performRequest(request));
+        final String encoded = (String) response.get("encoded");
+        assertThat(encoded, notNullValue());
+        return encoded;
     }
 
     private void createIndex() throws Exception {

@@ -6,19 +6,29 @@
  */
 package org.elasticsearch.xpack.security.authz.extension;
 
+import org.elasticsearch.logging.LogManager;
+import org.elasticsearch.logging.Logger;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.ext.DynamicRoleAssigner;
 import org.elasticsearch.xpack.core.security.support.StringMatcher;
 
 import java.util.Collection;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TestDynamicRoleAssigner implements DynamicRoleAssigner {
 
+    private final Logger logger = LogManager.getLogger(TestDynamicRoleAssigner.class);
+
     @Override
     public Set<String> additionalRoles(Collection<RoleDescriptor> primaryRoles) {
         if (primaryRoles.stream().anyMatch(TestDynamicRoleAssigner::hasTestApplicationPrivilege)) {
+            logger.info(
+                "Adding role {} to assigned roles {}",
+                TestDynamicRoleProvider.ROLE_NAME,
+                primaryRoles.stream().map(RoleDescriptor::getName).collect(Collectors.joining("+"))
+            );
             return Set.of(TestDynamicRoleProvider.ROLE_NAME);
         } else {
             return Set.of();

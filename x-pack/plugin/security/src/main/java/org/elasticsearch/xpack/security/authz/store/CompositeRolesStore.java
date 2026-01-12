@@ -316,6 +316,11 @@ public class CompositeRolesStore {
                     if (additionalRoleNames.length == 0) {
                         buildRoleFromRetrievalResult(rolesRetrievalResult, cacheKey, invalidationCounter, handledRoleListener);
                     } else {
+                        logger.info(
+                            "Dynamically assigning additional roles [{}] to role reference [{}]",
+                            String.join(", ", additionalRoleNames),
+                            roleReference.id()
+                        );
                         new RoleReference.NamedRoleReference(additionalRoleNames).resolve(
                             roleReferenceResolver,
                             ActionListener.wrap(

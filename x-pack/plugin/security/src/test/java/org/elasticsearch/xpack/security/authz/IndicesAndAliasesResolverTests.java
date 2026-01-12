@@ -274,6 +274,7 @@ public class IndicesAndAliasesResolverTests extends ESTestCase {
                 settings,
                 mock(ClusterService.class),
                 mock(RoleProviders.class),
+                List.of(),
                 mock(NativePrivilegeStore.class),
                 new ThreadContext(settings),
                 MockLicenseState.createMock(),
