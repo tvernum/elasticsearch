@@ -297,6 +297,208 @@ public class SamlIdentityProviderTests extends IdentityProviderIntegTestCase {
         );
     }
 
+    public void testIdpInitiatedSsoSucceedsWhenApiKeyAndOwnerHaveSameResource() throws Exception {
+        // This test verifies that when an API key has assigned role descriptors for a specific resource,
+        // and the owner also has access to that same resource, SSO succeeds.
+        // This is the "happy path" for the LimitedRole intersection scenario.
+        final String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
+        final String entityId = SP_ENTITY_ID;
+
+        setupTestData(entityId, acsUrl);
+
+        final RequestOptions adminOptions = RequestOptions.DEFAULT.toBuilder()
+            .addHeader(
+                "Authorization",
+                UsernamePasswordToken.basicAuthHeaderValue(SAMPLE_USER_NAME, new SecureString(SAMPLE_USER_PASSWORD.toCharArray()))
+            )
+            .build();
+
+        // Create a user (owner) whose role has access to the SAME resource as the SP
+        final String username = "user_same_resource_" + randomAlphaOfLength(5);
+        final SecureString password = new SecureString(randomAlphaOfLength(8).toCharArray());
+        final String roleName = "role_" + username;
+
+        // Owner has access to the SP's resource (SP_ENTITY_ID)
+        createRole(roleName, Strings.format("""
+            {
+              "cluster": [ "manage_own_api_key" ],
+              "applications": [
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "%s" ],
+                  "privileges": [ "sso:superuser" ]
+                }
+              ]
+            }
+            """, entityId), adminOptions);
+        createUser(username, password, roleName, adminOptions);
+
+        // Create an API key with assigned role descriptors that also have access to SP_ENTITY_ID
+        // Both owner and API key have the same specific resource - intersection should grant access
+        final String apiKeyCredentials = createApiKeyWithSpecificResource(username, password, entityId);
+
+        // Make a request to init an SSO flow - should succeed because both owner and API key have access
+        Request request = new Request("POST", "/_idp/saml/init");
+        request.setOptions(
+            RequestOptions.DEFAULT.toBuilder()
+                .addHeader("Authorization", basicAuthHeaderValue(CONSOLE_USER_NAME, new SecureString(CONSOLE_USER_PASSWORD.toCharArray())))
+                .addHeader("es-secondary-authorization", "ApiKey " + apiKeyCredentials)
+                .build()
+        );
+        request.setJsonEntity("{ \"entity_id\": \"" + entityId + "\", \"acs\": \"" + acsUrl + "\" }");
+
+        Response initResponse = getRestClient().performRequest(request);
+        assertThat(initResponse.getStatusLine().getStatusCode(), equalTo(200));
+
+        ObjectPath objectPath = ObjectPath.createFromResponse(initResponse);
+        assertThat(objectPath.evaluate("post_url").toString(), equalTo(acsUrl));
+        assertSamlResponseForServiceProvider(objectPath, entityId, acsUrl);
+        assertSamlResponseUserData(objectPath, username, "superuser");
+    }
+
+    public void testIdpInitiatedSsoSucceedsWhenOwnerHasMultipleOrgsAndApiKeyMatchesOne() throws Exception {
+        // This test verifies that when an owner has access to multiple organizations,
+        // and the API key's assigned role descriptors match ONE of those organizations,
+        // SSO succeeds because there's an intersection.
+        final String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
+        final String entityId = SP_ENTITY_ID;
+
+        setupTestData(entityId, acsUrl);
+
+        final RequestOptions adminOptions = RequestOptions.DEFAULT.toBuilder()
+            .addHeader(
+                "Authorization",
+                UsernamePasswordToken.basicAuthHeaderValue(SAMPLE_USER_NAME, new SecureString(SAMPLE_USER_PASSWORD.toCharArray()))
+            )
+            .build();
+
+        // Create a user (owner) whose role has access to MULTIPLE organizations
+        final String username = "user_multi_org_" + randomAlphaOfLength(5);
+        final SecureString password = new SecureString(randomAlphaOfLength(8).toCharArray());
+        final String roleName = "role_" + username;
+
+        // Owner has access to multiple organizations: org:1111, SP_ENTITY_ID (the matching one), and org:3333
+        createRole(roleName, Strings.format("""
+            {
+              "cluster": [ "manage_own_api_key" ],
+              "applications": [
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "ec:org:1111" ],
+                  "privileges": [ "sso:viewer" ]
+                },
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "%s" ],
+                  "privileges": [ "sso:superuser" ]
+                },
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "ec:org:3333" ],
+                  "privileges": [ "sso:editor" ]
+                }
+              ]
+            }
+            """, entityId), adminOptions);
+        createUser(username, password, roleName, adminOptions);
+
+        // Create an API key with assigned role descriptors for SP_ENTITY_ID only
+        // This should intersect with the owner's second application privilege
+        final String apiKeyCredentials = createApiKeyWithSpecificResource(username, password, entityId);
+
+        // Make a request to init an SSO flow - should succeed because owner has access to SP_ENTITY_ID
+        Request request = new Request("POST", "/_idp/saml/init");
+        request.setOptions(
+            RequestOptions.DEFAULT.toBuilder()
+                .addHeader("Authorization", basicAuthHeaderValue(CONSOLE_USER_NAME, new SecureString(CONSOLE_USER_PASSWORD.toCharArray())))
+                .addHeader("es-secondary-authorization", "ApiKey " + apiKeyCredentials)
+                .build()
+        );
+        request.setJsonEntity("{ \"entity_id\": \"" + entityId + "\", \"acs\": \"" + acsUrl + "\" }");
+
+        Response initResponse = getRestClient().performRequest(request);
+        assertThat(initResponse.getStatusLine().getStatusCode(), equalTo(200));
+
+        ObjectPath objectPath = ObjectPath.createFromResponse(initResponse);
+        assertThat(objectPath.evaluate("post_url").toString(), equalTo(acsUrl));
+        assertSamlResponseForServiceProvider(objectPath, entityId, acsUrl);
+        // Assert that "superuser" is the ONLY role in the SAML response (not viewer or editor from other orgs)
+        var body = objectPath.evaluate("saml_response").toString();
+        assertContainsAttributeWithValues(body, "principal", username);
+        assertAttributeHasExactlyValues(body, "roles", "superuser");
+    }
+
+    public void testIdpInitiatedSsoFailsWhenApiKeyOwnerLacksAccessToResource() throws Exception {
+        // This test verifies that when an API key has assigned role descriptors for a resource,
+        // but the owner (limited-by role) doesn't have access to that resource, SSO fails.
+        // This is the LimitedRole intersection scenario where resources don't overlap.
+        final String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
+        final String entityId = SP_ENTITY_ID;
+
+        setupTestData(entityId, acsUrl);
+
+        final RequestOptions adminOptions = RequestOptions.DEFAULT.toBuilder()
+            .addHeader(
+                "Authorization",
+                UsernamePasswordToken.basicAuthHeaderValue(SAMPLE_USER_NAME, new SecureString(SAMPLE_USER_PASSWORD.toCharArray()))
+            )
+            .build();
+
+        // Create a user (owner) whose roles have access to MULTIPLE organizations, but NONE match SP_ENTITY_ID
+        final String username = "user_wrong_resource_" + randomAlphaOfLength(5);
+        final SecureString password = new SecureString(randomAlphaOfLength(8).toCharArray());
+        final String roleName = "role_" + username;
+
+        // Owner has access to multiple organizations: org:1111, org:2222, org:3333
+        // But NONE of them match the SP's resource (SP_ENTITY_ID = "ec:abcdef:123456")
+        createRole(roleName, """
+            {
+              "cluster": [ "manage_own_api_key" ],
+              "applications": [
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "ec:org:1111" ],
+                  "privileges": [ "sso:viewer" ]
+                },
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "ec:org:2222" ],
+                  "privileges": [ "sso:superuser" ]
+                },
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "ec:org:3333" ],
+                  "privileges": [ "sso:editor" ]
+                }
+              ]
+            }
+            """, adminOptions);
+        createUser(username, password, roleName, adminOptions);
+
+        // Create an API key with assigned role descriptors that claim access to SP_ENTITY_ID
+        // But the owner doesn't have access to SP_ENTITY_ID, only to "ec:different:organization"
+        final String apiKeyCredentials = createApiKeyWithSpecificResource(username, password, entityId);
+
+        // Make a request to init an SSO flow - should fail because owner lacks access to SP's resource
+        Request request = new Request("POST", "/_idp/saml/init");
+        request.setOptions(
+            RequestOptions.DEFAULT.toBuilder()
+                .addHeader("Authorization", basicAuthHeaderValue(CONSOLE_USER_NAME, new SecureString(CONSOLE_USER_PASSWORD.toCharArray())))
+                .addHeader("es-secondary-authorization", "ApiKey " + apiKeyCredentials)
+                .build()
+        );
+        request.setJsonEntity("{ \"entity_id\": \"" + entityId + "\", \"acs\": \"" + acsUrl + "\" }");
+
+        ResponseException e = expectThrows(ResponseException.class, () -> getRestClient().performRequest(request));
+        Response response = e.getResponse();
+        assertThat(response.getStatusLine().getStatusCode(), equalTo(403));
+        // The user should be denied access because the owner's role doesn't have access to the SP's resource
+        assertThat(
+            e.getMessage(),
+            containsString("User [" + username + "] is not permitted to access service [" + entityId + "]")
+        );
+    }
+
     public void testSpInitiatedSsoFailsForUnknownSp() throws Exception {
         String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
         String entityId = SP_ENTITY_ID;
@@ -520,6 +722,39 @@ public class SamlIdentityProviderTests extends IdentityProviderIntegTestCase {
         return Base64.getEncoder().encodeToString((response.getId() + ":" + response.getKey().toString()).getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Creates an API key with assigned role descriptors that grant access to a specific resource.
+     * This is used to test the LimitedRole scenario where the API key's assigned roles
+     * may differ from the owner's roles.
+     */
+    private String createApiKeyWithSpecificResource(String username, SecureString password, String resource) {
+        Client client = client().filterWithHeader(
+            Collections.singletonMap("Authorization", UsernamePasswordToken.basicAuthHeaderValue(username, password))
+        );
+        final RoleDescriptor apiKeyRole = new RoleDescriptor(
+            "api-key-role-" + username,
+            null,
+            null,
+            new RoleDescriptor.ApplicationResourcePrivileges[] {
+                RoleDescriptor.ApplicationResourcePrivileges.builder()
+                    .application("elastic-cloud")
+                    .privileges("sso:superuser")
+                    .resources(resource)
+                    .build() },
+            null,
+            null,
+            Map.of(),
+            Map.of()
+        );
+        final CreateApiKeyResponse response = new CreateApiKeyRequestBuilder(client).setName("test key with specific resource")
+            .setExpiration(TimeValue.timeValueHours(TimeUnit.DAYS.toHours(7L)))
+            .setRefreshPolicy(IMMEDIATE)
+            .setRoleDescriptors(List.of(apiKeyRole))
+            .get();
+        assertNotNull(response);
+        return Base64.getEncoder().encodeToString((response.getId() + ":" + response.getKey().toString()).getBytes(StandardCharsets.UTF_8));
+    }
+
     private AuthnRequest buildAuthnRequest(String entityId, URL acs, URL destination, String nameIdFormat, boolean forceAuthn) {
         final Issuer issuer = samlFactory.buildObject(Issuer.class, Issuer.DEFAULT_ELEMENT_NAME);
         issuer.setValue(entityId);
@@ -600,6 +835,51 @@ public class SamlIdentityProviderTests extends IdentityProviderIntegTestCase {
         final String attributeContent = message.substring(posStart + startAttribute.length(), posEnd);
 
         for (String value : values) {
+            assertThat(
+                attributeContent,
+                containsString(
+                    "<saml2:AttributeValue xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"xsd:string\">"
+                        + value
+                        + "</saml2:AttributeValue>"
+                )
+            );
+        }
+    }
+
+    /**
+     * Asserts that the SAML response contains EXACTLY the specified values for an attribute (no more, no less).
+     */
+    private void assertAttributeHasExactlyValues(String message, String attribute, String... expectedValues) {
+        final String startAttribute = Strings.format("""
+            <saml2:Attribute FriendlyName="%s" Name="https://saml.elasticsearch.org/attributes/%s" \
+            NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri">""", attribute, attribute);
+        assertThat(message, containsString(startAttribute));
+        final int posStart = message.indexOf(startAttribute);
+        assertThat(posStart, Matchers.greaterThan(0));
+
+        final String endAttribute = "</saml2:Attribute>";
+        final int posEnd = message.indexOf(endAttribute, posStart);
+        assertThat(posEnd, Matchers.greaterThan(posStart));
+
+        final String attributeContent = message.substring(posStart + startAttribute.length(), posEnd);
+
+        // Count actual AttributeValue occurrences
+        final String valueTag = "<saml2:AttributeValue";
+        int count = 0;
+        int index = 0;
+        while ((index = attributeContent.indexOf(valueTag, index)) != -1) {
+            count++;
+            index += valueTag.length();
+        }
+
+        assertThat(
+            "Expected exactly " + expectedValues.length + " value(s) for attribute [" + attribute + "], but found " + count,
+            count,
+            equalTo(expectedValues.length)
+        );
+
+        // Verify each expected value is present
+        for (String value : expectedValues) {
             assertThat(
                 attributeContent,
                 containsString(
