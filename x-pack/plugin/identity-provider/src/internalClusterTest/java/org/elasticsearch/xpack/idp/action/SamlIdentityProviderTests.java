@@ -499,6 +499,66 @@ public class SamlIdentityProviderTests extends IdentityProviderIntegTestCase {
         );
     }
 
+    public void testIdpInitiatedSsoFailsWhenOwnerHasSameResourceButNoSsoPrivilege() throws Exception {
+        // This test verifies that when both the API key and owner have access to the SAME resource,
+        // but the owner doesn't have any SSO privilege (sso:*), SSO fails.
+        // The resource intersection exists, but the privilege intersection is empty.
+        final String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
+        final String entityId = SP_ENTITY_ID;
+
+        setupTestData(entityId, acsUrl);
+
+        final RequestOptions adminOptions = RequestOptions.DEFAULT.toBuilder()
+            .addHeader(
+                "Authorization",
+                UsernamePasswordToken.basicAuthHeaderValue(SAMPLE_USER_NAME, new SecureString(SAMPLE_USER_PASSWORD.toCharArray()))
+            )
+            .build();
+
+        // Create a user (owner) who has access to the SAME resource as the SP,
+        // but with a non-SSO privilege (e.g., "read" instead of "sso:superuser")
+        final String username = "user_no_sso_priv_" + randomAlphaOfLength(5);
+        final SecureString password = new SecureString(randomAlphaOfLength(8).toCharArray());
+        final String roleName = "role_" + username;
+
+        // Owner has access to SP_ENTITY_ID but only with "read" privilege, NOT "sso:*"
+        createRole(roleName, Strings.format("""
+            {
+              "cluster": [ "manage_own_api_key" ],
+              "applications": [
+                {
+                  "application": "elastic-cloud",
+                  "resources": [ "%s" ],
+                  "privileges": [ "read" ]
+                }
+              ]
+            }
+            """, entityId), adminOptions);
+        createUser(username, password, roleName, adminOptions);
+
+        // Create an API key with assigned role descriptors that claim SSO access to SP_ENTITY_ID
+        final String apiKeyCredentials = createApiKeyWithSpecificResource(username, password, entityId);
+
+        // Make a request to init an SSO flow - should fail because owner lacks SSO privilege
+        Request request = new Request("POST", "/_idp/saml/init");
+        request.setOptions(
+            RequestOptions.DEFAULT.toBuilder()
+                .addHeader("Authorization", basicAuthHeaderValue(CONSOLE_USER_NAME, new SecureString(CONSOLE_USER_PASSWORD.toCharArray())))
+                .addHeader("es-secondary-authorization", "ApiKey " + apiKeyCredentials)
+                .build()
+        );
+        request.setJsonEntity("{ \"entity_id\": \"" + entityId + "\", \"acs\": \"" + acsUrl + "\" }");
+
+        ResponseException e = expectThrows(ResponseException.class, () -> getRestClient().performRequest(request));
+        Response response = e.getResponse();
+        assertThat(response.getStatusLine().getStatusCode(), equalTo(403));
+        // The user should be denied access because the owner has "read" but not "sso:*" privilege
+        assertThat(
+            e.getMessage(),
+            containsString("User [" + username + "] is not permitted to access service [" + entityId + "]")
+        );
+    }
+
     public void testSpInitiatedSsoFailsForUnknownSp() throws Exception {
         String acsUrl = "https://" + randomAlphaOfLength(12) + ".elastic-cloud.com/saml/acs";
         String entityId = SP_ENTITY_ID;
